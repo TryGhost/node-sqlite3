@@ -1,0 +1,61 @@
+Node.js bindings for sqlite3
+============================
+
+Functions
+-------------------
+
+### `new sqlite3.Db(filename)`
+
+Returns an object representing the sqlite3 database with given filename.
+
+### `sqlite3.Db.query(sql [,bindings] [,callback])`
+
+Executes the query `sql`, with variables bound from `bindings`. The
+variables can take the form `?` or `?NNN` where `NNN` is a number, in which
+case `bindings` should be an array of values, or the form `$VVV` where
+`VVV` is an identifier, in which canse `bindings` should be an object
+with keys matching the variable names.
+
+If provided the `callback` is called with an argument for each
+statement in the query. Each argument is an array of objects mapping
+column names to values. 
+
+Each callback argument `rows` also has these properties 
+
+- **`rows.count`** is the number of rows affected by the query. 
+- **`rows.rowid`** is the `ROWID` of the last `INSERT` command
+
+Within the callback, `this` is an array of all such arrays, with a
+`count` property giving the total number of rows affected. That same
+`this` object is returned by `query`.
+
+### `sqlite3.Db.close()`
+
+Closes the database.
+
+
+Example
+--------
+
+    var sqlite3 = require("./sqlite3");
+    var db = new sqlite3.Db("test.db");
+    db.query("INSERT INTO test (column) VALUES ($value)", {$value: 10});
+    db.query("SELECT column FROM test WHERE rowid<?", [5], function (rows) {
+      process.assert(rows[0].column == 10);
+    });
+    db.query("UPDATE test SET column=20; SELECT column FROM test;",
+             function (update, select) {
+               assert(update.count == 1);
+               assert(select[0].column == 20);
+             });
+    db.close();
+
+Build
+-----
+
+`$` **`node-waf build`**
+
+Test
+----
+
+`$` **`node test.js`**

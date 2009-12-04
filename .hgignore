@@ -1,0 +1,8 @@
+syntax:glob
+
+build
+README.html
+.svn
+test.db
+.lock-wscript
+
