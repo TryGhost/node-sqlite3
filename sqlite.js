@@ -57,8 +57,10 @@ DatabaseSync.prototype.query = function (sql, bindings, callback) {
 function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
   this.database = db;
   this.executeSql = function(sqlStatement, arguments, callback) {
-    // TODO: Somehow SQL errors are being eaten
-    return db.query(sqlStatement, arguments, callback)[0];
+    var result = db.query(sqlStatement, arguments, callback)[0];
+    result.rows = {item: function (index) { return result[index]; },
+                   length: result.length};
+    return result;
   }
 
   db.query("BEGIN TRANSACTION");

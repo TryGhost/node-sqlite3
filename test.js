@@ -6,6 +6,14 @@ var sqlite = require("./sqlite");
 
 posix.unlink('test.db');
 
+function asserteq(v1, v2) {
+  if (v1 != v2) {
+    sys.puts(sys.inspect(v1));
+    sys.puts(sys.inspect(v2));
+  }
+  process.assert(v1 == v2);
+}
+
 var db = sqlite.openDatabaseSync('test.db');
 
 db.query("CREATE TABLE egg (a,y,e)");
@@ -37,11 +45,18 @@ db.query("SELECT e FROM egg WHERE a = ?", [5], function (rows) {
 });
 
 
+
 db.transaction(function(tx) {
   tx.executeSql("CREATE TABLE tex (t,e,x)");
-  tx.executeSql("INSERT INTO tex (t,e,x) VALUES (?,?,?)", ["this","is","SQL"]);
+  var i = tx.executeSql("INSERT INTO tex (t,e,x) VALUES (?,?,?)", 
+                        ["this","is","Sparta"]);
+  asserteq(i.rowsAffected, 1);
+  var s = tx.executeSql("SELECT * FROM tex");
+  asserteq(s.rows.length, 1);
+  asserteq(s.rows.item(0).t, "this");
+  asserteq(s.rows.item(0).e, "is");
+  asserteq(s.rows.item(0).x, "Sparta");
 });
-
 
 
 db.query("CREATE TABLE test (x,y,z)", function () {
