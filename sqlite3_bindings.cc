@@ -149,15 +149,15 @@ protected:
       std::deque< Handle<Object> >::const_iterator ri(rows.begin());
       for (int r = 0; r < rows.size(); ++r, ++ri)
         rosult->Set(Integer::New(r), *ri);
-      rosult->Set(String::New("changes"), Integer::New(sqlite3_changes(*db)));
-      rosult->Set(String::New("rowid"), 
+      rosult->Set(String::New("rowsAffected"), Integer::New(sqlite3_changes(*db)));
+      rosult->Set(String::New("insertId"), 
                   Integer::New(sqlite3_last_insert_rowid(*db)));
       resulting.push_back(rosult);
     }
       
     Local<Array> result(Array::New(0));
-    result->Set(String::New("changes"), Integer::New(changes)); 
-    result->Set(String::New("rowid"), 
+    result->Set(String::New("rowsAffected"), Integer::New(changes)); 
+    result->Set(String::New("insertId"), 
                 Integer::New(sqlite3_last_insert_rowid(*db)));
     std::deque< Handle<Array> >::iterator ri(resulting.begin());
     for (int r = 0; r < resulting.size(); ++r, ++ri) {

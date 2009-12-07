@@ -1,16 +1,19 @@
 // Test script for node_sqlite
 
 var sys = require("sys");
+var posix = require("posix");
 var sqlite3 = require("./sqlite3");
 
-var db = new sqlite3.Db('test.db');
+posix.unlink('test.db');
+
+var db = sqlite3.openDatabaseSync('test.db');
 
 db.query("CREATE TABLE egg (a,y,e)");
 db.query("INSERT INTO egg (a) VALUES (1)", function () {
-    process.assert(this.rowid == 1);
-  });
+  process.assert(this.insertId == 1);
+});
 var i2 = db.query("INSERT INTO egg (a) VALUES (?)", [5]);
-process.assert(i2.rowid == 2);
+process.assert(i2.insertId == 2);
 db.query("UPDATE egg SET y='Y'; UPDATE egg SET e='E';");
 db.query("UPDATE egg SET y=?; UPDATE egg SET e=? WHERE ROWID=1", 
          ["arm","leg"] );
@@ -42,8 +45,8 @@ db.query("SELECT * FROM test WHERE rowid < ?;", [1],
          });
 
 db.query("UPDATE test SET y = 10;", [], function () {
-    sys.puts(this.changes + " rows affected");
-    process.assert(this.changes == 2);
+    sys.puts(this.rowsAffected + " rows affected");
+    process.assert(this.rowsAffected == 2);
   });
 
           
