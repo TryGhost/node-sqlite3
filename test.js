@@ -25,13 +25,16 @@ db.query("SELECT * FROM egg", function (rows) {
   });
 
 db.query("SELECT a FROM egg; SELECT y FROM egg", function (as, ys) {
-    sys.puts("As " + JSON.stringify(as));
-    sys.puts("Ys " + JSON.stringify(ys));
-  });
+  sys.puts("As " + JSON.stringify(as));
+  sys.puts("Ys " + JSON.stringify(ys));
+  process.assert(as.length == 4);
+  process.assert(ys.length == 4);
+});
 
 db.query("SELECT e FROM egg WHERE a = ?", [5], function (rows) {
-    process.assert(rows[0].e == "E");
-  });
+  process.assert(rows.length == 1);
+  process.assert(rows[0].e == "E");
+});
 
 
 db.transaction(function(tx) {
