@@ -50,6 +50,19 @@ Example
              });
     db.close();
 
+
+Install
+-------
+
+Install node. http://nodejs.org/
+
+`$` **`hg clone https://node-sqlite.googlecode.com/hg/ node-sqlite`**
+
+`$` **`cd node_sqlite`**
+
+`$` **`node-waf configure`**
+
+
 Build
 -----
 

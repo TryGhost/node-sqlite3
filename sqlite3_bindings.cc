@@ -17,7 +17,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <v8.h>
 #include <node.h>
 #include <node_events.h>
-#include <deque>
 
 using namespace v8;
 using namespace node;
@@ -91,7 +90,7 @@ protected:
     int changes = 0;
     int param = 0;
 
-    std::deque< Handle<Array> > resulting;
+    Local<Array> result(Array::New(0));
 
     for(;;) {
 
@@ -123,7 +122,7 @@ protected:
         }
       }
       
-      std::deque< Handle<Object> > rows;
+      Local<Array> rosult(Array::New(0));
 
       for (int r = 0; ; ++r) {
         int rc = sqlite3_step(statement);
@@ -149,7 +148,7 @@ protected:
             row->Set(String::NewSymbol(sqlite3_column_name(statement, c)), 
                      value);
           }
-          rows.push_back(row);
+          rosult->Set(Integer::New(rosult->Length()), row);
         } else if (rc == SQLITE_DONE) {
           break;
         } else {
@@ -160,24 +159,15 @@ protected:
 
       changes += sqlite3_changes(*db);
 
-      Local<Array> rosult(Array::New(rows.size()));
-      std::deque< Handle<Object> >::const_iterator ri(rows.begin());
-      for (int r = 0; r < rows.size(); ++r, ++ri)
-        rosult->Set(Integer::New(r), *ri);
       rosult->Set(String::New("rowsAffected"), Integer::New(sqlite3_changes(*db)));
       rosult->Set(String::New("insertId"), 
                   Integer::New(sqlite3_last_insert_rowid(*db)));
-      resulting.push_back(rosult);
+      result->Set(Integer::New(result->Length()), rosult);
     }
       
-    Local<Array> result(Array::New(0));
     result->Set(String::New("rowsAffected"), Integer::New(changes)); 
     result->Set(String::New("insertId"), 
                 Integer::New(sqlite3_last_insert_rowid(*db)));
-    std::deque< Handle<Array> >::iterator ri(resulting.begin());
-    for (int r = 0; r < resulting.size(); ++r, ++ri) {
-      result->Set(Integer::New(r), *ri);
-    }
     return result;
   }
 
