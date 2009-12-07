@@ -33,6 +33,14 @@ db.query("SELECT e FROM egg WHERE a = ?", [5], function (rows) {
     process.assert(rows[0].e == "E");
   });
 
+
+db.transaction(function(tx) {
+  tx.executeSql("CREATE TABLE tex (t,e,x)");
+  tx.executeSql("INSERT INTO tex (t,e,x) VALUES (?,?,?)", ["this","is","SQL"]);
+});
+
+
+
 db.query("CREATE TABLE test (x,y,z)", function () {
     db.query("INSERT INTO test (x,y) VALUES (?,?)", [5,10]);
     db.query("INSERT INTO test (x,y,z) VALUES ($x, $y, $z)", {$x:1, $y:2, $z:3});
