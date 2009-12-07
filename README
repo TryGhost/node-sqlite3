@@ -4,11 +4,11 @@ Node.js bindings for sqlite3
 Functions
 -------------------
 
-### `new sqlite3.Db(filename)`
+### `sqlite.openDatabaseSync(filename)`
 
 Returns an object representing the sqlite3 database with given filename.
 
-### `sqlite3.Db.query(sql [,bindings] [,callback])`
+### `DatabaseSync.query(sql [,bindings] [,callback])`
 
 Executes the query `sql`, with variables bound from `bindings`. The
 variables can take the form `?` or `?NNN` where `NNN` is a number, in which
@@ -29,7 +29,7 @@ Within the callback, `this` is an array of all such arrays, with a
 `count` property giving the total number of rows affected. That same
 `this` object is returned by `query`.
 
-### `sqlite3.Db.close()`
+### `sqlite.Db.close()`
 
 Closes the database.
 
@@ -37,8 +37,8 @@ Closes the database.
 Example
 --------
 
-    var sqlite3 = require("./sqlite3");
-    var db = new sqlite3.Db("test.db");
+    var sqlite = require("./sqlite");
+    var db = new sqlite.Db("test.db");
     db.query("INSERT INTO test (column) VALUES ($value)", {$value: 10});
     db.query("SELECT column FROM test WHERE rowid<?", [5], function (rows) {
       process.assert(rows[0].column == 10);

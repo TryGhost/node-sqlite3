@@ -2,11 +2,11 @@
 
 var sys = require("sys");
 var posix = require("posix");
-var sqlite3 = require("./sqlite3");
+var sqlite = require("./sqlite");
 
 posix.unlink('test.db');
 
-var db = sqlite3.openDatabaseSync('test.db');
+var db = sqlite.openDatabaseSync('test.db');
 
 db.query("CREATE TABLE egg (a,y,e)");
 db.query("INSERT INTO egg (a) VALUES (1)", function () {

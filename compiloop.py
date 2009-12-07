@@ -5,7 +5,7 @@
 import os, sys, time
 
 #filenames = sys.argv[1:]
-filenames = ["sqlite3_bindings.cc", "wscript", "sqlite3.js", "test.js"]
+filenames = ["sqlite3_bindings.cc", "wscript", "sqlite.js", "test.js"]
 mdname = "README"
 
 def handler():
