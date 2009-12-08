@@ -163,6 +163,8 @@ protected:
       rosult->Set(String::New("insertId"), 
                   Integer::New(sqlite3_last_insert_rowid(*db)));
       result->Set(Integer::New(result->Length()), rosult);
+
+      sqlite3_finalize(stmt);
     }
       
     result->Set(String::New("rowsAffected"), Integer::New(changes)); 

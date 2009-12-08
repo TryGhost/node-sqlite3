@@ -22,7 +22,8 @@ while True:
 
   m = os.stat(mdname).st_mtime
   if mdtime != m:
-    os.system("Markdown.pl < %s > %s.html" % (mdname, mdname))
+    os.system("Markdown.pl -v < %s > %s.html" % (mdname, mdname))
+    print mdname + ".html updated"
     mdtime = m
 
   time.sleep(1)

@@ -33,7 +33,6 @@ exports.openDatabaseSync = function (name, version, displayName,
 }
 
 
-// This is an extension of the HTML5 API
 DatabaseSync.prototype.query = function (sql, bindings, callback) {
   // TODO: error callback
   if (typeof(bindings) == "function") {
@@ -41,9 +40,20 @@ DatabaseSync.prototype.query = function (sql, bindings, callback) {
     bindings = callback;
     callback = tmp;
   }
-  var result = this.performQuery(sql, bindings);
+  var all = this.performQuery(sql, bindings);
+  if (all.length == 0) {
+    var result = None;
+  } else {
+    for (var i = 0; i < all.length; ++i) {
+      var resultset = all[i];
+      resultset.all = all;
+      resultset.rows = {item: function (index) { return resultset[index]; },
+                        length: resultset.length};
+    }
+    var result = all[0];
+  }
   if (typeof(callback) == "function") {
-    callback.apply(result, result);
+    callback.apply(result, all);
   }
   return result;
 }
@@ -56,10 +66,13 @@ DatabaseSync.prototype.query = function (sql, bindings, callback) {
 
 function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
   this.database = db;
+
   this.executeSql = function(sqlStatement, arguments, callback) {
-    var result = db.query(sqlStatement, arguments, callback)[0];
-    result.rows = {item: function (index) { return result[index]; },
-                   length: result.length};
+    var result = db.query(sqlStatement, arguments);
+    if (callback) {
+      var tx = this;
+      callback.apply(result, [tx].concat(result.all));
+    }
     return result;
   }
 
@@ -72,7 +85,8 @@ function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
 
 DatabaseSync.prototype.transaction = function (txCallback, errCallback, 
                                                successCallback) {
-  var tx = new SQLTransactionSync(this, txCallback, errCallback, successCallback);
+  var tx = new SQLTransactionSync(this, txCallback, 
+                                  errCallback, successCallback);
 }
 
 // TODO: readTransaction()

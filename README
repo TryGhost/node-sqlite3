@@ -6,7 +6,8 @@ Functions
 
 ### `sqlite.openDatabaseSync(filename)`
 
-Returns an object representing the sqlite3 database with given filename.
+Returns a `DatabaseSync` object representing the sqlite3 database with
+given filename.
 
 ### `DatabaseSync.query(sql [,bindings] [,callback])`
 
@@ -16,20 +17,22 @@ case `bindings` should be an array of values, or the form `$VVV` where
 `VVV` is an identifier, in which canse `bindings` should be an object
 with keys matching the variable names.
 
-If provided the `callback` is called with an argument for each
-statement in the query. Each argument is an array of objects mapping
-column names to values. 
+If provided the `callback` is called with a number of arguments equal
+to the number of statements in the query. Each argument is a result
+set which is an array of objects mapping column names to values.
 
-Each callback argument `rows` also has these properties 
+Each result set `r` also has these accessors: 
 
-- **`rows.count`** is the number of rows affected by the query. 
-- **`rows.rowid`** is the `ROWID` of the last `INSERT` command
+- **`r.rowsAffected`** is the number of rows affected by an `UPDATE` query. 
+- **`r.insertId`** is the `ROWID` of the an `INSERT` query
+- **`r.rows.length`** (also just `r.length`) is the number of rows in a
+       `SELECT` result
+- **`r.all`** is an array of result sets, one for each statement in the
+       query 
 
-Within the callback, `this` is an array of all such arrays, with a
-`count` property giving the total number of rows affected. That same
-`this` object is returned by `query`.
+The return value is the first (often only) result set.
 
-### `sqlite.Db.close()`
+### `DatabaseSync.close()`
 
 Closes the database.
 
