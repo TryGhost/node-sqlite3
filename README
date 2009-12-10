@@ -1,77 +1,10 @@
-Node.js bindings for sqlite3
-============================
+SQLite3 bindings for Node.js
+=============================
 
-Functions
--------------------
+The code and some documentation live at http://code.google.com/p/node-sqlite/
 
-### `sqlite.openDatabaseSync(filename)`
+The two files required to use these bindings are sqlite.js and
+build/default/sqlite3_bindings.node. Put this directory in your
+NODE_PATH or copy those two files where you need them.
 
-Returns a `DatabaseSync` object representing the sqlite3 database with
-given filename.
-
-### `DatabaseSync.query(sql [,bindings] [,callback])`
-
-Executes the query `sql`, with variables bound from `bindings`. The
-variables can take the form `?` or `?NNN` where `NNN` is a number, in which
-case `bindings` should be an array of values, or the form `$VVV` where
-`VVV` is an identifier, in which canse `bindings` should be an object
-with keys matching the variable names.
-
-If provided the `callback` is called with a number of arguments equal
-to the number of statements in the query. Each argument is a result
-set which is an array of objects mapping column names to values.
-
-Each result set `r` also has these accessors: 
-
-- **`r.rowsAffected`** is the number of rows affected by an `UPDATE` query. 
-- **`r.insertId`** is the `ROWID` of the an `INSERT` query
-- **`r.rows.length`** (also just `r.length`) is the number of rows in a
-       `SELECT` result
-- **`r.all`** is an array of result sets, one for each statement in the
-       query 
-
-The return value is the first (often only) result set.
-
-### `DatabaseSync.close()`
-
-Closes the database.
-
-
-Example
---------
-
-    var sqlite = require("./sqlite");
-    var db = new sqlite.Db("test.db");
-    db.query("INSERT INTO test (column) VALUES ($value)", {$value: 10});
-    db.query("SELECT column FROM test WHERE rowid<?", [5], function (rows) {
-      process.assert(rows[0].column == 10);
-    });
-    db.query("UPDATE test SET column=20; SELECT column FROM test;",
-             function (update, select) {
-               assert(update.count == 1);
-               assert(select[0].column == 20);
-             });
-    db.close();
-
-
-Install
--------
-
-Install node. http://nodejs.org/
-
-`$` **`hg clone https://node-sqlite.googlecode.com/hg/ node-sqlite`**
-
-`$` **`cd node_sqlite`**
-
-`$` **`node-waf configure`**
-
-
-Build
------
-
-`$` **`node-waf build`**
-
-Test
-----
-
-`$` **`node test.js`**
+(c) 2009 Eric Fredricksen - Permissive license terms at top of sqlite.js
