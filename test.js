@@ -79,6 +79,10 @@ db.transaction(function(tx) {
   });
 });
 
+var na = db.query("");
+asserteq(na, null);
+  
+
 db.close();
 sys.puts("OK\n");
              

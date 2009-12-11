@@ -42,7 +42,7 @@ DatabaseSync.prototype.query = function (sql, bindings, callback) {
   }
   var all = this.performQuery(sql, bindings);
   if (all.length == 0) {
-    var result = None;
+    var result = null;
   } else {
     for (var i = 0; i < all.length; ++i) {
       var resultset = all[i];
