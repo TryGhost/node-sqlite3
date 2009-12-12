@@ -27,19 +27,26 @@ public:
   static void Init(v8::Handle<Object> target) 
   {
     HandleScope scope;
-
+    
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
-
+    
     t->Inherit(EventEmitter::constructor_template);
     t->InstanceTemplate()->SetInternalFieldCount(1);
-  
-    NODE_SET_PROTOTYPE_METHOD(t, "performQuery", PerformQuery);
+    
+    NODE_SET_PROTOTYPE_METHOD(t, "changes", Changes);
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-  
+    NODE_SET_PROTOTYPE_METHOD(t, "lastInsertRowid", LastInsertRowid);
+    NODE_SET_PROTOTYPE_METHOD(t, "prepare", Prepare);
+    
     target->Set(v8::String::NewSymbol("DatabaseSync"), t->GetFunction());
+
+    Statement::Init(target);
   }
 
 protected:
+  Sqlite3Db() : db_(NULL) {
+  }
+
   Sqlite3Db(sqlite3* db) : db_(db) {
   }
 
@@ -49,11 +56,10 @@ protected:
 
   sqlite3* db_;
 
-  operator sqlite3* () { return db_; }
+  operator sqlite3* () const { return db_; }
 
 protected:
-  static Handle<Value> New(const Arguments& args)
-  {
+  static Handle<Value> New(const Arguments& args) {
     HandleScope scope;
 
     if (args.Length() == 0 || !args[0]->IsString()) {
@@ -74,155 +80,208 @@ protected:
   }
 
 
-  static Handle<Value> PerformQuery(const Arguments& args)
-  {
-    HandleScope scope;
-    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+#define CHECK(rc) { if ((rc) != SQLITE_OK) \
+      return ThrowException(Exception::Error(String::New( \
+                                                   sqlite3_errmsg(*db)))); }
 
-    if (args.Length() == 0 || !args[0]->IsString()) {
-      return ThrowException(Exception::TypeError(
-            String::New("First argument must be a string")));
-    }
+#define SCHECK(rc) { if ((rc) != SQLITE_OK) \
+      return ThrowException(Exception::Error(String::New( \
+                              sqlite3_errmsg(sqlite3_db_handle(*stmt))))); }
 
-    String::Utf8Value usql(args[0]->ToString());
-    const char* sql(*usql);
+#define REQ_ARGS(N)                                                     \
+  if (args.Length() < (N))                                              \
+    return ThrowException(Exception::TypeError(                         \
+                             String::New("Expected " #N "arguments"))); \
 
-    int param = 0;
-
-    Local<Array> all(Array::New(0));
-
-    for(;;) {
-
-      sqlite3_stmt* stmt;
-      int rc = sqlite3_prepare_v2(*db, sql, -1, &stmt, &sql);
-      if (rc != SQLITE_OK) {
-        return ThrowException(Exception::Error(String::New(
-                                              sqlite3_errmsg(*db))));
-      }
-      if (!stmt) break;
-      Statement statement(stmt);
- 
-      if (args.Length() > 1) {
-        if (args[1]->IsArray()) {
-          Local<Array> a(Array::Cast(*args[1]));
-          int start = param;
-          int stop = start + sqlite3_bind_parameter_count(statement);
-          for (; param < a->Length() && param < stop; ++param) {
-            Local<Value> v = a->Get(Integer::New(param));
-            statement.Bind(param+1-start, v);
-          }
-        } else if (args[1]->IsObject()) {
-          Local<Array> keys(args[1]->ToObject()->GetPropertyNames());
-          for (int k = 0; k < keys->Length(); ++k) {
-            Local<Value> key(keys->Get(Integer::New(k)));
-            statement.Bind(key, args[1]->ToObject()->Get(key));
-          }
-        } else if (args[1]->IsUndefined() || args[1]->IsNull()) {
-          // That's okay
-        } else {
-          return ThrowException(Exception::TypeError(
-                         String::New("Second argument invalid")));
-        }
-      }
-      
-      Local<Array> rows(Array::New(0));
-
-      for (int r = 0; ; ++r) {
-        int rc = sqlite3_step(statement);
-        if (rc == SQLITE_ROW) {
-          Local<Object> row = Object::New();
-          for (int c = 0; c < sqlite3_column_count(statement); ++c) {
-            Handle<Value> value;
-            switch (sqlite3_column_type(statement, c)) {
-            case SQLITE_INTEGER:
-              value = Integer::New(sqlite3_column_int(statement, c));
-              break;
-            case SQLITE_FLOAT: 
-              value = Number::New(sqlite3_column_double(statement, c));
-              break;
-            case SQLITE_TEXT: 
-              value = String::New((const char*) sqlite3_column_text(statement, c));
-              break;
-            case SQLITE_NULL:
-            default: // We don't handle any other types just now
-              value = Undefined();
-              break;
-            }
-            row->Set(String::NewSymbol(sqlite3_column_name(statement, c)), 
-                     value);
-          }
-          rows->Set(Integer::New(rows->Length()), row);
-        } else if (rc == SQLITE_DONE) {
-          break;
-        } else {
-          return ThrowException(Exception::Error(
-                                      v8::String::New(sqlite3_errmsg(*db))));
-        }
-      }
-
-      rows->Set(String::New("rowsAffected"), 
-                Integer::New(sqlite3_changes(*db)));
-      rows->Set(String::New("insertId"), 
-                Integer::New(sqlite3_last_insert_rowid(*db)));
-
-      all->Set(Integer::New(all->Length()), rows);
-
-      sqlite3_finalize(stmt);
-    }
-      
-    return all;
+#define REQ_STR_ARG(I, VAR)                                             \
+  if (args.Length() <= (I) || !args[I]->IsString())                     \
+    return ThrowException(Exception::TypeError(                         \
+                  String::New("Argument " #I " must be a string"))); \
+  String::Utf8Value VAR(args[I]->ToString());
+                                                      
+#define REQ_EXT_ARG(I, VAR)                                             \
+  if (args.Length() <= (I) || !args[I]->IsExternal())                   \
+    return ThrowException(Exception::TypeError(                         \
+                              String::New("Argument " #I " invalid"))); \
+  Local<External> VAR = Local<External>::Cast(args[I]);
+                                                      
+#define OPT_INT_ARG(I, VAR, DEFAULT)                                    \
+  int VAR;                                                              \
+  if (args.Length() <= (I)) {                                           \
+    VAR = (DEFAULT);                                                    \
+  } else if (args[I]->IsInt32()) {                                      \
+    VAR = args[I]->Int32Value();                                        \
+  } else {                                                              \
+    return ThrowException(Exception::TypeError(                         \
+              String::New("Argument " #I " must be an integer"))); \
   }
 
 
-  static Handle<Value> Close (const Arguments& args)
-  {
-    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+  static Handle<Value> Changes(const Arguments& args) {
     HandleScope scope;
-    db->Close();
+    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+    Local<Number> result = Integer::New(sqlite3_changes(*db));
+    return scope.Close(result);
+  }
+
+  static Handle<Value> Close(const Arguments& args) {
+    HandleScope scope;
+    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+    CHECK(sqlite3_close(*db));
+    db->db_ = NULL;
     return Undefined();
   }
 
-  void Close() {
-    sqlite3_close(db_);
-    db_ = NULL;
-    Detach();
+  static Handle<Value> LastInsertRowid(const Arguments& args) {
+    HandleScope scope;
+    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+    Local<Number> result = Integer::New(sqlite3_last_insert_rowid(*db));
+    return scope.Close(result);
+  }
+
+  static Handle<Value> Open(const Arguments& args) {
+    HandleScope scope;
+    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+    REQ_STR_ARG(0, filename);
+    Close(args);  // ignores args anyway, except This
+    CHECK(sqlite3_open(*filename, &db->db_));
+    return args.This();
+  }
+
+  static Handle<Value> Prepare(const Arguments& args) {
+    HandleScope scope;
+    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+    REQ_STR_ARG(0, sql);
+    sqlite3_stmt* stmt = NULL;
+    const char* tail = NULL;
+    CHECK(sqlite3_prepare_v2(*db, *sql, -1, &stmt, &tail));
+    if (!stmt) 
+      return Null();
+    Handle<Value> arg = External::New(stmt);
+    Local<Object> statement(Statement::constructor_template->
+                            GetFunction()->NewInstance(1, &arg));
+    if (tail)
+      statement->Set(String::New("tail"), String::New(tail));
+    return scope.Close(statement);
   }
 
   class Statement : public EventEmitter
   {
   public:
+    static Persistent<FunctionTemplate> constructor_template;
+
+    static void Init(v8::Handle<Object> target) {
+      HandleScope scope;
+      
+      Local<FunctionTemplate> t = FunctionTemplate::New(New);
+      constructor_template = Persistent<FunctionTemplate>::New(t);
+      
+      t->Inherit(EventEmitter::constructor_template);
+      t->InstanceTemplate()->SetInternalFieldCount(1);
+      
+      NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
+      NODE_SET_PROTOTYPE_METHOD(t, "finalize", Finalize);
+      NODE_SET_PROTOTYPE_METHOD(t, "bindParameterCount", BindParameterCount);
+      NODE_SET_PROTOTYPE_METHOD(t, "step", Step);
+      
+      //target->Set(v8::String::NewSymbol("SQLStatement"), t->GetFunction());
+    }
+
+    static Handle<Value> New(const Arguments& args) {
+      HandleScope scope;
+      int I = 0;
+      REQ_EXT_ARG(0, stmt);
+      (new Statement((sqlite3_stmt*)stmt->Value()))->Wrap(args.This());
+      return args.This();
+    }
+
+  protected:
     Statement(sqlite3_stmt* stmt) : stmt_(stmt) {}
     
-    ~Statement() { sqlite3_finalize(stmt_); }
+    ~Statement() { if (stmt_) sqlite3_finalize(stmt_); }
     
-    operator sqlite3_stmt* () { return stmt_; }
+    sqlite3_stmt* stmt_;
+
+    operator sqlite3_stmt* () const { return stmt_; }
     
-    bool Bind(int index, Handle<Value> value) 
-    {
+    static Handle<Value> Bind(const Arguments& args) {
       HandleScope scope;
-      if (value->IsInt32()) {
-        sqlite3_bind_int(stmt_, index, value->Int32Value());
-      } else if (value->IsNumber()) {
-        sqlite3_bind_double(stmt_, index, value->NumberValue());
-      } else if (value->IsString()) {
-        String::Utf8Value text(value);
-        sqlite3_bind_text(stmt_, index, *text, text.length(), SQLITE_TRANSIENT);
+      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+
+      REQ_ARGS(2);
+      if (!args[0]->IsString() && !args[0]->IsInt32())
+        return ThrowException(Exception::TypeError(                     
+               String::New("First argument must be a string or integer")));
+      int index = args[0]->IsString() ?
+        sqlite3_bind_parameter_index(*stmt, *String::Utf8Value(args[0])) :
+        args[0]->Int32Value();
+
+      if (args[1]->IsInt32()) {
+        sqlite3_bind_int(*stmt, index, args[1]->Int32Value());
+      } else if (args[1]->IsNumber()) {
+        sqlite3_bind_double(*stmt, index, args[1]->NumberValue());
+      } else if (args[1]->IsString()) {
+        String::Utf8Value text(args[1]);
+        sqlite3_bind_text(*stmt, index, *text, text.length(),SQLITE_TRANSIENT);
       } else {
-        return false;
+        return ThrowException(Exception::TypeError(                     
+               String::New("Unable to bind value of this type")));
       }
-      return true;
+      return args.This();
     }
     
-    bool Bind(Handle<Value> key, Handle<Value> value) {
+    static Handle<Value> Finalize(const Arguments& args) {
       HandleScope scope;
-      String::Utf8Value skey(key);
-      //string x = ":" + key
-      int index = sqlite3_bind_parameter_index(stmt_, *skey);
-      Bind(index, value);
+      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+      SCHECK(sqlite3_finalize(*stmt));
+      stmt->stmt_ = NULL;
+      return Undefined();
     }
-    
-    Handle<Object> Cast()
-    {
+
+    static Handle<Value> BindParameterCount(const Arguments& args) {
+      HandleScope scope;
+      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+      Local<Number> result = Integer::New(sqlite3_bind_parameter_count(*stmt));
+      return scope.Close(result);
+    }
+
+    static Handle<Value> Step(const Arguments& args) {
+      HandleScope scope;
+      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+      int rc = sqlite3_step(*stmt);
+      if (rc == SQLITE_ROW) {
+        Local<Object> row = Object::New();
+        for (int c = 0; c < sqlite3_column_count(*stmt); ++c) {
+          Handle<Value> value;
+          switch (sqlite3_column_type(*stmt, c)) {
+          case SQLITE_INTEGER:
+            value = Integer::New(sqlite3_column_int(*stmt, c));
+            break;
+          case SQLITE_FLOAT: 
+            value = Number::New(sqlite3_column_double(*stmt, c));
+            break;
+          case SQLITE_TEXT: 
+            value = String::New((const char*) sqlite3_column_text(*stmt, c));
+            break;
+          case SQLITE_NULL:
+          default: // We don't handle any other types just now
+            value = Undefined();
+            break;
+          }
+          row->Set(String::NewSymbol(sqlite3_column_name(*stmt, c)), 
+                   value);
+        }
+        return row;
+      } else if (rc == SQLITE_DONE) {
+        return Null();
+      } else {
+        return ThrowException(Exception::Error(String::New(             
+                            sqlite3_errmsg(sqlite3_db_handle(*stmt))))); 
+      }
+    }
+
+    /*
+    Handle<Object> Cast() {
       HandleScope scope;
       Local<ObjectTemplate> t(ObjectTemplate::New());
       t->SetInternalFieldCount(1);
@@ -231,13 +290,15 @@ protected:
       //Wrap(thus);
       return thus;
     }
+    */
     
-  protected:
-    sqlite3_stmt* stmt_;
   };
 
   
 };
+
+
+Persistent<FunctionTemplate> Sqlite3Db::Statement::constructor_template;
 
 
 extern "C" void init (v8::Handle<Object> target)

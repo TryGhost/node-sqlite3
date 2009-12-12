@@ -33,6 +33,51 @@ exports.openDatabaseSync = function (name, version, displayName,
 }
 
 
+DatabaseSync.prototype.performQuery = function(sql, bindings,
+                                               callback, errback) {
+  var all = [];
+  
+  // bindings param is optional
+  if (typeof bindings == 'function') {
+    errback = callback;
+    callback = bindings;
+    bindings = null;
+  }
+
+  var stmt = this.prepare(sql);
+  while(stmt) {
+    if (bindings) {
+      if (Object.prototype.toString.call(bindings) === "[object Array]") {
+        for (var i = 0; i < stmt.bindParameterCount(); ++i)
+          stmt.bind(i+1, bindings.shift());
+      } else {
+        for (var key in bindings) 
+          if (bindings.hasOwnProperty(key))
+            stmt.bind(key, bindings[key]);
+      }
+    }
+      
+    var rows = [];
+
+    while (true) {
+      var row = stmt.step();
+      if (!row) break;
+      rows.push(row);
+    }
+
+    rows.rowsAffected = this.changes();
+    rows.insertId = this.lastInsertRowid();
+
+    all.push(rows);
+
+    stmt.finalize();
+    stmt = this.prepare(stmt.tail);
+  }
+      
+  return all;
+}
+
+
 DatabaseSync.prototype.query = function (sql, bindings, callback) {
   // TODO: error callback
   if (typeof(bindings) == "function") {
