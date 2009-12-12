@@ -116,6 +116,9 @@ protected:
               String::New("Argument " #I " must be an integer"))); \
   }
 
+  //
+  // JS DatabaseSync bindings
+  //
 
   static Handle<Value> Changes(const Arguments& args) {
     HandleScope scope;
@@ -139,12 +142,40 @@ protected:
     return scope.Close(result);
   }
 
+  static int CommitHook(void* v_this) {
+    HandleScope scope;
+    Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
+    db->Emit("commit", 0, NULL); 
+    // TODO: allow change in return value to convert to rollback...somehow
+    return 0;
+  }
+
+  static void RollbackHook(void* v_this) {
+    HandleScope scope;
+    Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
+    db->Emit("rollback", 0, NULL); 
+  }
+
+  static void UpdateHook(void* v_this, int operation, const char* database, 
+                         const char* table, sqlite_int64 rowid) {
+    HandleScope scope;
+    Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
+    Local<Value> args[] = { Int32::New(operation), String::New(database),
+                            String::New(table), Number::New(rowid) };
+    db->Emit("update", 4, args);
+  }
+
   static Handle<Value> Open(const Arguments& args) {
     HandleScope scope;
     Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
     REQ_STR_ARG(0, filename);
     Close(args);  // ignores args anyway, except This
     CHECK(sqlite3_open(*filename, &db->db_));
+
+    sqlite3_commit_hook(*db, CommitHook, db);
+    sqlite3_rollback_hook(*db, RollbackHook, db);
+    sqlite3_update_hook(*db, UpdateHook, db);
+
     return args.This();
   }
 
@@ -203,6 +234,10 @@ protected:
     sqlite3_stmt* stmt_;
 
     operator sqlite3_stmt* () const { return stmt_; }
+
+    //
+    // JS Bindings
+    //
     
     static Handle<Value> Bind(const Arguments& args) {
       HandleScope scope;
