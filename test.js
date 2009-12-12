@@ -82,6 +82,12 @@ db.transaction(function(tx) {
 var na = db.query("");
 asserteq(na, null);
   
+try {
+  na = db.query("CRAPPY QUERY THAT DOESN'T WORK");
+  asserteq("Apples", "Oranges");
+} catch (e) {
+}
+
 
 db.close();
 sys.puts("OK\n");

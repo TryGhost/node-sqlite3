@@ -87,15 +87,18 @@ protected:
     String::Utf8Value usql(args[0]->ToString());
     const char* sql(*usql);
 
-    int changes = 0;
     int param = 0;
 
-    Local<Array> result(Array::New(0));
+    Local<Array> all(Array::New(0));
 
     for(;;) {
 
       sqlite3_stmt* stmt;
       int rc = sqlite3_prepare_v2(*db, sql, -1, &stmt, &sql);
+      if (rc != SQLITE_OK) {
+        return ThrowException(Exception::Error(String::New(
+                                              sqlite3_errmsg(*db))));
+      }
       if (!stmt) break;
       Statement statement(stmt);
  
@@ -122,7 +125,7 @@ protected:
         }
       }
       
-      Local<Array> rosult(Array::New(0));
+      Local<Array> rows(Array::New(0));
 
       for (int r = 0; ; ++r) {
         int rc = sqlite3_step(statement);
@@ -148,7 +151,7 @@ protected:
             row->Set(String::NewSymbol(sqlite3_column_name(statement, c)), 
                      value);
           }
-          rosult->Set(Integer::New(rosult->Length()), row);
+          rows->Set(Integer::New(rows->Length()), row);
         } else if (rc == SQLITE_DONE) {
           break;
         } else {
@@ -157,20 +160,17 @@ protected:
         }
       }
 
-      changes += sqlite3_changes(*db);
+      rows->Set(String::New("rowsAffected"), 
+                Integer::New(sqlite3_changes(*db)));
+      rows->Set(String::New("insertId"), 
+                Integer::New(sqlite3_last_insert_rowid(*db)));
 
-      rosult->Set(String::New("rowsAffected"), Integer::New(sqlite3_changes(*db)));
-      rosult->Set(String::New("insertId"), 
-                  Integer::New(sqlite3_last_insert_rowid(*db)));
-      result->Set(Integer::New(result->Length()), rosult);
+      all->Set(Integer::New(all->Length()), rows);
 
       sqlite3_finalize(stmt);
     }
       
-    result->Set(String::New("rowsAffected"), Integer::New(changes)); 
-    result->Set(String::New("insertId"), 
-                Integer::New(sqlite3_last_insert_rowid(*db)));
-    return result;
+    return all;
   }
 
 
