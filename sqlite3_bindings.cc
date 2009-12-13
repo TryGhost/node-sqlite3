@@ -21,77 +21,19 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 using namespace v8;
 using namespace node;
 
-class Sqlite3Db : public EventEmitter
-{
-public:
-  static void Init(v8::Handle<Object> target) 
-  {
-    HandleScope scope;
-    
-    Local<FunctionTemplate> t = FunctionTemplate::New(New);
-    
-    t->Inherit(EventEmitter::constructor_template);
-    t->InstanceTemplate()->SetInternalFieldCount(1);
-    
-    NODE_SET_PROTOTYPE_METHOD(t, "changes", Changes);
-    NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-    NODE_SET_PROTOTYPE_METHOD(t, "lastInsertRowid", LastInsertRowid);
-    NODE_SET_PROTOTYPE_METHOD(t, "prepare", Prepare);
-    
-    target->Set(v8::String::NewSymbol("DatabaseSync"), t->GetFunction());
 
-    Statement::Init(target);
-  }
-
-protected:
-  Sqlite3Db() : db_(NULL) {
-  }
-
-  Sqlite3Db(sqlite3* db) : db_(db) {
-  }
-
-  ~Sqlite3Db() {
-    sqlite3_close(db_);
-  }
-
-  sqlite3* db_;
-
-  operator sqlite3* () const { return db_; }
-
-protected:
-  static Handle<Value> New(const Arguments& args) {
-    HandleScope scope;
-
-    if (args.Length() == 0 || !args[0]->IsString()) {
-      return ThrowException(Exception::TypeError(
-            String::New("First argument must be a string")));
-    }
-
-    String::Utf8Value filename(args[0]->ToString());
-    sqlite3* db;
-    int rc = sqlite3_open(*filename, &db);
-    if (rc) {
-      Local<String> err = v8::String::New(sqlite3_errmsg(db));
-      sqlite3_close(db);
-      return ThrowException(Exception::Error(err));
-    }
-    (new Sqlite3Db(db))->Wrap(args.This());
-    return args.This();
-  }
-
-
-#define CHECK(rc) { if ((rc) != SQLITE_OK) \
-      return ThrowException(Exception::Error(String::New( \
-                                                   sqlite3_errmsg(*db)))); }
+#define CHECK(rc) { if ((rc) != SQLITE_OK)                              \
+      return ThrowException(Exception::Error(String::New(               \
+                                             sqlite3_errmsg(*db)))); }
 
 #define SCHECK(rc) { if ((rc) != SQLITE_OK) \
-      return ThrowException(Exception::Error(String::New( \
-                              sqlite3_errmsg(sqlite3_db_handle(*stmt))))); }
+      return ThrowException(Exception::Error(String::New(               \
+                        sqlite3_errmsg(sqlite3_db_handle(*stmt))))); }
 
 #define REQ_ARGS(N)                                                     \
   if (args.Length() < (N))                                              \
     return ThrowException(Exception::TypeError(                         \
-                             String::New("Expected " #N "arguments"))); \
+                             String::New("Expected " #N "arguments"))); 
 
 #define REQ_STR_ARG(I, VAR)                                             \
   if (args.Length() <= (I) || !args[I]->IsString())                     \
@@ -115,6 +57,61 @@ protected:
     return ThrowException(Exception::TypeError(                         \
               String::New("Argument " #I " must be an integer"))); \
   }
+
+
+
+class Sqlite3Db : public EventEmitter
+{
+public:
+  static void Init(v8::Handle<Object> target) 
+  {
+    HandleScope scope;
+    
+    Local<FunctionTemplate> t = FunctionTemplate::New(New);
+    
+    t->Inherit(EventEmitter::constructor_template);
+    t->InstanceTemplate()->SetInternalFieldCount(1);
+    
+    NODE_SET_PROTOTYPE_METHOD(t, "changes", Changes);
+    NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
+    NODE_SET_PROTOTYPE_METHOD(t, "lastInsertRowid", LastInsertRowid);
+    NODE_SET_PROTOTYPE_METHOD(t, "prepare", Prepare);
+    
+    target->Set(v8::String::NewSymbol("DatabaseSync"), t->GetFunction());
+
+    Statement::Init(target);
+  }
+
+protected:
+  Sqlite3Db(sqlite3* db) : db_(db) {
+  }
+
+  ~Sqlite3Db() {
+    sqlite3_close(db_);
+  }
+
+  sqlite3* db_;
+
+  operator sqlite3* () const { return db_; }
+
+protected:
+  static Handle<Value> New(const Arguments& args) {
+    HandleScope scope;
+    REQ_STR_ARG(0, filename);
+    sqlite3* db;
+    int rc = sqlite3_open(*filename, &db);
+    if (rc) return ThrowException(Exception::Error(                     
+                                     String::New("Error opening database")));
+    Sqlite3Db* dbo = new Sqlite3Db(db);
+    dbo->Wrap(args.This());
+
+    sqlite3_commit_hook(db, CommitHook, dbo);
+    sqlite3_rollback_hook(db, RollbackHook, dbo);
+    sqlite3_update_hook(db, UpdateHook, dbo);
+
+    return args.This();
+  }
+
 
   //
   // JS DatabaseSync bindings
@@ -165,6 +162,7 @@ protected:
     db->Emit("update", 4, args);
   }
 
+  /*
   static Handle<Value> Open(const Arguments& args) {
     HandleScope scope;
     Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
@@ -178,6 +176,7 @@ protected:
 
     return args.This();
   }
+  */
 
   static Handle<Value> Prepare(const Arguments& args) {
     HandleScope scope;

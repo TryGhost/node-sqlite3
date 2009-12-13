@@ -16,6 +16,26 @@ function asserteq(v1, v2) {
 
 var db = sqlite.openDatabaseSync('test.db');
 
+
+var commits = 0;
+var rollbacks = 0;
+var updates = 0;
+db.addListener("commit", function () {
+  commits++;
+});
+
+db.addListener("rollback", function () {
+  sys.puts("ROLLBACK");
+  rollbacks++;
+});
+
+db.addListener("update", function (operation, database, table, rowid) {
+  //sys.puts("update " + operation + " " + database + "." + table + " " + rowid);
+  updates++;
+});
+
+
+
 db.query("CREATE TABLE egg (a,y,e)");
 db.query("INSERT INTO egg (a) VALUES (1)", function () {
   process.assert(this.insertId == 1);
@@ -44,7 +64,6 @@ db.query("SELECT e FROM egg WHERE a = ?", [5], function (es) {
   asserteq(es[0].e, es.rows.item(0).e);
   asserteq(es[0].e, "E");
 });
-
 
 
 db.transaction(function(tx) {
@@ -87,6 +106,11 @@ try {
   asserteq("Apples", "Oranges");
 } catch (e) {
 }
+
+
+sys.puts("commits: " + commits);
+sys.puts("rollbacks: " + rollbacks);
+sys.puts("updates: " + updates);
 
 
 db.close();

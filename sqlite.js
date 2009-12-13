@@ -24,6 +24,10 @@ process.mixin(exports, bindings);
 
 // Conform somewhat to http://dev.w3.org/html5/webdatabase/#sql
 
+exports.SQLITE_DELETE = 9;
+exports.SQLITE_INSERT = 18;
+exports.SQLITE_UPDATE = 23;
+
 
 exports.openDatabaseSync = function (name, version, displayName, 
                                      estimatedSize, creationCallback) {
