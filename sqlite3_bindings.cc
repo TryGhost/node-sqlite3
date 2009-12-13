@@ -187,9 +187,9 @@ protected:
     CHECK(sqlite3_prepare_v2(*db, *sql, -1, &stmt, &tail));
     if (!stmt) 
       return Null();
-    Handle<Value> arg = External::New(stmt);
-    Local<Object> statement(Statement::constructor_template->
-                            GetFunction()->NewInstance(1, &arg));
+    Local<Value> arg = External::New(stmt);
+    Persistent<Object> statement(Statement::constructor_template->
+                                 GetFunction()->NewInstance(1, &arg));
     if (tail)
       statement->Set(String::New("tail"), String::New(tail));
     return scope.Close(statement);
@@ -210,8 +210,10 @@ protected:
       t->InstanceTemplate()->SetInternalFieldCount(1);
       
       NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
+      NODE_SET_PROTOTYPE_METHOD(t, "clearBindings", ClearBindings);
       NODE_SET_PROTOTYPE_METHOD(t, "finalize", Finalize);
       NODE_SET_PROTOTYPE_METHOD(t, "bindParameterCount", BindParameterCount);
+      NODE_SET_PROTOTYPE_METHOD(t, "reset", Reset);
       NODE_SET_PROTOTYPE_METHOD(t, "step", Step);
       
       //target->Set(v8::String::NewSymbol("SQLStatement"), t->GetFunction());
@@ -235,7 +237,7 @@ protected:
     operator sqlite3_stmt* () const { return stmt_; }
 
     //
-    // JS Bindings
+    // JS prepared statement bindings
     //
     
     static Handle<Value> Bind(const Arguments& args) {
@@ -264,19 +266,34 @@ protected:
       return args.This();
     }
     
-    static Handle<Value> Finalize(const Arguments& args) {
-      HandleScope scope;
-      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
-      SCHECK(sqlite3_finalize(*stmt));
-      stmt->stmt_ = NULL;
-      return Undefined();
-    }
-
     static Handle<Value> BindParameterCount(const Arguments& args) {
       HandleScope scope;
       Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
       Local<Number> result = Integer::New(sqlite3_bind_parameter_count(*stmt));
       return scope.Close(result);
+    }
+
+    static Handle<Value> ClearBindings(const Arguments& args) {
+      HandleScope scope;
+      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+      SCHECK(sqlite3_clear_bindings(*stmt));
+      return Undefined();
+    }
+
+    static Handle<Value> Finalize(const Arguments& args) {
+      HandleScope scope;
+      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+      SCHECK(sqlite3_finalize(*stmt));
+      stmt->stmt_ = NULL;
+      //args.This().MakeWeak();
+      return Undefined();
+    }
+
+    static Handle<Value> Reset(const Arguments& args) {
+      HandleScope scope;
+      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+      SCHECK(sqlite3_reset(*stmt));
+      return Undefined();
     }
 
     static Handle<Value> Step(const Arguments& args) {
