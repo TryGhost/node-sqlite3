@@ -9,6 +9,7 @@
   pre { margin-left: 2ex; padding: 1ex; background: #eee; }
   p { font-size: 12pt; }
   body { margin: 2em; background-color: #fff; color: black }
+  h1,h2,h3,h4 { font-family: helvetica }
 </style>
 </head>
 
