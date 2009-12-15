@@ -16,7 +16,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 // TODO: async
 
-var sys = require("sys");
 var bindings = require("./sqlite3_bindings");
 process.mixin(GLOBAL, bindings);
 process.mixin(exports, bindings);
@@ -31,23 +30,23 @@ exports.SQLITE_UPDATE = 23;
 
 exports.openDatabaseSync = function (name, version, displayName, 
                                      estimatedSize, creationCallback) {
+  // 2nd-4th parameters are ignored
   var db = new DatabaseSync(name);
   if (creationCallback) creationCallback(db);
   return db;
 }
 
 
-DatabaseSync.prototype.performQuery = function(sql, bindings,
-                                               callback, errback) {
-  var all = [];
-  
-  // bindings param is optional
-  if (typeof bindings == 'function') {
-    errback = callback;
-    callback = bindings;
-    bindings = null;
+DatabaseSync.prototype.query = function (sql, bindings, callback) {
+  // TODO: error callback
+  if (typeof(bindings) == "function") {
+    var tmp = bindings;
+    bindings = callback;
+    callback = tmp;
   }
 
+  var all = [];
+  
   var stmt = this.prepare(sql);
   while(stmt) {
     if (bindings) {
@@ -77,19 +76,7 @@ DatabaseSync.prototype.performQuery = function(sql, bindings,
     stmt.finalize();
     stmt = this.prepare(stmt.tail);
   }
-      
-  return all;
-}
 
-
-DatabaseSync.prototype.query = function (sql, bindings, callback) {
-  // TODO: error callback
-  if (typeof(bindings) == "function") {
-    var tmp = bindings;
-    bindings = callback;
-    callback = tmp;
-  }
-  var all = this.performQuery(sql, bindings);
   if (all.length == 0) {
     var result = null;
   } else {
@@ -116,7 +103,10 @@ DatabaseSync.prototype.query = function (sql, bindings, callback) {
 function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
   this.database = db;
 
+  this.rolledBack = false;
+
   this.executeSql = function(sqlStatement, arguments, callback) {
+    if (this.rolledBack) return;
     var result = db.query(sqlStatement, arguments);
     if (callback) {
       var tx = this;
@@ -125,10 +115,21 @@ function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
     return result;
   }
 
-  db.query("BEGIN TRANSACTION");
+  var that = this;
+  function unroll() {
+    that.rolledBack = true;
+  }
+    
+  db.addListener("rollback", unroll);
+
+  this.executeSql("BEGIN TRANSACTION");
   txCallback(this);
-  db.query("COMMIT");
-  if (successCallback) successCallback(this);
+  this.executeSql("COMMIT");
+
+  db.removeListener("rollback", unroll);
+
+  if (!this.rolledBack && successCallback) 
+    successCallback(this);
 }
 
 

@@ -259,6 +259,8 @@ protected:
       } else if (args[1]->IsString()) {
         String::Utf8Value text(args[1]);
         sqlite3_bind_text(*stmt, index, *text, text.length(),SQLITE_TRANSIENT);
+      } else if (args[1]->IsNull() || args[1]->IsUndefined()) {
+        sqlite3_bind_null(*stmt, index);
       } else {
         return ThrowException(Exception::TypeError(                     
                String::New("Unable to bind value of this type")));

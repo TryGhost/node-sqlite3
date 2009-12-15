@@ -49,8 +49,8 @@ db.query("INSERT INTO egg (a,y,e) VALUES (?,?,?)", [1.01, 10e20, -0.0]);
 db.query("INSERT INTO egg (a,y,e) VALUES (?,?,?)", ["one", "two", "three"]);
 
 db.query("SELECT * FROM egg", function (rows) {
-    sys.puts(JSON.stringify(rows));
-  });
+  sys.puts(JSON.stringify(rows));
+});
 
 db.query("SELECT a FROM egg; SELECT y FROM egg", function (as, ys) {
   sys.puts("As " + JSON.stringify(as));
@@ -80,16 +80,15 @@ db.transaction(function(tx) {
 
 
 db.query("CREATE TABLE test (x,y,z)", function () {
-    db.query("INSERT INTO test (x,y) VALUES (?,?)", [5,10]);
-    db.query("INSERT INTO test (x,y,z) VALUES ($x, $y, $z)", {$x:1, $y:2, $z:3});
-  });
+  db.query("INSERT INTO test (x,y) VALUES (?,?)", [5,10]);
+  db.query("INSERT INTO test (x,y,z) VALUES ($x,$y,$z)", {$x:1, $y:2, $z:3});
+});
 
 db.query("SELECT * FROM test WHERE rowid < ?;", [1]);
 
 db.query("UPDATE test SET y = 10;", [], function () {
-    sys.puts(this.rowsAffected + " rows affected");
-    process.assert(this.rowsAffected == 2);
-  });
+  process.assert(this.rowsAffected == 2);
+});
 
 db.transaction(function(tx) {
   tx.executeSql("SELECT * FROM test WHERE x = ?", [1], function (tx,records) {
@@ -107,10 +106,16 @@ try {
 } catch (e) {
 }
 
+db.transaction(function(tx){
+  for (var i = 0; i < 3; ++i)
+    tx.executeSql("INSERT INTO test VALUES (6,6,6)");
+  tx.executeSql("ROLLBACK");
+});
 
-sys.puts("commits: " + commits);
-sys.puts("rollbacks: " + rollbacks);
-sys.puts("updates: " + updates);
+
+asserteq(commits, 14);
+asserteq(rollbacks, 1);
+asserteq(updates, 19);
 
 
 db.close();
