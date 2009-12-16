@@ -1,10 +1,11 @@
 SQLite3 bindings for Node.js
 =============================
 
-The code and some documentation live at http://code.google.com/p/node-sqlite/
+Documentation lives at http://grumdrig.com/node-sqlite/
+The code lives at http://code.google.com/p/node-sqlite/
 
 The two files required to use these bindings are sqlite.js and
 build/default/sqlite3_bindings.node. Put this directory in your
 NODE_PATH or copy those two files where you need them.
 
-(c) 2009 Eric Fredricksen - Permissive license terms at top of sqlite.js
+(c) 2009 Eric Fredricksen - See permissive license terms at top of sqlite.js

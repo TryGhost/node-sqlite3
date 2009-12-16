@@ -2,35 +2,13 @@
 /*
 //!! To be processed by docbyex.py (or run by Node)
 
-<head>
-<title>node-sqlite</title>
-<style>
-  pre, code { color: #060; font-size: 11pt; }
-  pre { margin-left: 2ex; padding: 1ex; background: #eee; }
-  p { font-size: 12pt; }
-  body { margin: 2em; background-color: #fff; color: black }
-  h1,h2,h3,h4 { font-family: helvetica }
-</style>
-</head>
-
-<body>
-<h1>node-sqlite</h1>
-
-<a href=http://sqlite.org/>SQLite</a> bindings for 
-<a //href=http://nodejs.org/>Node</a>.
-
-The semantics conform somewhat to those of the <a
-href=http://dev.w3.org/html5/webdatabase/#sql>HTML5 Web SQL API</a>,
-plus some extensions. Also, only the synchronous API is implemented;
-the asynchronous API is a big TODO item.
-
 <h2>Documentation by Example</h2>
 */
 
 // Import the library and open a database. (Only syncronous database
 // access is implemented at this time.)
 
-var sqlite = require("./sqlite");
+var sqlite = require("../sqlite");
 var db = sqlite.openDatabaseSync("example.db");
 
 // Perform an SQL query on the database:
@@ -131,7 +109,7 @@ stmt.bind(2, "lonely");
 stmt.step();  // Insert (null, "lonely", null)
 stmt.finalize();
 
-// Close it!
+// Close it:
 
 db.close();
 
