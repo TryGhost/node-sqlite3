@@ -8,4 +8,6 @@ The two files required to use these bindings are sqlite.js and
 build/default/sqlite3_bindings.node. Put this directory in your
 NODE_PATH or copy those two files where you need them.
 
+Tested with Node version 0.1.18
+
 (c) 2010 Eric Fredricksen - See permissive license terms at top of sqlite.js

@@ -57,7 +57,7 @@ The code lives at <a href=http://code.google.com/p/node-sqlite/>http://code.goog
 <li>Get the code
 
 <pre>
-$ hg clone https://node-sqlite.googlecode.com/hg/ node-sqlite
+$ git clone git://github.com/grumdrig/node-sqlite.git
 </pre>
 
 <li>Configure and build

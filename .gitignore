@@ -1,6 +1,4 @@
-syntax:glob
-
-build
+build/
 README.html
 .svn
 test.db
