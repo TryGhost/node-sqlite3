@@ -142,7 +142,7 @@ protected:
   static int CommitHook(void* v_this) {
     HandleScope scope;
     Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
-    db->Emit("commit", 0, NULL); 
+    db->Emit(String::New("commit"), 0, NULL); 
     // TODO: allow change in return value to convert to rollback...somehow
     return 0;
   }
@@ -150,7 +150,7 @@ protected:
   static void RollbackHook(void* v_this) {
     HandleScope scope;
     Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
-    db->Emit("rollback", 0, NULL); 
+    db->Emit(String::New("rollback"), 0, NULL); 
   }
 
   static void UpdateHook(void* v_this, int operation, const char* database, 
@@ -159,7 +159,7 @@ protected:
     Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
     Local<Value> args[] = { Int32::New(operation), String::New(database),
                             String::New(table), Number::New(rowid) };
-    db->Emit("update", 4, args);
+    db->Emit(String::New("update"), 4, args);
   }
 
   /*
