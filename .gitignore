@@ -1,6 +1,5 @@
 build/
 README.html
-.svn
 test.db
 .lock-wscript
-
+speedtest.db
