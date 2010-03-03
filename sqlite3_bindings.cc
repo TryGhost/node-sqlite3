@@ -123,7 +123,6 @@ protected:
   struct open_request {
     Persistent<Function> cb;
     Sqlite3Db *dbo;
-    sqlite3 **dbptr;
     char filename[1];
   };
 
@@ -133,7 +132,6 @@ protected:
     struct open_request *open_req = (struct open_request *)(req->data);
 
     printf("EIO_AfterOpen; rc = %d\n", (int) req->result);
-
     printf("result was %d\n", (int) req->result);
 
     Local<Value> argv[1];
@@ -161,11 +159,12 @@ protected:
     struct open_request *open_req = (struct open_request *)(req->data);
     printf("The filename was %s\n", open_req->filename);
 
-    printf("before assn %p\n", *(open_req->dbptr));
-    int rc = sqlite3_open(open_req->filename, open_req->dbptr);
-    printf("after addr %p\n", *(open_req->dbptr));
+    sqlite3 **dbptr = open_req->dbo->GetDBPtr();
+    printf("before assn %p\n", *dbptr);
+    int rc = sqlite3_open(open_req->filename, dbptr);
+    printf("after assn %p\n", *dbptr);
 
-    sqlite3 *db = *(open_req->dbptr);
+    sqlite3 *db = *dbptr;
     sqlite3_commit_hook(db, CommitHook, open_req->dbo);
     sqlite3_rollback_hook(db, RollbackHook, open_req->dbo);
     sqlite3_update_hook(db, UpdateHook, open_req->dbo);
@@ -202,8 +201,6 @@ protected:
       return ThrowException(Exception::Error(
         String::New("Could not allocate enough memory")));
     }
-
-    open_req->dbptr = dbo->GetDBPtr();
 
     strcpy(open_req->filename, *filename);
     open_req->cb = Persistent<Function>::New(cb);

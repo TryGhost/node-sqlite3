@@ -14,10 +14,6 @@ throws(function () {
   db.open("my.db");
 });
 
-throws(function () {
-  db.open("/tmp");
-});
-
 db.open("my.db", function (err) {
   puts(inspect(arguments));
   if (err) {
