@@ -143,7 +143,7 @@ protected:
 
     TryCatch try_catch;
 
-    open_req->cb->Call(Context::GetCurrent()->Global(), err && 1, argv);
+    open_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
 
     if (try_catch.HasCaught()) {
       FatalException(try_catch);
@@ -151,6 +151,8 @@ protected:
 
     open_req->cb.Dispose();
     free(open_req);
+
+    open_req->dbo->Unref();
 
     return 0;
   }
@@ -162,13 +164,15 @@ protected:
     sqlite3 **dbptr = open_req->dbo->GetDBPtr();
     printf("before assn %p\n", *dbptr);
     int rc = sqlite3_open(open_req->filename, dbptr);
+    req->result = rc;
     printf("after assn %p\n", *dbptr);
 
+    // XXX try pulling the sqlite5 handle lazily (ie don't store in struct)
     sqlite3 *db = *dbptr;
     sqlite3_commit_hook(db, CommitHook, open_req->dbo);
     sqlite3_rollback_hook(db, RollbackHook, open_req->dbo);
     sqlite3_update_hook(db, UpdateHook, open_req->dbo);
-    req->result = rc;
+
     return 0;
   }
 
@@ -194,7 +198,7 @@ protected:
     printf("way before addr %p\n", ((sqlite3*) *dbo));
 
     struct open_request *open_req = (struct open_request *)
-        calloc(1, sizeof(struct open_request));
+        calloc(1, sizeof(struct open_request) + filename.length());
 
     if (!open_req) {
       V8::LowMemoryNotification();
@@ -218,6 +222,7 @@ protected:
   // JS DatabaseSync bindings
   //
 
+  // TODO: libeio'fy
   static Handle<Value> Changes(const Arguments& args) {
     HandleScope scope;
     Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
@@ -225,6 +230,7 @@ protected:
     return scope.Close(result);
   }
 
+  // TODO: libeio'fy
   static Handle<Value> Close(const Arguments& args) {
     HandleScope scope;
     Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
@@ -233,12 +239,15 @@ protected:
     return Undefined();
   }
 
+  // TODO: libeio'fy
   static Handle<Value> LastInsertRowid(const Arguments& args) {
     HandleScope scope;
     Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
     Local<Number> result = Integer::New(sqlite3_last_insert_rowid(*db));
     return scope.Close(result);
   }
+
+  // Hooks
 
   static int CommitHook(void* v_this) {
     HandleScope scope;
@@ -263,37 +272,99 @@ protected:
     db->Emit(String::New("update"), 4, args);
   }
 
-  /*
-  static Handle<Value> Open(const Arguments& args) {
+  struct prepare_request {
+    Persistent<Function> cb;
+    Sqlite3Db *dbo;
+    sqlite3_stmt* stmt;
+    const char* tail;
+    char sql[1];
+  };
+
+  static int EIO_AfterPrepare(eio_req *req) {
+    ev_unref(EV_DEFAULT_UC);
+    struct prepare_request *prep_req = (struct prepare_request *)(req->data);
     HandleScope scope;
-    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
-    REQ_STR_ARG(0, filename);
-    Close(args);  // ignores args anyway, except This
-    CHECK(sqlite3_open(*filename, &db->db_));
 
-    sqlite3_commit_hook(*db, CommitHook, db);
-    sqlite3_rollback_hook(*db, RollbackHook, db);
-    sqlite3_update_hook(*db, UpdateHook, db);
+    printf("EIO_AfterPrepare %s\n", prep_req->sql);
 
-    return args.This();
+    Local<Value> argv[2];
+    bool err = false;
+    if (req->result) {
+      err = true;
+      argv[0] = Exception::Error(String::New("Error preparing statement"));
+    }
+    else {
+      Local<Value> arg = External::New(prep_req->stmt);
+      Persistent<Object> statement(Statement::constructor_template->
+                                   GetFunction()->NewInstance(1, &arg));
+      if (prep_req->tail)
+        statement->Set(String::New("tail"), String::New(prep_req->tail));
+
+      argv[1] = Local<Value>::New(Undefined());
+      argv[0] = scope.Close(statement);
+    }
+
+    TryCatch try_catch;
+
+    prep_req->cb->Call(Context::GetCurrent()->Global(), (err ? 1 : 2), argv);
+
+    if (try_catch.HasCaught()) {
+      FatalException(try_catch);
+    }
+
+    prep_req->cb.Dispose();
+    free(prep_req);
+
+    prep_req->dbo->Unref();
+
+    return 0;
   }
-  */
+
+  static int EIO_Prepare(eio_req *req) {
+    struct prepare_request *prep_req = (struct prepare_request *)(req->data);
+    printf("EIO_Prepare %s\n",
+        static_cast<struct prepare_request*>(req->data)->sql);
+
+    prep_req->stmt = NULL;
+    prep_req->tail = NULL;
+    sqlite3* db = *(prep_req->dbo);
+
+    int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
+                &(prep_req->stmt), &(prep_req->tail));
+    printf("sqlite3_prepare called\n");
+
+    rc = rc || !prep_req->stmt;
+    req->result = rc;
+
+    return 0;
+  }
 
   static Handle<Value> Prepare(const Arguments& args) {
     HandleScope scope;
-    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
     REQ_STR_ARG(0, sql);
-    sqlite3_stmt* stmt = NULL;
-    const char* tail = NULL;
-    CHECK(sqlite3_prepare_v2(*db, *sql, -1, &stmt, &tail));
-    if (!stmt)
-      return Null();
-    Local<Value> arg = External::New(stmt);
-    Persistent<Object> statement(Statement::constructor_template->
-                                 GetFunction()->NewInstance(1, &arg));
-    if (tail)
-      statement->Set(String::New("tail"), String::New(tail));
-    return scope.Close(statement);
+    REQ_FUN_ARG(1, cb);
+
+    Sqlite3Db* dbo = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+
+    struct prepare_request *prep_req = (struct prepare_request *)
+        calloc(1, sizeof(struct prepare_request) + sql.length());
+
+    if (!prep_req) {
+      V8::LowMemoryNotification();
+      return ThrowException(Exception::Error(
+        String::New("Could not allocate enough memory")));
+    }
+
+    strcpy(prep_req->sql, *sql);
+    prep_req->cb = Persistent<Function>::New(cb);
+    prep_req->dbo = dbo;
+
+    eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, prep_req);
+
+    ev_ref(EV_DEFAULT_UC);
+    dbo->Ref();
+
+    return Undefined();
   }
 
   class Statement : public EventEmitter {
