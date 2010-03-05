@@ -131,9 +131,6 @@ protected:
     HandleScope scope;
     struct open_request *open_req = (struct open_request *)(req->data);
 
-    printf("EIO_AfterOpen; rc = %d\n", (int) req->result);
-    printf("result was %d\n", (int) req->result);
-
     Local<Value> argv[1];
     bool err = false;
     if (req->result) {
@@ -159,15 +156,11 @@ protected:
 
   static int EIO_Open(eio_req *req) {
     struct open_request *open_req = (struct open_request *)(req->data);
-    printf("The filename was %s\n", open_req->filename);
 
     sqlite3 **dbptr = open_req->dbo->GetDBPtr();
-    printf("before assn %p\n", *dbptr);
     int rc = sqlite3_open(open_req->filename, dbptr);
     req->result = rc;
-    printf("after assn %p\n", *dbptr);
 
-    // XXX try pulling the sqlite5 handle lazily (ie don't store in struct)
     sqlite3 *db = *dbptr;
     sqlite3_commit_hook(db, CommitHook, open_req->dbo);
     sqlite3_rollback_hook(db, RollbackHook, open_req->dbo);
@@ -182,8 +175,6 @@ protected:
     Sqlite3Db* dbo = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
     sqlite3 *db = *dbo;
 
-    printf("print it %p\n", db);
-
     return Undefined();
   }
 
@@ -194,8 +185,6 @@ protected:
     REQ_FUN_ARG(1, cb);
 
     Sqlite3Db* dbo = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
-
-    printf("way before addr %p\n", ((sqlite3*) *dbo));
 
     struct open_request *open_req = (struct open_request *)
         calloc(1, sizeof(struct open_request) + filename.length());
@@ -285,8 +274,6 @@ protected:
     struct prepare_request *prep_req = (struct prepare_request *)(req->data);
     HandleScope scope;
 
-    printf("EIO_AfterPrepare %s\n", prep_req->sql);
-
     Local<Value> argv[2];
     bool err = false;
     if (req->result) {
@@ -300,8 +287,8 @@ protected:
       if (prep_req->tail)
         statement->Set(String::New("tail"), String::New(prep_req->tail));
 
-      argv[1] = Local<Value>::New(Undefined());
-      argv[0] = scope.Close(statement);
+      argv[0] = Local<Value>::New(Undefined());
+      argv[1] = scope.Close(statement);
     }
 
     TryCatch try_catch;
@@ -322,8 +309,6 @@ protected:
 
   static int EIO_Prepare(eio_req *req) {
     struct prepare_request *prep_req = (struct prepare_request *)(req->data);
-    printf("EIO_Prepare %s\n",
-        static_cast<struct prepare_request*>(req->data)->sql);
 
     prep_req->stmt = NULL;
     prep_req->tail = NULL;
@@ -331,7 +316,8 @@ protected:
 
     int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
                 &(prep_req->stmt), &(prep_req->tail));
-    printf("sqlite3_prepare called\n");
+
+    printf("rc = %d, stmt = %p\n", rc, prep_req->stmt);
 
     rc = rc || !prep_req->stmt;
     req->result = rc;
@@ -412,7 +398,121 @@ protected:
     // JS prepared statement bindings
     //
 
+    // indicate the key type (integer index or name string)
+    enum BindKeyType {
+      KEY_INT,
+      KEY_STRING
+    };
+
+    // indicate the parameter type
+    enum BindValueType {
+      VALUE_INT,
+      VALUE_NUMBER,
+      VALUE_TEXT,
+      VALUE_UNDEFINED
+    };
+
+    struct bind_request {
+      Persistent<Function> cb;
+      Statement *sto;
+
+      enum BindKeyType   key_type;
+      enum BindValueType value_type;
+
+      void *key;   // pointer to char * or int
+      void *value; // pointer to char * or int
+    };
+
+    static int EIO_AfterBind(eio_req *req) {
+      ev_unref(EV_DEFAULT_UC);
+
+      HandleScope scope;
+      struct bind_request *bind_req = (struct bind_request *)(req->data);
+      printf("EIO_AfterBind %d\n", (int) req->result);
+
+      Statement *sto = bind_req->sto;
+
+      TryCatch try_catch;
+
+      bind_req->cb->Call(Context::GetCurrent()->Global(), 0, NULL);
+
+      if (try_catch.HasCaught()) {
+        FatalException(try_catch);
+      }
+
+      bind_req->cb.Dispose();
+      sto->Unref();
+
+      free(bind_req->key);
+      free(bind_req->value);
+      free(bind_req);
+
+      return 0;
+    }
+
+    static int EIO_Bind(eio_req *req) {
+      struct bind_request *bind_req = (struct bind_request *)(req->data);
+
+      printf("EIO_Bind\n");
+      if (bind_req->key_type == KEY_INT) {
+        enum BindKeyType key_type = bind_req->key_type;
+        int *index = (int*)(bind_req->key);
+        int *value = (int*)(bind_req->value);
+        printf("index was %d value was %d\n", *index, *value);
+      }
+      printf("outside\n");
+
+      req->result = 420;
+
+      return 0;
+    }
+
     static Handle<Value> Bind(const Arguments& args) {
+      HandleScope scope;
+      Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+
+      REQ_ARGS(2);
+      REQ_FUN_ARG(2, cb);
+
+      if (!args[0]->IsString() && !args[0]->IsInt32())
+        return ThrowException(Exception::TypeError(
+               String::New("First argument must be a string or integer")));
+
+      struct bind_request *bind_req = (struct bind_request *)
+          calloc(1, sizeof(struct bind_request));
+
+      if (args[0]->IsString()) {
+//         bind_req->key_type = STRING;
+//         Local<String> key = String::Utf8Value(args[0]);
+//         char *value = (char *) malloc();
+//         bind_rq->key_value = value;
+      }
+      else {
+        bind_req->key_type = KEY_INT;
+        int *index = (int *) malloc(sizeof(int));
+        *index = args[0]->Int32Value();
+        int *value = (int *) malloc(sizeof(int));
+        *value = args[1]->Int32Value();
+        printf("creating key/val %d %d\n", *index, *value);
+
+        // don't forget to `free` this
+        bind_req->key = index;
+        bind_req->value = value;
+      }
+      printf("done binding\n");
+
+      bind_req->cb = Persistent<Function>::New(cb);
+      bind_req->sto = sto;
+
+      eio_custom(EIO_Bind, EIO_PRI_DEFAULT, EIO_AfterBind, bind_req);
+
+      ev_ref(EV_DEFAULT_UC);
+      sto->Ref();
+
+      return Undefined();
+    }
+
+    static Handle<Value> Bind2(const Arguments& args) {
       HandleScope scope;
       Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
@@ -523,7 +623,6 @@ protected:
 
 
 Persistent<FunctionTemplate> Sqlite3Db::Statement::constructor_template;
-
 
 extern "C" void init (v8::Handle<Object> target) {
   Sqlite3Db::Init(target);

@@ -18,20 +18,26 @@ throws(function () {
   db.open("foo.db");
 });
 
-db.open("my.db", function (err) {
+db.open("mydatabase.db", function (err) {
   puts(inspect(arguments));
   if (err) {
     puts("There was an error");
     throw err;
   }
+
   puts("open callback");
   db.printIt();
 
-  db.prepare("SELECT foo FROM bar", function (statement) {
+  db.prepare("SELECT bar FROM foo; SELECT baz FROM foo;", function (error, statement) {
+    puts(inspect(arguments));
     puts("prepare callback");
-  });
-  db.prepare("SELECT foo FROM bar; SELECT bar FROM baz", function (statement) {
-    puts("prepare callback");
+    db.prepare("SELECT bar FROM foo WHERE bar = 'hello'", function (error, statement) {
+      puts("prepare callback");
+      statement.bind(0, 666, function () {
+        puts("bind callback");
+      });
+    });
   });
 });
+
 puts("done");
