@@ -29,12 +29,29 @@ db.open("mydatabase.db", function (err) {
   db.printIt();
 
   db.prepare("SELECT bar FROM foo; SELECT baz FROM foo;", function (error, statement) {
-    puts(inspect(arguments));
     puts("prepare callback");
-    db.prepare("SELECT bar FROM foo WHERE bar = 'hello'", function (error, statement) {
+    db.prepare("SELECT bar FROM foo WHERE bar = $x and (baz = $y or baz = $z)", function (error, statement) {
       puts("prepare callback");
+
       statement.bind(0, 666, function () {
         puts("bind callback");
+
+        statement.bind('$y', 666, function () {
+          puts("bind callback");
+
+          statement.bind('$x', "hello", function () {
+            puts("bind callback");
+
+            statement.bind('$z', 3.141, function () {
+              puts("bind callback");
+
+              statement.bind('$a', 'no such param', function (err) {
+                puts(inspect(arguments));
+                puts("bind callback");
+              });
+            });
+          });
+        });
       });
     });
   });

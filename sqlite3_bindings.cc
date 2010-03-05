@@ -319,7 +319,6 @@ protected:
 
     printf("rc = %d, stmt = %p\n", rc, prep_req->stmt);
 
-    rc = rc || !prep_req->stmt;
     req->result = rc;
 
     return 0;
@@ -407,9 +406,9 @@ protected:
     // indicate the parameter type
     enum BindValueType {
       VALUE_INT,
-      VALUE_NUMBER,
-      VALUE_TEXT,
-      VALUE_UNDEFINED
+      VALUE_DOUBLE,
+      VALUE_STRING,
+      VALUE_NULL
     };
 
     struct bind_request {
@@ -419,8 +418,9 @@ protected:
       enum BindKeyType   key_type;
       enum BindValueType value_type;
 
-      void *key;   // pointer to char * or int
-      void *value; // pointer to char * or int
+      void *key;   // char * | int *
+      void *value; // char * | int * | double * | 0
+      size_t value_size;
     };
 
     static int EIO_AfterBind(eio_req *req) {
@@ -432,9 +432,16 @@ protected:
 
       Statement *sto = bind_req->sto;
 
+      Local<Value> argv[1];
+      bool err = false;
+      if (req->result) {
+        err = true;
+        argv[0] = Exception::Error(String::New("Error binding parameter"));
+      }
+
       TryCatch try_catch;
 
-      bind_req->cb->Call(Context::GetCurrent()->Global(), 0, NULL);
+      bind_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
 
       if (try_catch.HasCaught()) {
         FatalException(try_catch);
@@ -452,17 +459,61 @@ protected:
 
     static int EIO_Bind(eio_req *req) {
       struct bind_request *bind_req = (struct bind_request *)(req->data);
+      Statement *sto = bind_req->sto;
 
-      printf("EIO_Bind\n");
-      if (bind_req->key_type == KEY_INT) {
-        enum BindKeyType key_type = bind_req->key_type;
-        int *index = (int*)(bind_req->key);
-        int *value = (int*)(bind_req->value);
-        printf("index was %d value was %d\n", *index, *value);
+      int index(0);
+      switch(bind_req->key_type) {
+        case KEY_INT:
+          index = *(int*)(bind_req->key);
+          printf("key was %d\n", index);
+          break;
+
+        case KEY_STRING:
+          printf("stmt = %p\n", (sqlite3_stmt*)*sto);
+          index = sqlite3_bind_parameter_index(
+                      *sto, (char*)(bind_req->key));
+          printf("key was %s (index %d)\n", (char*)(bind_req->key), index);
+          break;
+
+         default: {
+           // this SHOULD be unreachable
+         }
       }
-      printf("outside\n");
 
-      req->result = 420;
+      if (!index) {
+        req->result = SQLITE_MISMATCH;
+        return 0;
+      }
+
+      int rc = 0;
+      switch(bind_req->value_type) {
+        case VALUE_INT:
+          printf("value was an int\n");
+          rc = sqlite3_bind_int(*sto, index, *(int*)(bind_req->value));
+          break;
+        case VALUE_DOUBLE:
+          printf("value was a double %f\n", *(double*)(bind_req->value));
+          rc = sqlite3_bind_double(*sto, index, *(double*)(bind_req->value));
+          break;
+        case VALUE_STRING:
+          printf("value was a string, '%s'\n", (char*)(bind_req->value));
+          rc = sqlite3_bind_text(*sto, index, (char*)(bind_req->value),
+                            bind_req->value_size, SQLITE_TRANSIENT);
+          break;
+        case VALUE_NULL:
+          printf("value was NULL\n");
+          rc = sqlite3_bind_null(*sto, index);
+          break;
+
+        default: {
+          // should be unreachable
+        }
+      }
+
+      if (rc) {
+        req->result = rc;
+        return 0;
+      }
 
       return 0;
     }
@@ -481,25 +532,63 @@ protected:
       struct bind_request *bind_req = (struct bind_request *)
           calloc(1, sizeof(struct bind_request));
 
+      // setup key
       if (args[0]->IsString()) {
-//         bind_req->key_type = STRING;
-//         Local<String> key = String::Utf8Value(args[0]);
-//         char *value = (char *) malloc();
-//         bind_rq->key_value = value;
+         String::Utf8Value keyValue(args[0]);
+         bind_req->key_type = KEY_STRING;
+
+         char *key = (char *) calloc(1, keyValue.length() + 1);
+         bind_req->value_size = keyValue.length() + 1;
+         strcpy(key, *keyValue);
+
+         bind_req->key = key;
+         printf("created key %s\n", key);
       }
-      else {
+      else if (args[0]->IsInt32()) {
         bind_req->key_type = KEY_INT;
         int *index = (int *) malloc(sizeof(int));
         *index = args[0]->Int32Value();
-        int *value = (int *) malloc(sizeof(int));
-        *value = args[1]->Int32Value();
-        printf("creating key/val %d %d\n", *index, *value);
+        bind_req->value_size = sizeof(int);
 
         // don't forget to `free` this
         bind_req->key = index;
+        printf("created value %d\n", (int) *index);
+      }
+
+      // setup value
+      if (args[1]->IsInt32()) {
+        printf("setting up int\n");
+        bind_req->value_type = VALUE_INT;
+        int *value = (int *) malloc(sizeof(int));
+        *value = args[1]->Int32Value();
         bind_req->value = value;
       }
-      printf("done binding\n");
+      else if (args[1]->IsNumber()) {
+        printf("setting up double\n");
+        bind_req->value_type = VALUE_DOUBLE;
+        double *value = (double *) malloc(sizeof(double));
+        *value = args[1]->NumberValue();
+        bind_req->value = value;
+      }
+      else if (args[1]->IsString()) {
+        printf("setting up string\n");
+        bind_req->value_type = VALUE_STRING;
+        String::Utf8Value text(args[1]);
+        char *value = (char *) calloc(text.length()+1, sizeof(char*));
+        strcpy(value, *text);
+        bind_req->value = value;
+        bind_req->value_size = text.length()+1;
+      }
+      else if (args[1]->IsNull() || args[1]->IsUndefined()) {
+        printf("setting up null\n");
+        bind_req->value_type = VALUE_NULL;
+        bind_req->value = NULL;
+      }
+      else {
+        free(bind_req->key);
+        return ThrowException(Exception::TypeError(
+               String::New("Unable to bind value of this type")));
+      }
 
       bind_req->cb = Persistent<Function>::New(cb);
       bind_req->sto = sto;
