@@ -74,17 +74,16 @@ function test_simple() {
       puts('prepare callback');
       puts(inspect(arguments));
 
-  //     assertCallsFunction(statement.step, function (err, statement) {
-  //     });
       statement.step(function () {
         puts('query callback');
         puts(inspect(arguments));
-          statement.step(function () {
-            puts('query callback');
-            puts(inspect(arguments));
-
-            test_prepare();
+        statement.step(function () {
+          puts('query callback');
+          puts(inspect(arguments));
+          db.close(function () {
+            puts("closed database");
           });
+        });
       });
     });
   });

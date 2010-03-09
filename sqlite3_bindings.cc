@@ -80,9 +80,8 @@ public:
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
     NODE_SET_PROTOTYPE_METHOD(t, "open", Open);
-    NODE_SET_PROTOTYPE_METHOD(t, "printIt", PrintIt);
-    NODE_SET_PROTOTYPE_METHOD(t, "changes", Changes);
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
+    NODE_SET_PROTOTYPE_METHOD(t, "changes", Changes);
     NODE_SET_PROTOTYPE_METHOD(t, "lastInsertRowid", LastInsertRowid);
     NODE_SET_PROTOTYPE_METHOD(t, "prepare", Prepare);
 
@@ -169,15 +168,6 @@ protected:
     return 0;
   }
 
-  static Handle<Value> PrintIt(const Arguments& args) {
-    HandleScope scope;
-
-    Sqlite3Db* dbo = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
-    sqlite3 *db = *dbo;
-
-    return Undefined();
-  }
-
   static Handle<Value> Open(const Arguments& args) {
     HandleScope scope;
 
@@ -219,12 +209,73 @@ protected:
     return scope.Close(result);
   }
 
-  // TODO: libeio'fy
+  struct close_request {
+    Persistent<Function> cb;
+    Sqlite3Db *dbo;
+  };
+
+  static int EIO_AfterClose(eio_req *req) {
+    ev_unref(EV_DEFAULT_UC);
+
+    HandleScope scope;
+
+    struct close_request *close_req = (struct close_request *)(req->data);
+
+    Local<Value> argv[1];
+    bool err = false;
+    if (req->result) {
+      err = true;
+      argv[0] = Exception::Error(String::New("Error closing database"));
+    }
+
+    TryCatch try_catch;
+
+    close_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
+
+    if (try_catch.HasCaught()) {
+      FatalException(try_catch);
+    }
+
+    close_req->cb.Dispose();
+    free(close_req);
+
+    close_req->dbo->Unref();
+
+    return 0;
+  }
+
+  static int EIO_Close(eio_req *req) {
+    struct close_request *close_req = (struct close_request *)(req->data);
+    Sqlite3Db* dbo = close_req->dbo;
+    int rc = req->result = sqlite3_close(*dbo);
+    dbo->db_ = NULL;
+    return 0;
+  }
+
   static Handle<Value> Close(const Arguments& args) {
     HandleScope scope;
-    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
-    CHECK(sqlite3_close(*db));
-    db->db_ = NULL;
+
+    REQ_FUN_ARG(0, cb);
+
+    Sqlite3Db* dbo = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+
+    struct close_request *close_req = (struct close_request *)
+        calloc(1, sizeof(struct close_request));
+
+    if (!close_req) {
+      V8::LowMemoryNotification();
+      return ThrowException(Exception::Error(
+        String::New("Could not allocate enough memory")));
+    }
+
+    close_req->cb = Persistent<Function>::New(cb);
+    close_req->dbo = dbo;
+
+    eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, close_req);
+
+    ev_ref(EV_DEFAULT_UC);
+    dbo->Ref();
+
     return Undefined();
   }
 
