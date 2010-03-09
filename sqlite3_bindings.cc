@@ -1,5 +1,6 @@
 /*
 Copyright (c) 2009, Eric Fredricksen <e@fredricksen.net>
+Copyright (c) 2010, Orlando Vazquez <ovazquez@gmail.com>
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -67,11 +68,9 @@ using namespace node;
               String::New("Argument " #I " must be an integer")));      \
   }
 
-class Sqlite3Db : public EventEmitter
-{
+class Sqlite3Db : public EventEmitter {
 public:
-  static void Init(v8::Handle<Object> target)
-  {
+  static void Init(v8::Handle<Object> target) {
     HandleScope scope;
 
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
@@ -659,7 +658,174 @@ protected:
       return Undefined();
     }
 
+    struct step_request {
+      Persistent<Function> cb;
+      Statement *sto;
+
+      // Populate two arrays: one will be the types of columns for the result,
+      // the second will be the data for the row.
+      int  column_count;
+      int  *column_types;
+      void **column_data;
+    };
+
+    static int EIO_AfterStep(eio_req *req) {
+      HandleScope scope;
+      struct step_request *step_req = (struct step_request *)(req->data);
+      ev_unref(EV_DEFAULT_UC);
+      void **data = step_req->column_data;
+      printf("column_data addr was %p\n", ((void**)data)+1);
+
+      printf("there were %d columns\n", step_req->column_count);
+
+      for (int i = 0; i < step_req->column_count; i++) {
+        printf("value addr was %p\n", (step_req->column_data[i]));
+        switch(step_req->column_types[i]) {
+          case SQLITE_INTEGER:
+            printf("type was an integer\n");
+            printf("value was %d\n", *(int*)(step_req->column_data[i]));
+            break;
+          case SQLITE_TEXT:
+            printf("type was as string\n");
+            printf("value was %s\n", (char*)(step_req->column_data[i]));
+            break;
+          default:
+            printf("dunno\n");
+        }
+      }
+      step_req->cb.Dispose();
+      free(step_req);
+
+      step_req->sto->Unref();
+      return 0;
+    }
+
+
+    static int EIO_Step(eio_req *req) {
+      struct step_request *step_req = (struct step_request *)(req->data);
+      Statement *sto = step_req->sto;
+
+//       int rc = sqlite3_step(*stmt);
+//       if (rc == SQLITE_ROW) {
+//         Local<Object> row = Object::New();
+//         for (int c = 0; c < sqlite3_column_count(*stmt); ++c) {
+//           Handle<Value> value;
+//           switch (sqlite3_column_type(*stmt, c)) {
+//           case SQLITE_INTEGER:
+//             value = Integer::New(sqlite3_column_int(*stmt, c));
+//             break;
+//           case SQLITE_FLOAT:
+//             value = Number::New(sqlite3_column_double(*stmt, c));
+//             break;
+//           case SQLITE_TEXT:
+//             value = String::New((const char*) sqlite3_column_text(*stmt, c));
+//             break;
+//           case SQLITE_NULL:
+//           default: // We don't handle any other types just now
+//             value = Undefined();
+//             break;
+//           }
+//           row->Set(String::NewSymbol(sqlite3_column_name(*stmt, c)),
+//                    value);
+//         }
+//         return row;
+//       } else if (rc == SQLITE_DONE) {
+//         return Null();
+//       } else {
+//         return ThrowException(Exception::Error(String::New(
+//                             sqlite3_errmsg(sqlite3_db_handle(*stmt)))));
+//       }
+
+      sqlite3_stmt *stmt = *sto;
+      int rc = sqlite3_step(stmt);
+
+      printf("result of step %d\n", rc);
+      if (rc == SQLITE_ROW) {
+        // would be nice to not have to fetch and return the columns always
+        step_req->column_count = sqlite3_column_count(stmt);
+        step_req->column_types =
+          (int *) calloc(step_req->column_count, sizeof(int));
+        step_req->column_data =
+          (void **) calloc(step_req->column_count, sizeof(void *));
+
+        for (int i = 0; i < step_req->column_count; i++) {
+          int type = step_req->column_types[i] = sqlite3_column_type(stmt, i);
+
+          switch(type) {
+            case SQLITE_INTEGER: {
+                int *value = (int*) malloc(sizeof(int));
+                *value = sqlite3_column_int(stmt, i);
+                step_req->column_data[i] = value;
+                printf("serialized int %d\n", *(int*)(step_req->column_data[i]));
+              }
+              break;
+
+            case SQLITE_FLOAT: {
+                double *value = (double*) malloc(sizeof(double));
+                *value = sqlite3_column_double(stmt, i);
+                step_req->column_data[i] = value;
+                printf("serialized float\n");
+              }
+              break;
+
+            case SQLITE_TEXT: {
+                // It shouldn't be necessary to copy or free() this value,
+                // according to http://www.sqlite.org/c3ref/column_blob.html
+                // it will be reclaimed on the next step, reset, or finalize.
+                // I'm going to assume it's okay to keep this pointer around
+                // until it is used in `EIO_AfterStep`
+                char *value = (char *)sqlite3_column_text(stmt, i);
+                step_req->column_data[i] = value;
+                printf("serialized text %s\n", step_req->column_data[i]);
+              }
+              break;
+
+            default: {
+              // unsupported type
+              printf("default, not serialized\n");
+            }
+          }
+        }
+      }
+      else if (rc == SQLITE_DONE) {
+        // done case
+      }
+      else {
+        // error case
+      }
+
+      req->result = 0;
+      return 0;
+    }
+
     static Handle<Value> Step(const Arguments& args) {
+      HandleScope scope;
+
+      REQ_FUN_ARG(0, cb);
+
+      Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+
+      struct step_request *step_req = (struct step_request *)
+          calloc(1, sizeof(struct step_request));
+
+      if (!step_req) {
+        V8::LowMemoryNotification();
+        return ThrowException(Exception::Error(
+          String::New("Could not allocate enough memory")));
+      }
+
+      step_req->cb = Persistent<Function>::New(cb);
+      step_req->sto = sto;
+
+      eio_custom(EIO_Step, EIO_PRI_DEFAULT, EIO_AfterStep, step_req);
+
+      ev_ref(EV_DEFAULT_UC);
+      sto->Ref();
+
+      return Undefined();
+    }
+
+    static Handle<Value> Step2(const Arguments& args) {
       HandleScope scope;
       Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
       int rc = sqlite3_step(*stmt);
@@ -677,7 +843,7 @@ protected:
           case SQLITE_TEXT:
             value = String::New((const char*) sqlite3_column_text(*stmt, c));
             break;
-          case SQLITE_NULL:
+
           default: // We don't handle any other types just now
             value = Undefined();
             break;

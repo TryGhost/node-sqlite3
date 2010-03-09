@@ -18,41 +18,59 @@ throws(function () {
   db.open("foo.db");
 });
 
-db.open("mydatabase.db", function (err) {
-  puts(inspect(arguments));
-  if (err) {
-    puts("There was an error");
-    throw err;
-  }
+function testBinds() {
+  db.open("mydatabase.db", function (err) {
+    puts(inspect(arguments));
+    if (err) {
+      puts("There was an error");
+      throw err;
+    }
 
-  puts("open callback");
-  db.printIt();
+    puts("open callback");
+    db.printIt();
 
-  db.prepare("SELECT bar FROM foo; SELECT baz FROM foo;", function (error, statement) {
-    puts("prepare callback");
-    db.prepare("SELECT bar FROM foo WHERE bar = $x and (baz = $y or baz = $z)", function (error, statement) {
+    db.prepare("SELECT bar FROM foo; SELECT baz FROM foo;", function (error, statement) {
       puts("prepare callback");
+      db.prepare("SELECT bar FROM foo WHERE bar = $x and (baz = $y or baz = $z)", function (error, statement) {
+      });
 
-      statement.bind(0, 666, function () {
-        puts("bind callback");
+      db.prepare("SELECT bar FROM foo WHERE bar = $x and (baz = $y or baz = $z)", function (error, statement) {
+        puts("prepare callback");
 
-        statement.bind('$y', 666, function () {
+        statement.bind(0, 666, function () {
           puts("bind callback");
 
-          statement.bind('$x', "hello", function () {
+          statement.bind('$y', 666, function () {
             puts("bind callback");
 
-            statement.bind('$z', 3.141, function () {
+            statement.bind('$x', "hello", function () {
               puts("bind callback");
 
-              statement.bind('$a', 'no such param', function (err) {
-                puts(inspect(arguments));
+              statement.bind('$z', 3.141, function () {
                 puts("bind callback");
+
+  //               statement.bind('$a', 'no such param', function (err) {
+  //                 puts(inspect(arguments));
+                  puts("bind callback");
+                  statement.step(function () {
+                    puts("step callback");  
+                  });
+  //               });
               });
             });
           });
         });
       });
+    });
+  });
+}
+
+db.open("mydatabase.db", function () {
+  db.prepare("SELECT bar, baz FROM foo WHERE baz > 5", function (error, statement) {
+    puts(inspect(arguments));
+    
+    statement.step(function () {
+      puts('query callback');
     });
   });
 });
