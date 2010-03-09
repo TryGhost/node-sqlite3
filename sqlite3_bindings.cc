@@ -16,6 +16,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
 #include <string.h>
+#include <stdlib.h>
 
 #include <v8.h>
 #include <node.h>
@@ -316,8 +317,6 @@ protected:
     int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
                 &(prep_req->stmt), &(prep_req->tail));
 
-    printf("rc = %d, stmt = %p\n", rc, prep_req->stmt);
-
     req->result = rc;
 
     return 0;
@@ -427,7 +426,6 @@ protected:
 
       HandleScope scope;
       struct bind_request *bind_req = (struct bind_request *)(req->data);
-      printf("EIO_AfterBind %d\n", (int) req->result);
 
       Statement *sto = bind_req->sto;
 
@@ -468,7 +466,6 @@ protected:
           break;
 
         case KEY_STRING:
-          printf("stmt = %p\n", (sqlite3_stmt*)*sto);
           index = sqlite3_bind_parameter_index(
                       *sto, (char*)(bind_req->key));
           printf("key was %s (index %d)\n", (char*)(bind_req->key), index);
@@ -541,7 +538,7 @@ protected:
          strcpy(key, *keyValue);
 
          bind_req->key = key;
-         printf("created key %s\n", key);
+         printf("attempting to bind to key %s\n", key);
       }
       else if (args[0]->IsInt32()) {
         bind_req->key_type = KEY_INT;
@@ -551,26 +548,23 @@ protected:
 
         // don't forget to `free` this
         bind_req->key = index;
-        printf("created value %d\n", (int) *index);
+        printf("attempting to bind to index %d\n", (int) *index);
       }
 
       // setup value
       if (args[1]->IsInt32()) {
-        printf("setting up int\n");
         bind_req->value_type = VALUE_INT;
         int *value = (int *) malloc(sizeof(int));
         *value = args[1]->Int32Value();
         bind_req->value = value;
       }
       else if (args[1]->IsNumber()) {
-        printf("setting up double\n");
         bind_req->value_type = VALUE_DOUBLE;
         double *value = (double *) malloc(sizeof(double));
         *value = args[1]->NumberValue();
         bind_req->value = value;
       }
       else if (args[1]->IsString()) {
-        printf("setting up string\n");
         bind_req->value_type = VALUE_STRING;
         String::Utf8Value text(args[1]);
         char *value = (char *) calloc(text.length()+1, sizeof(char*));
@@ -579,7 +573,6 @@ protected:
         bind_req->value_size = text.length()+1;
       }
       else if (args[1]->IsNull() || args[1]->IsUndefined()) {
-        printf("setting up null\n");
         bind_req->value_type = VALUE_NULL;
         bind_req->value = NULL;
       }
@@ -600,34 +593,7 @@ protected:
       return Undefined();
     }
 
-    static Handle<Value> Bind2(const Arguments& args) {
-      HandleScope scope;
-      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
-
-      REQ_ARGS(2);
-      if (!args[0]->IsString() && !args[0]->IsInt32())
-        return ThrowException(Exception::TypeError(
-               String::New("First argument must be a string or integer")));
-      int index = args[0]->IsString() ?
-        sqlite3_bind_parameter_index(*stmt, *String::Utf8Value(args[0])) :
-        args[0]->Int32Value();
-
-      if (args[1]->IsInt32()) {
-        sqlite3_bind_int(*stmt, index, args[1]->Int32Value());
-      } else if (args[1]->IsNumber()) {
-        sqlite3_bind_double(*stmt, index, args[1]->NumberValue());
-      } else if (args[1]->IsString()) {
-        String::Utf8Value text(args[1]);
-        sqlite3_bind_text(*stmt, index, *text, text.length(),SQLITE_TRANSIENT);
-      } else if (args[1]->IsNull() || args[1]->IsUndefined()) {
-        sqlite3_bind_null(*stmt, index);
-      } else {
-        return ThrowException(Exception::TypeError(
-               String::New("Unable to bind value of this type")));
-      }
-      return args.This();
-    }
-
+    // XXX TODO
     static Handle<Value> BindParameterCount(const Arguments& args) {
       HandleScope scope;
       Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
@@ -670,30 +636,48 @@ protected:
     };
 
     static int EIO_AfterStep(eio_req *req) {
-      HandleScope scope;
-      struct step_request *step_req = (struct step_request *)(req->data);
       ev_unref(EV_DEFAULT_UC);
+
+      HandleScope scope;
+
+      struct step_request *step_req = (struct step_request *)(req->data);
       void **data = step_req->column_data;
-      printf("column_data addr was %p\n", ((void**)data)+1);
 
       printf("there were %d columns\n", step_req->column_count);
+      Local<Value> argv[2];
+      argv[0] = Local<Value>::New(Undefined());
+      Local<Array> row = Array::New(step_req->column_count);
 
       for (int i = 0; i < step_req->column_count; i++) {
-        printf("value addr was %p\n", (step_req->column_data[i]));
         switch(step_req->column_types[i]) {
           case SQLITE_INTEGER:
-            printf("type was an integer\n");
-            printf("value was %d\n", *(int*)(step_req->column_data[i]));
+            printf("integer value was %d\n", *(int*)(step_req->column_data[i]));
+            row->Set(Number::New(i), Int32::New(*(int*) (step_req->column_data[i])));
+            free((int*)(step_req->column_data[i]));
             break;
           case SQLITE_TEXT:
-            printf("type was as string\n");
-            printf("value was %s\n", (char*)(step_req->column_data[i]));
+            printf("string value was %s\n", (char *) (step_req->column_data[i]));
+            row->Set(Number::New(i),
+                String::New((char *) (step_req->column_data[i])));
+            // don't free this pointer, it's owned by sqlite3
             break;
           default:
-            printf("dunno\n");
+            printf("Unknown type error!\n");
         }
       }
+
+      argv[1] = row;
+      TryCatch try_catch;
+
+      step_req->cb->Call(Context::GetCurrent()->Global(), 2, argv);
+
+      if (try_catch.HasCaught()) {
+        FatalException(try_catch);
+      }
+
       step_req->cb.Dispose();
+      free(step_req->column_data);
+      free(step_req->column_types);
       free(step_req);
 
       step_req->sto->Unref();
@@ -741,7 +725,7 @@ protected:
 
       printf("result of step %d\n", rc);
       if (rc == SQLITE_ROW) {
-        // would be nice to not have to fetch and return the columns always
+        // would be nice to cache the column type data somewhere
         step_req->column_count = sqlite3_column_count(stmt);
         step_req->column_types =
           (int *) calloc(step_req->column_count, sizeof(int));
@@ -753,7 +737,7 @@ protected:
 
           switch(type) {
             case SQLITE_INTEGER: {
-                int *value = (int*) malloc(sizeof(int));
+                int *value = (int *) malloc(sizeof(int));
                 *value = sqlite3_column_int(stmt, i);
                 step_req->column_data[i] = value;
                 printf("serialized int %d\n", *(int*)(step_req->column_data[i]));
@@ -761,7 +745,7 @@ protected:
               break;
 
             case SQLITE_FLOAT: {
-                double *value = (double*) malloc(sizeof(double));
+                double *value = (double *) malloc(sizeof(double));
                 *value = sqlite3_column_double(stmt, i);
                 step_req->column_data[i] = value;
                 printf("serialized float\n");
@@ -774,7 +758,7 @@ protected:
                 // it will be reclaimed on the next step, reset, or finalize.
                 // I'm going to assume it's okay to keep this pointer around
                 // until it is used in `EIO_AfterStep`
-                char *value = (char *)sqlite3_column_text(stmt, i);
+                char *value = (char *) sqlite3_column_text(stmt, i);
                 step_req->column_data[i] = value;
                 printf("serialized text %s\n", step_req->column_data[i]);
               }
