@@ -80,8 +80,12 @@ function test_simple() {
         statement.step(function () {
           puts('query callback');
           puts(inspect(arguments));
-          db.close(function () {
-            puts("closed database");
+          statement.finalize(function () {
+            puts("finalize callback");
+            db.close(function () {
+              puts("closed database");
+              puts("close args " + inspect(arguments));
+            });
           });
         });
       });
@@ -89,4 +93,13 @@ function test_simple() {
   });
 }
 
+function test_close() {
+  db.open("mydatabase.db", function () {
+    db.close(function () {
+      puts("closed database");
+    });
+  });
+}
+
+// test_close();
 test_simple();

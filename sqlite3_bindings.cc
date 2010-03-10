@@ -94,7 +94,7 @@ protected:
   Sqlite3Db() : db_(NULL) { }
 
   ~Sqlite3Db() {
-    sqlite3_close(db_);
+    assert(db_ == NULL);
   }
 
   sqlite3* db_;
@@ -248,6 +248,7 @@ protected:
     struct close_request *close_req = (struct close_request *)(req->data);
     Sqlite3Db* dbo = close_req->dbo;
     int rc = req->result = sqlite3_close(*dbo);
+    printf("closed database, rc = %d\n", rc);
     dbo->db_ = NULL;
     return 0;
   }
@@ -659,12 +660,72 @@ protected:
       return Undefined();
     }
 
+    struct finalize_request {
+      Persistent<Function> cb;
+      Statement *sto;
+    };
+
+    static int EIO_AfterFinalize(eio_req *req) {
+      ev_unref(EV_DEFAULT_UC);
+      struct finalize_request *finalize_req = (struct finalize_request *)(req->data);
+
+      HandleScope scope;
+      TryCatch try_catch;
+      Local<Value> argv[1];
+
+      printf("rc for finalize = %d\n", (int)req->result);
+      argv[0] = Local<Value>::New(Undefined());
+
+      finalize_req->cb->Call(
+          Context::GetCurrent()->Global(), 1, argv);
+
+      if (try_catch.HasCaught()) {
+        FatalException(try_catch);
+      }
+
+      finalize_req->cb.Dispose();
+      free(finalize_req);
+
+      finalize_req->sto->Unref();
+      
+      return 0;
+    }
+
+    static int EIO_Finalize(eio_req *req) {
+      struct finalize_request *finalize_req =
+        (struct finalize_request *)(req->data);
+
+      Statement *sto = finalize_req->sto;
+      req->result = sqlite3_finalize(*sto);
+      sto->stmt_ = NULL;
+
+      return 0;
+    }
+
     static Handle<Value> Finalize(const Arguments& args) {
       HandleScope scope;
-      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
-      SCHECK(sqlite3_finalize(*stmt));
-      stmt->stmt_ = NULL;
-      //args.This().MakeWeak();
+
+      REQ_FUN_ARG(0, cb);
+
+      Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+
+      struct finalize_request *finalize_req = (struct finalize_request *)
+          calloc(1, sizeof(struct finalize_request));
+
+      if (!finalize_req) {
+        V8::LowMemoryNotification();
+        return ThrowException(Exception::Error(
+          String::New("Could not allocate enough memory")));
+      }
+
+      finalize_req->cb = Persistent<Function>::New(cb);
+      finalize_req->sto = sto;
+
+      eio_custom(EIO_Finalize, EIO_PRI_DEFAULT, EIO_AfterFinalize, finalize_req);
+
+      ev_ref(EV_DEFAULT_UC);
+      sto->Ref();
+
       return Undefined();
     }
 
@@ -763,37 +824,6 @@ protected:
       struct step_request *step_req = (struct step_request *)(req->data);
       Statement *sto = step_req->sto;
 
-//       int rc = sqlite3_step(*stmt);
-//       if (rc == SQLITE_ROW) {
-//         Local<Object> row = Object::New();
-//         for (int c = 0; c < sqlite3_column_count(*stmt); ++c) {
-//           Handle<Value> value;
-//           switch (sqlite3_column_type(*stmt, c)) {
-//           case SQLITE_INTEGER:
-//             value = Integer::New(sqlite3_column_int(*stmt, c));
-//             break;
-//           case SQLITE_FLOAT:
-//             value = Number::New(sqlite3_column_double(*stmt, c));
-//             break;
-//           case SQLITE_TEXT:
-//             value = String::New((const char*) sqlite3_column_text(*stmt, c));
-//             break;
-//           case SQLITE_NULL:
-//           default: // We don't handle any other types just now
-//             value = Undefined();
-//             break;
-//           }
-//           row->Set(String::NewSymbol(sqlite3_column_name(*stmt, c)),
-//                    value);
-//         }
-//         return row;
-//       } else if (rc == SQLITE_DONE) {
-//         return Null();
-//       } else {
-//         return ThrowException(Exception::Error(String::New(
-//                             sqlite3_errmsg(sqlite3_db_handle(*stmt)))));
-//       }
-
       sqlite3_stmt *stmt = *sto;
       int rc = req->result = sqlite3_step(stmt);
 
@@ -848,9 +878,6 @@ protected:
           }
         }
       }
-      else if (rc == SQLITE_DONE) {
-        // done case
-      }
       else {
         step_req->error_msg = (char *)
           sqlite3_errmsg(sqlite3_db_handle(*sto));
@@ -888,7 +915,6 @@ protected:
     }
   };
 };
-
 
 Persistent<FunctionTemplate> Sqlite3Db::Statement::constructor_template;
 
