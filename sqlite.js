@@ -1,5 +1,6 @@
 /*
 Copyright (c) 2009, Eric Fredricksen <e@fredricksen.net>
+Copyright (c) 2010, Orlando Vazquez <ovazquez@gmail.com>
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -14,31 +15,15 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-// TODO: async
+var sys = require("sys");
+var puts = sys.puts;
+var sqlite = require("./sqlite3_bindings");
 
-var bindings = require("./sqlite3_bindings");
-process.mixin(GLOBAL, bindings);
-process.mixin(exports, bindings);
+var Database = exports.Database = sqlite.Database;
 
+Database.prototype.query = function (sql, bindings, queryCallback) {
+  var self = this;
 
-// Conform somewhat to http://dev.w3.org/html5/webdatabase/#sql
-
-exports.SQLITE_DELETE = 9;
-exports.SQLITE_INSERT = 18;
-exports.SQLITE_UPDATE = 23;
-
-
-exports.openDatabaseSync = function (name, version, displayName, 
-                                     estimatedSize, creationCallback) {
-  // 2nd-4th parameters are ignored
-  var db = new DatabaseSync(name);
-  if (creationCallback) creationCallback(db);
-  return db;
-}
-
-
-DatabaseSync.prototype.query = function (sql, bindings, callback) {
-  // TODO: error callback
   if (typeof(bindings) == "function") {
     var tmp = bindings;
     bindings = callback;
@@ -46,59 +31,74 @@ DatabaseSync.prototype.query = function (sql, bindings, callback) {
   }
 
   var all = [];
-  
-  var stmt = this.prepare(sql);
-  while(stmt) {
+
+  // Iterate over the list of bindings. Since we can't use something as
+  // simple as a for or while loop, we'll use the event loop
+  function doBindingsByIndex(statement, bindings, queryCallback, startIndex) {
+    (function (statement, bindings, startIndex) {
+      var innerFunction = arguments.callee;
+      if (!bindings.length) {
+        process.nextTick(function () {
+          queryCallback(statement);
+        });
+        return;
+      }
+
+      startIndex = startIndex || 1;
+      var value = bindings.shift();
+
+      puts("setting index " + startIndex + " to " + value);
+      process.nextTick(function () {
+        statement.bind(startIndex, value, function () {
+          innerFunction(statement, bindings, startIndex+1);
+        });
+      });
+    })(statement, bindings, startIndex);
+  }
+
+  function queryDone(statement, rows) {
+    if (statement.tail) {
+      puts("omg it has a tail");
+      self.prepare(statement.tail, onPrepare);
+    }
+    queryCallback(undefined, rows);
+  }
+
+  function doStep(statement) {
+    var rows = [];
+    (function () {
+      var innerFunction = arguments.callee;
+      statement.step(function (error, row) {
+        if (error) throw error;
+        if (!row) {
+//           rows.rowsAffected = this.changes();
+//           rows.insertId = this.lastInsertRowid();
+          process.nextTick(function () {
+            queryDone(statement, rows);
+          });
+          return;
+        }
+        rows.push(row);
+        puts("added " + inspect(row));
+        process.nextTick(innerFunction);
+      });
+    })();
+  }
+
+  function onPrepare(error, statement) {
+    puts("prep args " + inspect(arguments));
     if (bindings) {
       if (Object.prototype.toString.call(bindings) === "[object Array]") {
-        for (var i = 0; i < stmt.bindParameterCount(); ++i)
-          stmt.bind(i+1, bindings.shift());
-      } else {
-        for (var key in bindings) 
-          if (bindings.hasOwnProperty(key))
-            stmt.bind(key, bindings[key]);
+        doBindingsByIndex(statement, bindings, doStep);
+      }
+      else {
+        // TODO index by keys
       }
     }
-      
-    var rows = [];
-
-    while (true) {
-      var row = stmt.step();
-      if (!row) break;
-      rows.push(row);
-    }
-
-    rows.rowsAffected = this.changes();
-    rows.insertId = this.lastInsertRowid();
-
-    all.push(rows);
-
-    stmt.finalize();
-    stmt = this.prepare(stmt.tail);
   }
 
-  if (all.length == 0) {
-    var result = null;
-  } else {
-    for (var i = 0; i < all.length; ++i) {
-      var resultset = all[i];
-      resultset.all = all;
-      resultset.rows = {item: function (index) { return resultset[index]; },
-                        length: resultset.length};
-    }
-    var result = all[0];
-  }
-  if (typeof(callback) == "function") {
-    callback.apply(result, all);
-  }
-  return result;
+  this.prepare(sql, onPrepare);
 }
-
-
-
-// TODO: void *sqlite3_commit_hook(sqlite3*, int(*)(void*), void*);
-// TODO: void *sqlite3_rollback_hook(sqlite3*, void(*)(void *), void*);
-
 
 function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
   this.database = db;
@@ -119,7 +119,7 @@ function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
   function unroll() {
     that.rolledBack = true;
   }
-    
+
   db.addListener("rollback", unroll);
 
   this.executeSql("BEGIN TRANSACTION");
@@ -128,16 +128,15 @@ function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
 
   db.removeListener("rollback", unroll);
 
-  if (!this.rolledBack && successCallback) 
+  if (!this.rolledBack && successCallback)
     successCallback(this);
 }
 
 
-DatabaseSync.prototype.transaction = function (txCallback, errCallback, 
+Database.prototype.transaction = function (txCallback, errCallback,
                                                successCallback) {
-  var tx = new SQLTransactionSync(this, txCallback, 
+  var tx = new SQLTransactionSync(this, txCallback,
                                   errCallback, successCallback);
 }
 
 // TODO: readTransaction()
-

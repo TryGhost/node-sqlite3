@@ -878,6 +878,9 @@ protected:
           }
         }
       }
+      else if (SQLITE_DONE) {
+        // no more results
+      }
       else {
         step_req->error_msg = (char *)
           sqlite3_errmsg(sqlite3_db_handle(*sto));
