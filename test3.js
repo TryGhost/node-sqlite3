@@ -8,8 +8,14 @@ var db = new sqlite.Database();
 
 db.open("mydatabase.db", function () {
   puts("opened the db");
-  db.query("SELECT * FROM foo WHERE baz < ? OR baz > ?; SELECT 1;", [6, 3], function (error, result) {
-    puts(inspect(arguments));
+  db.query("SELECT * FROM foo WHERE baz < ? AND baz > ?", [6, 3], function (error, result) {
+    ok(!error);
     puts("query callback " + inspect(result));
+    equal(result.length, 2);
+  });
+  db.query("SELECT 1", function (error, result) {
+    ok(!error);
+    puts("query callback " + inspect(result));
+    equal(result.length, 1);
   });
 });

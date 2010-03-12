@@ -145,6 +145,7 @@ protected:
       FatalException(try_catch);
     }
 
+    open_req->dbo->Emit(String::New("ready"), 0, NULL);
     open_req->cb.Dispose();
     free(open_req);
 

@@ -19,23 +19,55 @@ var sys = require("sys");
 var puts = sys.puts;
 var sqlite = require("./sqlite3_bindings");
 
-var Database = exports.Database = sqlite.Database;
+var Database = exports.Database = function () {
+  var self = this;
+  this.queue = [];
+  this.db = new sqlite.Database();
+};
+
+Database.prototype.dispatch = function () {
+  puts('dispatching');
+  if (!this.queue || this.currentQuery
+                  || !this.queue.length) {
+    puts("no queries\n" + inspect([this.queue, this.currentQuery]));
+    return;
+  }
+  this.currentQuery = this.queue.shift();
+  puts("current query\n" + inspect(this.currentQuery));
+  this.executeQuery.apply(this, this.currentQuery);
+}
+
+Database.prototype.open = function () {
+  this.db.open.apply(this.db, arguments);
+}
+
+Database.prototype.close = function () {
+  this.db.close.apply(this.db, arguments);
+}
+
+Database.prototype.prepare = function () {
+  this.db.prepare.apply(this.db, arguments);
+}
 
 Database.prototype.query = function (sql, bindings, queryCallback) {
+  this.queue = this.queue || [];
+  this.queue.push([sql, bindings, queryCallback]);
+  this.dispatch();
+}
+
+Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
   var self = this;
 
   if (typeof(bindings) == "function") {
     var tmp = bindings;
-    bindings = callback;
-    callback = tmp;
+    bindings = queryCallback;
+    queryCallback = tmp;
   }
 
-  var all = [];
-
   // Iterate over the list of bindings. Since we can't use something as
-  // simple as a for or while loop, we'll use the event loop
-  function doBindingsByIndex(statement, bindings, queryCallback, startIndex) {
-    (function (statement, bindings, startIndex) {
+  // simple as a for or while loop, we'll just chain them via the event loop
+  function doBindingsByIndex(statement, bindings, queryCallback) {
+    (function (statement, bindings, bindIndex) {
       var innerFunction = arguments.callee;
       if (!bindings.length) {
         process.nextTick(function () {
@@ -44,23 +76,28 @@ Database.prototype.query = function (sql, bindings, queryCallback) {
         return;
       }
 
-      startIndex = startIndex || 1;
+      bindIndex = bindIndex || 1;
       var value = bindings.shift();
 
-      puts("setting index " + startIndex + " to " + value);
+      puts("setting index " + bindIndex + " to " + value);
       process.nextTick(function () {
-        statement.bind(startIndex, value, function () {
-          innerFunction(statement, bindings, startIndex+1);
+        statement.bind(bindIndex, value, function () {
+          innerFunction(statement, bindings, bindIndex+1);
         });
       });
-    })(statement, bindings, startIndex);
+    })(statement, bindings, 1);
   }
 
   function queryDone(statement, rows) {
     if (statement.tail) {
       puts("omg it has a tail");
-      self.prepare(statement.tail, onPrepare);
+      statement.finalize(function () {
+        self.db.prepare(statement.tail, onPrepare);
+      });
     }
+
+    // if there are any queries queued, let them know it's safe to go
+    self.db.emit("ready");
     queryCallback(undefined, rows);
   }
 
@@ -97,7 +134,8 @@ Database.prototype.query = function (sql, bindings, queryCallback) {
     }
   }
 
-  this.prepare(sql, onPrepare);
+  puts("preparing");
+  this.db.prepare(sql, onPrepare);
 }
 
 function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
