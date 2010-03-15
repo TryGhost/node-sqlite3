@@ -334,14 +334,16 @@ protected:
       argv[0] = Exception::Error(String::New("Error preparing statement"));
     }
     else {
-      Local<Value> arg = External::New(prep_req->stmt);
-      Persistent<Object> statement(Statement::constructor_template->
-                                   GetFunction()->NewInstance(1, &arg));
-      if (prep_req->tail)
+      Local<Value> arg(External::New(prep_req->stmt));
+      Persistent<Object> statement(
+        Statement::constructor_template->GetFunction()->NewInstance(1, &arg));
+
+      if (prep_req->tail) {
         statement->Set(String::New("tail"), String::New(prep_req->tail));
+      }
 
       argv[0] = Local<Value>::New(Undefined());
-      argv[1] = scope.Close(statement);
+      argv[1] = Local<Value>::New(statement);
     }
 
     TryCatch try_catch;

@@ -13,9 +13,9 @@ db.open("mydatabase.db", function () {
     puts("query callback " + inspect(result));
     equal(result.length, 2);
   });
-  db.query("SELECT 1", function (error, result) {
-    ok(!error);
-    puts("query callback " + inspect(result));
-    equal(result.length, 1);
-  });
+//   db.query("SELECT 1", function (error, result) {
+//     ok(!error);
+//     puts("query callback " + inspect(result));
+//     equal(result.length, 1);
+//   });
 });
