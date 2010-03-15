@@ -92,9 +92,10 @@ Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
     }
 
     statement.finalize(function () {
+      self.currentQuery = undefined;
+      queryCallback(undefined, rows);
       // if there are any queries queued, let them know it's safe to go
       self.db.emit("ready");
-      queryCallback(undefined, rows);
     });
   }
 

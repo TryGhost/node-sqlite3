@@ -11,6 +11,7 @@ def configure(conf):
 
 def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
+  obj.cxxflags = "-g"
   obj.target = "sqlite3_bindings"
   obj.source = "sqlite3_bindings.cc"
   obj.lib = "sqlite3"
