@@ -249,7 +249,6 @@ protected:
     struct close_request *close_req = (struct close_request *)(req->data);
     Sqlite3Db* dbo = close_req->dbo;
     int rc = req->result = sqlite3_close(*dbo);
-    printf("closed database, rc = %d\n", rc);
     dbo->db_ = NULL;
     return 0;
   }
@@ -517,13 +516,11 @@ protected:
       switch(bind_req->key_type) {
         case KEY_INT:
           index = *(int*)(bind_req->key);
-          printf("key was %d\n", index);
           break;
 
         case KEY_STRING:
           index = sqlite3_bind_parameter_index(
                       *sto, (char*)(bind_req->key));
-          printf("key was %s (index %d)\n", (char*)(bind_req->key), index);
           break;
 
          default: {
@@ -539,20 +536,16 @@ protected:
       int rc = 0;
       switch(bind_req->value_type) {
         case VALUE_INT:
-          printf("value was an int\n");
           rc = sqlite3_bind_int(*sto, index, *(int*)(bind_req->value));
           break;
         case VALUE_DOUBLE:
-          printf("value was a double %f\n", *(double*)(bind_req->value));
           rc = sqlite3_bind_double(*sto, index, *(double*)(bind_req->value));
           break;
         case VALUE_STRING:
-          printf("value was a string, '%s'\n", (char*)(bind_req->value));
           rc = sqlite3_bind_text(*sto, index, (char*)(bind_req->value),
                             bind_req->value_size, SQLITE_TRANSIENT);
           break;
         case VALUE_NULL:
-          printf("value was NULL\n");
           rc = sqlite3_bind_null(*sto, index);
           break;
 
@@ -593,7 +586,6 @@ protected:
          strcpy(key, *keyValue);
 
          bind_req->key = key;
-         printf("attempting to bind to key %s\n", key);
       }
       else if (args[0]->IsInt32()) {
         bind_req->key_type = KEY_INT;
@@ -603,7 +595,6 @@ protected:
 
         // don't forget to `free` this
         bind_req->key = index;
-        printf("attempting to bind to index %d\n", (int) *index);
       }
 
       // setup value
@@ -676,7 +667,6 @@ protected:
       TryCatch try_catch;
       Local<Value> argv[1];
 
-      printf("rc for finalize = %d\n", (int)req->result);
       argv[0] = Local<Value>::New(Undefined());
 
       finalize_req->cb->Call(
@@ -762,11 +752,9 @@ protected:
       struct step_request *step_req = (struct step_request *)(req->data);
       void **data = step_req->column_data;
 
-      printf("there were %d columns\n", step_req->column_count);
       Local<Value> argv[2];
 
       if (step_req->error_msg) {
-        printf("there's been an error %d\n", (int) req->result);
         argv[0] = Exception::Error(String::New(step_req->error_msg));
       }
       else {
@@ -782,21 +770,18 @@ protected:
         for (int i = 0; i < step_req->column_count; i++) {
           switch(step_req->column_types[i]) {
             case SQLITE_INTEGER:
-              printf("integer value was %d\n", *(int*)(step_req->column_data[i]));
               row->Set(String::New(step_req->column_names[i]),
                        Int32::New(*(int*) (step_req->column_data[i])));
               free((int*)(step_req->column_data[i]));
               break;
 
             case SQLITE_TEXT:
-              printf("string value was %s\n", (char *) (step_req->column_data[i]));
               row->Set(String::New(step_req->column_names[i]),
                        String::New((char *) (step_req->column_data[i])));
               // don't free this pointer, it's owned by sqlite3
               break;
 
-            default:
-              printf("Unknown type error!\n");
+            // no default
           }
         }
 
@@ -830,7 +815,6 @@ protected:
       sqlite3_stmt *stmt = *sto;
       int rc = req->result = sqlite3_step(stmt);
 
-      printf("result of step %d\n", rc);
       if (rc == SQLITE_ROW) {
         // would be nice to cache the column names and type data somewhere
         step_req->column_count = sqlite3_column_count(stmt);
@@ -850,7 +834,6 @@ protected:
                 int *value = (int *) malloc(sizeof(int));
                 *value = sqlite3_column_int(stmt, i);
                 step_req->column_data[i] = value;
-                printf("serialized int %d\n", *(int *)(step_req->column_data[i]));
               }
               break;
 
@@ -858,7 +841,6 @@ protected:
                 double *value = (double *) malloc(sizeof(double));
                 *value = sqlite3_column_double(stmt, i);
                 step_req->column_data[i] = value;
-                printf("serialized float\n");
               }
               break;
 
@@ -870,13 +852,11 @@ protected:
                 // until it is used in `EIO_AfterStep`
                 char *value = (char *) sqlite3_column_text(stmt, i);
                 step_req->column_data[i] = value;
-                printf("serialized text %s\n", (char *)(step_req->column_data[i]));
               }
               break;
 
             default: {
               // unsupported type
-              printf("default, not serialized\n");
             }
           }
         }

@@ -16,7 +16,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
 var sys = require("sys");
-var puts = sys.puts;
 var sqlite = require("./sqlite3_bindings");
 
 var Database = exports.Database = function () {
@@ -26,14 +25,11 @@ var Database = exports.Database = function () {
 };
 
 Database.prototype.dispatch = function () {
-  puts('dispatching');
   if (!this.queue || this.currentQuery
                   || !this.queue.length) {
-    puts("no queries\n" + inspect([this.queue, this.currentQuery]));
     return;
   }
   this.currentQuery = this.queue.shift();
-  puts("current query\n" + inspect(this.currentQuery));
   this.executeQuery.apply(this, this.currentQuery);
 }
 
@@ -79,7 +75,6 @@ Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
       bindIndex = bindIndex || 1;
       var value = bindings.shift();
 
-      puts("setting index " + bindIndex + " to " + value);
       process.nextTick(function () {
         statement.bind(bindIndex, value, function () {
           innerFunction(statement, bindings, bindIndex+1);
@@ -90,7 +85,6 @@ Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
 
   function queryDone(statement, rows) {
     if (statement.tail) {
-      puts("omg it has a tail");
       statement.finalize(function () {
         self.db.prepare(statement.tail, onPrepare);
       });
@@ -116,14 +110,12 @@ Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
           return;
         }
         rows.push(row);
-        puts("added " + inspect(row));
         process.nextTick(innerFunction);
       });
     })();
   }
 
   function onPrepare(error, statement) {
-    puts("prep args " + inspect(arguments));
     if (bindings) {
       if (Object.prototype.toString.call(bindings) === "[object Array]") {
         doBindingsByIndex(statement, bindings, doStep);
@@ -134,7 +126,6 @@ Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
     }
   }
 
-  puts("preparing");
   this.db.prepare(sql, onPrepare);
 }
 
