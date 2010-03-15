@@ -116,6 +116,7 @@ Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
   }
 
   function onPrepare(error, statement) {
+    if (error) throw error;
     if (bindings) {
       if (Object.prototype.toString.call(bindings) === "[object Array]") {
         doBindingsByIndex(statement, bindings, doStep);
@@ -123,6 +124,9 @@ Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
       else {
         // TODO index by keys
       }
+    }
+    else {
+      doStep(statement);
     }
   }
 
