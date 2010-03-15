@@ -20,53 +20,53 @@ var db = new sqlite.Database();
 // //   });
 // });
 
+function readTest(db) {
+  var t0 = new Date;
+  var count = i = 100;
+  var rows = 0;
+  var innerFunc = function () {
+    if (!i--) {
+      var d = ((new Date)-t0)/1000;
+      puts("**** " + count + " selects in " + d + "s (" + (count/d) + "/s) "+rows+" rows total ("+(rows/d)+" rows/s)");
+      return;
+    }
+
+    db.query("SELECT * FROM t1", function(error, results) {
+      rows = rows + results.length;
+      innerFunc();
+    });
+  };
+  innerFunc();
+}
+
+function writeTest(db, callback) {
+  var t0 = new Date;
+  var count = i = 10000;
+  var innerFunc = function () {
+    if(!i--) {
+      var d = ((new Date)-t0)/1000;
+      puts("**** " + count + " insertions in " + d + "s (" + (count/d) + "/s)");
+
+      callback(db);
+      return;
+    };
+
+    db.query("INSERT INTO t1 VALUES (?);", [1], function() {
+      innerFunc();
+    });
+  };
+
+  innerFunc();
+}
+
 fs.unlink("speedtest.db", function () {
   db.open("speedtest.db", function () {
     puts(inspect(arguments));
     puts("open cb");
-    function readTest() {
-     var t0 = new Date;
-     var count = i = 100;
-     var rows = 0;
-     var innerFunc = function () {
-       if (!i--) {
-         var d = ((new Date)-t0)/1000;
-         puts("**** " + count + " selects in " + d + "s (" + (count/d) + "/s) "+rows+" rows total ("+(rows/d)+" rows/s)");
-         return;
-       }
-       if (!(i%(count/10))) {
-         puts("--- " + i );
-       }
-
-       db.query("SELECT * FROM t1", function(error, results) {
-         rows = rows + results.length;
-         process.nextTick(innerFunc);
-       });
-     };
-     innerFunc();
-    }
 
     db.query("CREATE TABLE t1 (alpha INTEGER)", function () {
       puts("create table callback" + inspect(arguments));
-      var t0 = new Date;
-      var count = i = 10000;
-      var innerFunc = function () {
-        if(!i--) {
-          var d = ((new Date)-t0)/1000;
-          puts("**** " + count + " insertions in " + d + "s (" + (count/d) + "/s)");
-
-          process.nextTick(readTest);
-          return;
-        };
-         if (!(i%(count/10))) {
-           puts("--- " + i );
-         }
-        db.query("INSERT INTO t1 VALUES (?);", [1], function() {
-          process.nextTick(innerFunc);
-        });
-      };
-      
-      innerFunc();
+      writeTest(db, readTest);
     });
   });
 });
