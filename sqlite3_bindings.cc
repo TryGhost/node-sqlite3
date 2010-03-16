@@ -775,6 +775,12 @@ protected:
               free((int*)(step_req->column_data[i]));
               break;
 
+            case SQLITE_FLOAT:
+              row->Set(String::New(step_req->column_names[i]),
+                       Number::New(*(double*) (step_req->column_data[i])));
+              free((double*)(step_req->column_data[i]));
+              break;
+
             case SQLITE_TEXT:
               row->Set(String::New(step_req->column_names[i]),
                        String::New((char *) (step_req->column_data[i])));

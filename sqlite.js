@@ -22,6 +22,9 @@ var Database = exports.Database = function () {
   var self = this;
   this.queue = [];
   this.db = new sqlite.Database();
+  this.db.addListener("ready", function () {
+    self.dispatch();
+  });
 };
 
 Database.prototype.dispatch = function () {
@@ -62,28 +65,24 @@ Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
 
   // Iterate over the list of bindings. Since we can't use something as
   // simple as a for or while loop, we'll just chain them via the event loop
-  function doBindingsByIndex(statement, bindings, queryCallback) {
-    (function (statement, bindings, bindIndex) {
-      var innerFunction = arguments.callee;
+  function doBindingsByIndex(statement, bindings, callback) {
+    var innerFunction = function (statement, bindings, bindIndex) {
       if (!bindings.length) {
-        process.nextTick(function () {
-          queryCallback(statement);
-        });
+        callback(statement);
         return;
       }
 
       bindIndex = bindIndex || 1;
       var value = bindings.shift();
 
-      process.nextTick(function () {
-        statement.bind(bindIndex, value, function () {
-          innerFunction(statement, bindings, bindIndex+1);
-        });
+      statement.bind(bindIndex, value, function () {
+        innerFunction(statement, bindings, bindIndex+1);
       });
-    })(statement, bindings, 1);
+    };
+    innerFunction(statement, bindings, 1);
   }
 
-  function queryDone(statement, rows) {
+  function queryDone(statement) {
     if (statement.tail) {
       statement.finalize(function () {
         self.db.prepare(statement.tail, onPrepare);
@@ -93,30 +92,26 @@ Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
 
     statement.finalize(function () {
       self.currentQuery = undefined;
-      queryCallback(undefined, rows);
       // if there are any queries queued, let them know it's safe to go
       self.db.emit("ready");
     });
   }
 
   function doStep(statement) {
-    var rows = [];
-    (function () {
-      var innerFunction = arguments.callee;
+    var innerFunction = function () {
       statement.step(function (error, row) {
-        if (error) throw error;
+          if (error) throw error;
         if (!row) {
 //           rows.rowsAffected = this.changes();
 //           rows.insertId = this.lastInsertRowid();
-          process.nextTick(function () {
-            queryDone(statement, rows);
-          });
+          queryDone(statement);
           return;
         }
-        rows.push(row);
-        process.nextTick(innerFunction);
+        queryCallback(row);
+        innerFunction();
       });
-    })();
+    };
+    innerFunction();
   }
 
   function onPrepare(error, statement) {
