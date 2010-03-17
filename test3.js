@@ -28,7 +28,7 @@ function writeTest(db, callback) {
 
   function innerFunction () {
     db.query("INSERT INTO t1 VALUES (1)", function (row) {
-      if (!i-- && !row) {
+      if (!i--) {
         // end of results
         var dt = ((new Date)-t0)/1000;
         puts("**** " + count + " insertions in " + dt + "s (" + (count/dt) + "/s)");

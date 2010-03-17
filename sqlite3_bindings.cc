@@ -81,8 +81,8 @@ public:
 
     NODE_SET_PROTOTYPE_METHOD(t, "open", Open);
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-    NODE_SET_PROTOTYPE_METHOD(t, "changes", Changes);
-    NODE_SET_PROTOTYPE_METHOD(t, "lastInsertRowid", LastInsertRowid);
+//     NODE_SET_PROTOTYPE_METHOD(t, "changes", Changes);
+//     NODE_SET_PROTOTYPE_METHOD(t, "lastInsertRowid", LastInsertRowid);
     NODE_SET_PROTOTYPE_METHOD(t, "prepare", Prepare);
 
     target->Set(v8::String::NewSymbol("Database"), t->GetFunction());
@@ -420,10 +420,10 @@ protected:
       t->InstanceTemplate()->SetInternalFieldCount(1);
 
       NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
-      NODE_SET_PROTOTYPE_METHOD(t, "clearBindings", ClearBindings);
+//       NODE_SET_PROTOTYPE_METHOD(t, "clearBindings", ClearBindings);
       NODE_SET_PROTOTYPE_METHOD(t, "finalize", Finalize);
-      NODE_SET_PROTOTYPE_METHOD(t, "bindParameterCount", BindParameterCount);
-      NODE_SET_PROTOTYPE_METHOD(t, "reset", Reset);
+//       NODE_SET_PROTOTYPE_METHOD(t, "bindParameterCount", BindParameterCount);
+//       NODE_SET_PROTOTYPE_METHOD(t, "reset", Reset);
       NODE_SET_PROTOTYPE_METHOD(t, "step", Step);
 
       //target->Set(v8::String::NewSymbol("SQLStatement"), t->GetFunction());
@@ -434,14 +434,14 @@ protected:
       int I = 0;
       REQ_EXT_ARG(0, stmt);
       (new Statement((sqlite3_stmt*)stmt->Value()))->Wrap(args.This());
+
       return args.This();
     }
 
   protected:
     Statement(sqlite3_stmt* stmt) : stmt_(stmt) {}
 
-    ~Statement() { if (stmt_) sqlite3_finalize(stmt_); }
-
+    ~Statement() { if (stmt_) { sqlite3_finalize(stmt_); } } 
     sqlite3_stmt* stmt_;
 
     operator sqlite3_stmt* () const { return stmt_; }
@@ -804,9 +804,12 @@ protected:
       }
 
       step_req->cb.Dispose();
-      free(step_req->column_data);
-      free(step_req->column_types);
-      free(step_req->column_names);
+      
+      if (step_req->column_count) {
+        free(step_req->column_data);
+        free(step_req->column_types);
+        free(step_req->column_names);
+      }
 
       free(step_req);
 
@@ -823,13 +826,14 @@ protected:
 
       if (rc == SQLITE_ROW) {
         // would be nice to cache the column names and type data somewhere
-        step_req->column_count = sqlite3_column_count(stmt);
-        step_req->column_types =
-          (int *) calloc(step_req->column_count, sizeof(int));
-        step_req->column_data =
-          (void **) calloc(step_req->column_count, sizeof(void *));
-        step_req->column_names =
-          (char **) calloc(step_req->column_count, sizeof(char *));
+        if (step_req->column_count = sqlite3_column_count(stmt)) {
+          step_req->column_types =
+            (int *) calloc(step_req->column_count, sizeof(int));
+          step_req->column_data =
+            (void **) calloc(step_req->column_count, sizeof(void *));
+          step_req->column_names =
+            (char **) calloc(step_req->column_count, sizeof(char *));
+        }
 
         for (int i = 0; i < step_req->column_count; i++) {
           int type = step_req->column_types[i] = sqlite3_column_type(stmt, i);
