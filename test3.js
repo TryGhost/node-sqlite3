@@ -6,68 +6,49 @@ var sqlite = require("./sqlite");
 
 var db = new sqlite.Database();
 
-// db.open("mydatabase.db", function () {
-//   puts("opened the db");
-//   db.query("SELECT * FROM foo WHERE baz < ? AND baz > ?", [6, 3], function (error, result) {
-//     ok(!error);
-//     puts("query callback " + inspect(result));
-//     equal(result.length, 2);
-//   });
-// //   db.query("SELECT 1", function (error, result) {
-// //     ok(!error);
-// //     puts("query callback " + inspect(result));
-// //     equal(result.length, 1);
-// //   });
-// });
-
-function readTest(db) {
+function readTest(db, callback) {
   var t0 = new Date;
-  var count = i = 100;
   var rows = 0;
-  var innerFunc = function () {
-    if (!i--) {
+  db.query("SELECT * FROM t1", function(row) {
+    if (!row) {
       var d = ((new Date)-t0)/1000;
-      puts("**** " + count + " selects in " + d + "s (" + (count/d) + "/s) "+rows+" rows total ("+(rows/d)+" rows/s)");
-      return;
-    }
+      puts("**** " + rows + " rows in " + d + "s (" + (rows/d) + "/s)");
 
-    db.query("SELECT * FROM t1", function(error, results) {
-      rows = rows + results.length;
-      innerFunc();
-    });
-  };
-  innerFunc();
+      if (callback) callback(db);
+    }
+    else {
+      rows++;
+    }
+  });
 }
 
 function writeTest(db, callback) {
   var t0 = new Date;
-  var count = i = 10000;
-  var innerFunc = function () {
-    if(!i--) {
-      var d = ((new Date)-t0)/1000;
-      puts("**** " + count + " insertions in " + d + "s (" + (count/d) + "/s)");
+  var count = i = 100000;
 
-      callback(db);
-      return;
-    };
+  function innerFunction () {
+    db.query("INSERT INTO t1 VALUES (1)", function (row) {
+      if (!i-- && !row) {
+        // end of results
+        var dt = ((new Date)-t0)/1000;
+        puts("**** " + count + " insertions in " + dt + "s (" + (count/dt) + "/s)");
 
-    db.query("INSERT INTO t1 VALUES (?);", [1], function() {
-      innerFunc();
+        if (callback) callback(db);
+      }
+      else {
+        innerFunction();
+      }
     });
-  };
-
-  innerFunc();
+  }
+  innerFunction();
 }
 
-fs.unlink("speedtest.db", function () {
-  db.open("speedtest.db", function () {
-    puts(inspect(arguments));
-    puts("open cb");
+db.open(":memory:", function () {
+  puts(inspect(arguments));
+  puts("open cb");
 
-    db.query("CREATE TABLE t1 (alpha INTEGER)", function () {
-      puts("create table callback" + inspect(arguments));
-      writeTest(db, readTest);
-    });
+  db.query("CREATE TABLE t1 (alpha INTEGER)", function () {
+    puts("create table callback" + inspect(arguments));
+    writeTest(db, readTest);
   });
 });
-

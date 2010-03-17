@@ -161,10 +161,10 @@ protected:
     int rc = sqlite3_open(open_req->filename, dbptr);
     req->result = rc;
 
-    sqlite3 *db = *dbptr;
-    sqlite3_commit_hook(db, CommitHook, open_req->dbo);
-    sqlite3_rollback_hook(db, RollbackHook, open_req->dbo);
-    sqlite3_update_hook(db, UpdateHook, open_req->dbo);
+//     sqlite3 *db = *dbptr;
+//     sqlite3_commit_hook(db, CommitHook, open_req->dbo);
+//     sqlite3_rollback_hook(db, RollbackHook, open_req->dbo);
+//     sqlite3_update_hook(db, UpdateHook, open_req->dbo);
 
     return 0;
   }
@@ -290,28 +290,28 @@ protected:
 
   // Hooks
 
-  static int CommitHook(void* v_this) {
-    HandleScope scope;
-    Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
-    db->Emit(String::New("commit"), 0, NULL);
-    // TODO: allow change in return value to convert to rollback...somehow
-    return 0;
-  }
-
-  static void RollbackHook(void* v_this) {
-    HandleScope scope;
-    Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
-    db->Emit(String::New("rollback"), 0, NULL);
-  }
-
-  static void UpdateHook(void* v_this, int operation, const char* database,
-                         const char* table, sqlite_int64 rowid) {
-    HandleScope scope;
-    Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
-    Local<Value> args[] = { Int32::New(operation), String::New(database),
-                            String::New(table), Number::New(rowid) };
-    db->Emit(String::New("update"), 4, args);
-  }
+//   static int CommitHook(void* v_this) {
+//     HandleScope scope;
+//     Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
+//     db->Emit(String::New("commit"), 0, NULL);
+//     // TODO: allow change in return value to convert to rollback...somehow
+//     return 0;
+//   }
+//
+//   static void RollbackHook(void* v_this) {
+//     HandleScope scope;
+//     Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
+//     db->Emit(String::New("rollback"), 0, NULL);
+//   }
+//
+//   static void UpdateHook(void* v_this, int operation, const char* database,
+//                          const char* table, sqlite_int64 rowid) {
+//     HandleScope scope;
+//     Sqlite3Db* db = static_cast<Sqlite3Db*>(v_this);
+//     Local<Value> args[] = { Int32::New(operation), String::New(database),
+//                             String::New(table), Number::New(rowid) };
+//     db->Emit(String::New("update"), 4, args);
+//   }
 
   struct prepare_request {
     Persistent<Function> cb;
@@ -354,6 +354,7 @@ protected:
     }
 
     prep_req->cb.Dispose();
+
     free(prep_req);
 
     prep_req->dbo->Unref();
@@ -680,7 +681,7 @@ protected:
       free(finalize_req);
 
       finalize_req->sto->Unref();
-      
+
       return 0;
     }
 
@@ -812,7 +813,6 @@ protected:
       step_req->sto->Unref();
       return 0;
     }
-
 
     static int EIO_Step(eio_req *req) {
       struct step_request *step_req = (struct step_request *)(req->data);

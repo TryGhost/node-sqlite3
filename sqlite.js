@@ -98,20 +98,20 @@ Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
   }
 
   function doStep(statement) {
-    var innerFunction = function () {
+    (function innerFunction() {
       statement.step(function (error, row) {
           if (error) throw error;
         if (!row) {
 //           rows.rowsAffected = this.changes();
 //           rows.insertId = this.lastInsertRowid();
+          queryCallback();
           queryDone(statement);
           return;
         }
         queryCallback(row);
         innerFunction();
       });
-    };
-    innerFunction();
+    })();
   }
 
   function onPrepare(error, statement) {
