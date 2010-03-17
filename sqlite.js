@@ -21,8 +21,8 @@ var sqlite = require("./sqlite3_bindings");
 var Database = exports.Database = function () {
   var self = this;
   this.queue = [];
-  this.db = new sqlite.Database();
-  this.db.addListener("ready", function () {
+  this.driver = new sqlite.Database();
+  this.driver.addListener("ready", function () {
     self.dispatch();
   });
 };
@@ -37,15 +37,15 @@ Database.prototype.dispatch = function () {
 }
 
 Database.prototype.open = function () {
-  this.db.open.apply(this.db, arguments);
+  this.driver.open.apply(this.driver, arguments);
 }
 
 Database.prototype.close = function () {
-  this.db.close.apply(this.db, arguments);
+  this.driver.close.apply(this.driver, arguments);
 }
 
 Database.prototype.prepare = function () {
-  this.db.prepare.apply(this.db, arguments);
+  this.driver.prepare.apply(this.driver, arguments);
 }
 
 Database.prototype.query = function (sql, bindings, queryCallback) {
@@ -54,82 +54,83 @@ Database.prototype.query = function (sql, bindings, queryCallback) {
   this.dispatch();
 }
 
-Database.prototype.executeQuery = function(sql, bindings, queryCallback) {
-  var self = this;
-
-  if (typeof(bindings) == "function") {
-    var tmp = bindings;
-    bindings = queryCallback;
-    queryCallback = tmp;
-  }
-
-  // Iterate over the list of bindings. Since we can't use something as
-  // simple as a for or while loop, we'll just chain them via the event loop
-  function doBindingsByIndex(statement, bindings, callback) {
-    var innerFunction = function (statement, bindings, bindIndex) {
-      if (!bindings.length) {
-        callback(statement);
-        return;
-      }
-
-      bindIndex = bindIndex || 1;
-      var value = bindings.shift();
-
-      statement.bind(bindIndex, value, function () {
-        innerFunction(statement, bindings, bindIndex+1);
-      });
-    };
-    innerFunction(statement, bindings, 1);
-  }
-
-  function queryDone(statement) {
-    if (statement.tail) {
-      statement.finalize(function () {
-        self.db.prepare(statement.tail, onPrepare);
-      });
+// Iterate over the list of bindings. Since we can't use something as
+// simple as a for or while loop, we'll just chain them via the event loop
+function _setBindingsByIndex(db,
+    statement, bindings, nextCallback, rowCallback) {
+    puts("setting bindings");
+  var innerFunction = function (statement, bindings, bindIndex) {
+    if (!bindings.length) {
+      nextCallback(db, statement, rowCallback);
       return;
     }
 
-    statement.finalize(function () {
-      self.currentQuery = undefined;
-      // if there are any queries queued, let them know it's safe to go
-      self.db.emit("ready");
+    bindIndex = bindIndex || 1;
+    var value = bindings.shift();
+
+    statement.bind(bindIndex, value, function () {
+      innerFunction(statement, bindings, bindIndex+1);
     });
+  };
+  innerFunction(statement, bindings, 1);
+}
+
+function _queryDone(db, statement) {
+  if (statement.tail) {
+    statement.finalize(function () {
+      db.driver.prepare(statement.tail, onPrepare);
+    });
+    return;
   }
 
-  function doStep(statement) {
-    (function innerFunction() {
-      statement.step(function (error, row) {
-          if (error) throw error;
-        if (!row) {
-//           rows.rowsAffected = this.changes();
-//           rows.insertId = this.lastInsertRowid();
-          queryCallback();
-          queryDone(statement);
-          return;
-        }
-        queryCallback(row);
-        innerFunction();
-      });
-    })();
-  }
+  statement.finalize(function () {
+    db.currentQuery = undefined;
+    // if there are any queries queued, let them know it's safe to go
+    db.driver.emit("ready");
+  });
+}
 
-  function onPrepare(error, statement) {
-    if (error) throw error;
-    if (bindings) {
-      if (Object.prototype.toString.call(bindings) === "[object Array]") {
-        doBindingsByIndex(statement, bindings, doStep);
+function _doStep(db, statement, rowCallback) {
+  (function innerFunction() {
+    statement.step(function (error, row) {
+      if (error) throw error;
+      if (!row) {
+//        rows.rowsAffected = this.changes();
+//        rows.insertId = this.lastInsertRowid();
+        rowCallback();
+        _queryDone(db, statement);
+        return;
       }
-      else {
-        // TODO index by keys
-      }
+      rowCallback(row);
+      innerFunction();
+    });
+  })();
+}
+
+function _onPrepare(db, error, statement, bindings, rowCallback) {
+  if (error) throw error;
+  if (Array.isArray(bindings)) {
+    if (bindings.length) {
+      _setBindingsByIndex(db, statement, bindings, _doStep, rowCallback);
     }
     else {
-      doStep(statement);
+      _doStep(db, statement, rowCallback);
     }
   }
+  else if (typeof(bindings) !== 'undefined') {
+    // TODO index by keys
+  }
+}
 
-  this.db.prepare(sql, onPrepare);
+Database.prototype.executeQuery = function(sql, bindings, rowCallback) {
+  var self = this;
+
+  if (typeof(bindings) == "function") {
+    rowCallback = bindings;
+    bindings = [];
+  }
+
+  this.driver.prepare(sql, function(error, statement) { _onPrepare(self, error, statement, bindings, rowCallback) });
 }
 
 function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
