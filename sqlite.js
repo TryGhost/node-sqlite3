@@ -57,9 +57,9 @@ Database.prototype.query = function (sql, bindings, queryCallback) {
 // Iterate over the list of bindings. Since we can't use something as
 // simple as a for or while loop, we'll just chain them via the event loop
 function _setBindingsByIndex(db,
-    statement, bindings, nextCallback, rowCallback) {
+    statement, bindings, nextCallback, rowCallback, bindIndex) {
+
     puts("setting bindings");
-  var innerFunction = function (statement, bindings, bindIndex) {
     if (!bindings.length) {
       nextCallback(db, statement, rowCallback);
       return;
@@ -69,10 +69,8 @@ function _setBindingsByIndex(db,
     var value = bindings.shift();
 
     statement.bind(bindIndex, value, function () {
-      innerFunction(statement, bindings, bindIndex+1);
+      _setBindingsByIndex(statement, bindings, nextCallback, rowCallback, bindIndex+1);
     });
-  };
-  innerFunction(statement, bindings, 1);
 }
 
 function _queryDone(db, statement) {
@@ -91,20 +89,18 @@ function _queryDone(db, statement) {
 }
 
 function _doStep(db, statement, rowCallback) {
-  (function innerFunction() {
-    statement.step(function (error, row) {
-      if (error) throw error;
-      if (!row) {
-//        rows.rowsAffected = this.changes();
-//        rows.insertId = this.lastInsertRowid();
-        rowCallback();
-        _queryDone(db, statement);
-        return;
-      }
-      rowCallback(row);
-      innerFunction();
-    });
-  })();
+  statement.step(function (error, row) {
+    if (error) throw error;
+    if (!row) {
+//       rows.rowsAffected = this.changes();
+//       rows.insertId = this.lastInsertRowid();
+      rowCallback();
+      _queryDone(db, statement);
+      return;
+    }
+    rowCallback(row);
+    _doStep(db, statement, rowCallback);
+  });
 }
 
 function _onPrepare(db, error, statement, bindings, rowCallback) {
