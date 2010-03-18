@@ -17,6 +17,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <v8.h>
 #include <node.h>
@@ -327,35 +328,43 @@ protected:
     HandleScope scope;
 
     Local<Value> argv[2];
+    int argc = 0;
     bool err = false;
-    if (req->result) {
+
+    if (req->result != SQLITE_OK) {
       err = true;
       argv[0] = Exception::Error(String::New("Error preparing statement"));
+      argc = 1;
     }
     else {
-      Local<Value> arg(External::New(prep_req->stmt));
-      Persistent<Object> statement(
-        Statement::constructor_template->GetFunction()->NewInstance(1, &arg));
+      if (req->int1 == SQLITE_DONE) {
+        argc = 0;
+      } else {
+        argv[0] = External::New(prep_req->stmt);
+        argv[1] = Integer::New(req->int1);
+        Persistent<Object> statement(
+          Statement::constructor_template->GetFunction()->NewInstance(2, argv));
 
-      if (prep_req->tail) {
-        statement->Set(String::New("tail"), String::New(prep_req->tail));
+        if (prep_req->tail) {
+          statement->Set(String::New("tail"), String::New(prep_req->tail));
+        }
+
+        argv[0] = Local<Value>::New(Undefined());
+        argv[1] = Local<Value>::New(statement);
+        argc = 2;
       }
-
-      argv[0] = Local<Value>::New(Undefined());
-      argv[1] = Local<Value>::New(statement);
     }
 
     TryCatch try_catch;
 
-    prep_req->cb->Call(Context::GetCurrent()->Global(), (err ? 1 : 2), argv);
+    prep_req->cb->Call(Context::GetCurrent()->Global(), argc, argv);
 
     if (try_catch.HasCaught()) {
       FatalException(try_catch);
     }
 
-    prep_req->cb.Dispose();
-
     prep_req->dbo->Unref();
+    prep_req->cb.Dispose();
     free(prep_req);
 
     return 0;
@@ -372,6 +381,18 @@ protected:
                 &(prep_req->stmt), &(prep_req->tail));
 
     req->result = rc;
+    req->int1 = -1;
+
+    if (rc == SQLITE_OK) {
+      // This might be a INSERT statement. Let's try to get the first row.
+      // This is to optimize out further calls to the thread pool.
+      rc = sqlite3_step(prep_req->stmt);
+      req->int1 = rc;
+      if (rc == SQLITE_DONE) {
+        rc = sqlite3_finalize(prep_req->stmt);
+        assert(rc == SQLITE_OK);
+      }
+    }
 
     return 0;
   }
@@ -432,13 +453,18 @@ protected:
       HandleScope scope;
       int I = 0;
       REQ_EXT_ARG(0, stmt);
-      (new Statement((sqlite3_stmt*)stmt->Value()))->Wrap(args.This());
+      int first_rc = args[1]->IntegerValue();
+
+      Statement *s = new Statement((sqlite3_stmt*)stmt->Value(), first_rc);
+      s->Wrap(args.This());
 
       return args.This();
     }
 
   protected:
-    Statement(sqlite3_stmt* stmt) : EventEmitter(), stmt_(stmt) {}
+    Statement(sqlite3_stmt* stmt, int first_rc = -1) : EventEmitter(), stmt_(stmt) {
+      first_rc_ = first_rc;
+    }
 
     ~Statement() { if (stmt_) { sqlite3_finalize(stmt_); } } 
     sqlite3_stmt* stmt_;
@@ -733,6 +759,7 @@ protected:
       Persistent<Function> cb;
       Statement *sto;
 
+      int first_rc;
       // Populate arrays: one will be the types of columns for the result,
       // the second will be the data for the row.
       int  column_count;
@@ -821,7 +848,13 @@ protected:
       Statement *sto = step_req->sto;
 
       sqlite3_stmt *stmt = *sto;
-      int rc = req->result = sqlite3_step(stmt);
+      int rc;
+
+      if (step_req->first_rc < 0) {
+        rc = req->result = step_req->first_rc;
+      } else {
+        rc = req->result = sqlite3_step(stmt);
+      }
 
       if (rc == SQLITE_ROW) {
         // would be nice to cache the column names and type data somewhere
@@ -901,6 +934,9 @@ protected:
       step_req->sto = sto;
       step_req->error_msg = NULL;
 
+      step_req->first_rc = sto->first_rc_;
+      sto->first_rc_ = -1;
+
       eio_custom(EIO_Step, EIO_PRI_DEFAULT, EIO_AfterStep, step_req);
 
       ev_ref(EV_DEFAULT_UC);
@@ -908,6 +944,8 @@ protected:
 
       return Undefined();
     }
+
+    int first_rc_;
   };
 };
 

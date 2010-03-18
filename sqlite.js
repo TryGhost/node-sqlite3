@@ -103,8 +103,7 @@ function _doStep(db, statement, rowCallback) {
   });
 }
 
-function _onPrepare(db, error, statement, bindings, rowCallback) {
-  if (error) throw error;
+function _onPrepare(db, statement, bindings, rowCallback) {
   if (Array.isArray(bindings)) {
     if (bindings.length) {
       _setBindingsByIndex(db, statement, bindings, _doStep, rowCallback);
@@ -126,7 +125,17 @@ Database.prototype.executeQuery = function(sql, bindings, rowCallback) {
     bindings = [];
   }
 
-  this.driver.prepare(sql, function(error, statement) { _onPrepare(self, error, statement, bindings, rowCallback) });
+  this.driver.prepare(sql, function(error, statement) {
+    if (error) throw error;
+    if (statement) {
+      _onPrepare(self, statement, bindings, rowCallback)
+    } else {
+      rowCallback();
+      self.currentQuery = undefined;
+      // if there are any queries queued, let them know it's safe to go
+      self.dispatch();
+    }
+  });
 }
 
 function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
