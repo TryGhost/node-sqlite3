@@ -91,7 +91,7 @@ public:
   }
 
 protected:
-  Sqlite3Db() : db_(NULL) { }
+  Sqlite3Db() : EventEmitter(), db_(NULL) { }
 
   ~Sqlite3Db() {
     assert(db_ == NULL);
@@ -439,7 +439,7 @@ protected:
     }
 
   protected:
-    Statement(sqlite3_stmt* stmt) : stmt_(stmt) {}
+    Statement(sqlite3_stmt* stmt) : EventEmitter(), stmt_(stmt) {}
 
     ~Statement() { if (stmt_) { sqlite3_finalize(stmt_); } } 
     sqlite3_stmt* stmt_;
