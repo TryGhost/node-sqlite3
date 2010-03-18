@@ -147,9 +147,9 @@ protected:
 
     open_req->dbo->Emit(String::New("ready"), 0, NULL);
     open_req->cb.Dispose();
-    free(open_req);
 
     open_req->dbo->Unref();
+    free(open_req);
 
     return 0;
   }
@@ -238,9 +238,9 @@ protected:
     }
 
     close_req->cb.Dispose();
-    free(close_req);
 
     close_req->dbo->Unref();
+    free(close_req);
 
     return 0;
   }
@@ -355,9 +355,8 @@ protected:
 
     prep_req->cb.Dispose();
 
-    free(prep_req);
-
     prep_req->dbo->Unref();
+    free(prep_req);
 
     return 0;
   }
@@ -678,9 +677,9 @@ protected:
       }
 
       finalize_req->cb.Dispose();
-      free(finalize_req);
 
       finalize_req->sto->Unref();
+      free(finalize_req);
 
       return 0;
     }
@@ -811,9 +810,9 @@ protected:
         free(step_req->column_names);
       }
 
+      step_req->sto->Unref();
       free(step_req);
 
-      step_req->sto->Unref();
       return 0;
     }
 
