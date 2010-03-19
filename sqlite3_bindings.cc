@@ -329,10 +329,8 @@ protected:
 
     Local<Value> argv[2];
     int argc = 0;
-    bool err = false;
 
     if (req->result != SQLITE_OK) {
-      err = true;
       argv[0] = Exception::Error(String::New("Error preparing statement"));
       argc = 1;
     }
@@ -383,14 +381,21 @@ protected:
     req->result = rc;
     req->int1 = -1;
 
-    if (rc == SQLITE_OK) {
-      // This might be a INSERT statement. Let's try to get the first row.
-      // This is to optimize out further calls to the thread pool.
+    // This might be a INSERT statement. Let's try to get the first row.
+    // This is to optimize out further calls to the thread pool. This is only
+    // possible in the case where there are no variable placeholders/bindings
+    // in the SQL.
+    if (rc == SQLITE_OK && !sqlite3_bind_parameter_count(prep_req->stmt)) {
+//     if (rc == SQLITE_OK) {
       rc = sqlite3_step(prep_req->stmt);
       req->int1 = rc;
       if (rc == SQLITE_DONE) {
         rc = sqlite3_finalize(prep_req->stmt);
+        prep_req->stmt = NULL;
         assert(rc == SQLITE_OK);
+      }
+      else {
+        rc = sqlite3_reset(prep_req->stmt);
       }
     }
 
@@ -850,7 +855,7 @@ protected:
       sqlite3_stmt *stmt = *sto;
       int rc;
 
-      if (step_req->first_rc < 0) {
+      if (step_req->first_rc != -1) {
         rc = req->result = step_req->first_rc;
       } else {
         rc = req->result = sqlite3_step(stmt);
@@ -903,7 +908,8 @@ protected:
           }
         }
       }
-      else if (SQLITE_DONE) {
+      else if (rc == SQLITE_DONE) {
+//         printf("no more results");
         // no more results
       }
       else {

@@ -57,20 +57,19 @@ Database.prototype.query = function (sql, bindings, queryCallback) {
 // Iterate over the list of bindings. Since we can't use something as
 // simple as a for or while loop, we'll just chain them via the event loop
 function _setBindingsByIndex(db,
-    statement, bindings, nextCallback, rowCallback, bindIndex) {
+  statement, bindings, nextCallback, rowCallback, bindIndex) {
 
-    puts("setting bindings");
-    if (!bindings.length) {
-      nextCallback(db, statement, rowCallback);
-      return;
-    }
+  if (!bindings.length) {
+    nextCallback(db, statement, rowCallback);
+    return;
+  }
 
-    bindIndex = bindIndex || 1;
-    var value = bindings.shift();
+  bindIndex = bindIndex || 1;
+  var value = bindings.shift();
 
-    statement.bind(bindIndex, value, function () {
-      _setBindingsByIndex(statement, bindings, nextCallback, rowCallback, bindIndex+1);
-    });
+  statement.bind(bindIndex, value, function () {
+    _setBindingsByIndex(db, statement, bindings, nextCallback, rowCallback, bindIndex+1);
+  });
 }
 
 function _queryDone(db, statement) {
