@@ -330,6 +330,7 @@ protected:
     Local<Value> argv[2];
     int argc = 0;
 
+    // if the prepare failed
     if (req->result != SQLITE_OK) {
       argv[0] = Exception::Error(String::New("Error preparing statement"));
       argc = 1;
@@ -386,9 +387,10 @@ protected:
     // possible in the case where there are no variable placeholders/bindings
     // in the SQL.
     if (rc == SQLITE_OK && !sqlite3_bind_parameter_count(prep_req->stmt)) {
-//     if (rc == SQLITE_OK) {
       rc = sqlite3_step(prep_req->stmt);
       req->int1 = rc;
+
+      // no more rows to return, clean up statement
       if (rc == SQLITE_DONE) {
         rc = sqlite3_finalize(prep_req->stmt);
         prep_req->stmt = NULL;
@@ -862,9 +864,11 @@ protected:
       sqlite3_stmt *stmt = *sto;
       int rc;
 
+      // check if we have already taken a step immediately after prepare
       if (step_req->first_rc != -1) {
         rc = req->result = step_req->first_rc;
-      } else {
+      }
+      else {
         rc = req->result = sqlite3_step(stmt);
       }
 
