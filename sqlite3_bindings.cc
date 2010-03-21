@@ -394,9 +394,6 @@ protected:
         prep_req->stmt = NULL;
         assert(rc == SQLITE_OK);
       }
-      else {
-        rc = sqlite3_reset(prep_req->stmt);
-      }
     }
 
     return 0;
