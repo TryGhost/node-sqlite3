@@ -848,10 +848,6 @@ protected:
       if (req->result == SQLITE_ROW && step_req->column_count) {
         free((void**)step_req->column_data);
         step_req->column_data = NULL;
-        free((int*)step_req->column_types);
-        step_req->column_types = NULL;
-        free((char**)step_req->column_names);
-        step_req->column_names = NULL;
       }
 
       step_req->sto->Unref();
@@ -875,23 +871,35 @@ protected:
       assert(step_req);
 
       if (rc == SQLITE_ROW) {
-        // would be nice to cache the column names and type data somewhere
-        if (step_req->column_count = sqlite3_column_count(stmt)) {
+        // If these pointers are NULL, look up and store the number of columns
+        // their names and types.
+        // Otherwise that means we have already looked up the column types and
+        // names so we can simply re-use that info. 
+        if (   !step_req->column_types
+            && !step_req->column_names) {
+          step_req->column_count = sqlite3_column_count(stmt);
           step_req->column_types =
             (int *) calloc(step_req->column_count, sizeof(int));
-          step_req->column_data =
-            (void **) calloc(step_req->column_count, sizeof(void *));
           step_req->column_names =
             (char **) calloc(step_req->column_count, sizeof(char *));
 
+          for (int i = 0; i < step_req->column_count; i++) {
+            step_req->column_types[i] = sqlite3_column_type(stmt, i);
+            step_req->column_names[i] = (char *) sqlite3_column_name(stmt, i);
+          }
         }
+
+        if (step_req->column_count) {
+          step_req->column_data =
+            (void **) calloc(step_req->column_count, sizeof(void *));
+        }
+
         assert(step_req->column_types
                && step_req->column_data
                && step_req->column_names);
 
         for (int i = 0; i < step_req->column_count; i++) {
-          int type = step_req->column_types[i] = sqlite3_column_type(stmt, i);
-          step_req->column_names[i] = (char *) sqlite3_column_name(stmt, i);
+          int type = step_req->column_types[i];
 
           switch(type) {
             case SQLITE_INTEGER: {
@@ -951,6 +959,9 @@ protected:
       if (!step_req) {
         sto->step_req = step_req = (struct step_request *)
           calloc(1, sizeof(struct step_request));
+        step_req->column_types = NULL;
+        step_req->column_names = NULL;
+        step_req->column_data = NULL;
       }
 
       if (!step_req) {
