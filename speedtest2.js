@@ -1,9 +1,14 @@
-var fs = require("fs");
+var fs     = require("fs"),
+    sys    = require("sys"),
+    sqlite = require("./sqlite");
 
-process.mixin(GLOBAL, require("assert"));
-process.mixin(GLOBAL, require("sys"));
+var sys  = require("sys"),
+    assert = require("assert");
+
+var puts = sys.puts;
+var inspect = sys.inspect;
+
 var sqlite = require("./sqlite");
-
 var db = new sqlite.Database();
 
 function readTest(db, callback) {
@@ -17,6 +22,7 @@ function readTest(db, callback) {
       if (callback) callback(db);
     }
     else {
+//       assert.deepEqual(row, {alpha:1, beta: 'hello', pi: 3.141});
 //       puts("got a row" + inspect(arguments));
       rows++;
     }
@@ -24,7 +30,7 @@ function readTest(db, callback) {
 }
 
 function writeTest(db, i, callback) {
-  db.query("INSERT INTO t1 VALUES (1)", function (row) {
+  db.query("INSERT INTO t1 VALUES (1, 'hello', 3.141)", function (row) {
     if (!i--) {
       // end of results
       var dt = ((new Date)-t0)/1000;
@@ -42,7 +48,10 @@ var count = 100000;
 var t0;
 
 db.open(":memory:", function () {
-  db.query("CREATE TABLE t1 (alpha INTEGER)", function () {
+  puts(inspect(arguments));
+  puts("open cb");
+
+  db.query("CREATE TABLE t1 (alpha INTEGER, beta TEXT, pi FLOAT)", function () {
     puts("create table callback" + inspect(arguments));
 //     writeTest(db, readTest);
     t0 = new Date;

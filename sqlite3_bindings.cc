@@ -464,11 +464,16 @@ protected:
     }
 
   protected:
-    Statement(sqlite3_stmt* stmt, int first_rc = -1) : EventEmitter(), stmt_(stmt) {
+    Statement(sqlite3_stmt* stmt, int first_rc = -1)
+    : EventEmitter(), stmt_(stmt), step_req(NULL) {
       first_rc_ = first_rc;
     }
 
-    ~Statement() { if (stmt_) { sqlite3_finalize(stmt_); } } 
+    ~Statement() {
+      if (stmt_) { sqlite3_finalize(stmt_); }
+      if (step_req) free(step_req);
+    }
+
     sqlite3_stmt* stmt_;
 
     operator sqlite3_stmt* () const { return stmt_; }
@@ -719,6 +724,8 @@ protected:
       Statement *sto = finalize_req->sto;
       req->result = sqlite3_finalize(*sto);
       sto->stmt_ = NULL;
+      free(sto->step_req);
+      sto->step_req = NULL;
 
       return 0;
     }
@@ -741,6 +748,7 @@ protected:
 
       finalize_req->cb = Persistent<Function>::New(cb);
       finalize_req->sto = sto;
+
 
       eio_custom(EIO_Finalize, EIO_PRI_DEFAULT, EIO_AfterFinalize, finalize_req);
 
@@ -771,7 +779,7 @@ protected:
 
       // if rc == 0 this will NULL
       char *error_msg;
-    };
+    } *step_req;
 
     static int EIO_AfterStep(eio_req *req) {
       ev_unref(EV_DEFAULT_UC);
@@ -797,6 +805,10 @@ protected:
         Local<Object> row = Object::New();
 
         for (int i = 0; i < step_req->column_count; i++) {
+          assert(step_req->column_data[i]);
+          assert(step_req->column_names[i]);
+          assert(step_req->column_types[i]);
+
           switch(step_req->column_types[i]) {
             case SQLITE_INTEGER:
               row->Set(String::New(step_req->column_names[i]),
@@ -832,15 +844,17 @@ protected:
       }
 
       step_req->cb.Dispose();
-      
-      if (step_req->column_count) {
-        free(step_req->column_data);
-        free(step_req->column_types);
-        free(step_req->column_names);
+
+      if (req->result == SQLITE_ROW && step_req->column_count) {
+        free((void**)step_req->column_data);
+        step_req->column_data = NULL;
+        free((int*)step_req->column_types);
+        step_req->column_types = NULL;
+        free((char**)step_req->column_names);
+        step_req->column_names = NULL;
       }
 
       step_req->sto->Unref();
-      free(step_req);
 
       return 0;
     }
@@ -858,6 +872,8 @@ protected:
         rc = req->result = sqlite3_step(stmt);
       }
 
+      assert(step_req);
+
       if (rc == SQLITE_ROW) {
         // would be nice to cache the column names and type data somewhere
         if (step_req->column_count = sqlite3_column_count(stmt)) {
@@ -867,7 +883,11 @@ protected:
             (void **) calloc(step_req->column_count, sizeof(void *));
           step_req->column_names =
             (char **) calloc(step_req->column_count, sizeof(char *));
+
         }
+        assert(step_req->column_types
+               && step_req->column_data
+               && step_req->column_names);
 
         for (int i = 0; i < step_req->column_count; i++) {
           int type = step_req->column_types[i] = sqlite3_column_type(stmt, i);
@@ -903,11 +923,13 @@ protected:
               // unsupported type
             }
           }
+          assert(step_req->column_data[i]);
+          assert(step_req->column_names[i]);
+          assert(step_req->column_types[i]);
         }
       }
       else if (rc == SQLITE_DONE) {
-//         printf("no more results");
-        // no more results
+        // nothing to do in this case
       }
       else {
         step_req->error_msg = (char *)
@@ -923,9 +945,13 @@ protected:
       REQ_FUN_ARG(0, cb);
 
       Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+      struct step_request *step_req = sto->step_req;
 
-      struct step_request *step_req = (struct step_request *)
+
+      if (!step_req) {
+        sto->step_req = step_req = (struct step_request *)
           calloc(1, sizeof(struct step_request));
+      }
 
       if (!step_req) {
         V8::LowMemoryNotification();

@@ -98,7 +98,7 @@ function _doStep(db, statement, rowCallback) {
       return;
     }
     rowCallback(row);
-    _doStep(db, statement, rowCallback);
+    process.nextTick(function () { _doStep(db, statement, rowCallback); });
   });
 }
 
