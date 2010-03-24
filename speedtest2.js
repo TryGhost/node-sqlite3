@@ -2,9 +2,6 @@ var fs     = require("fs"),
     sys    = require("sys"),
     sqlite = require("./sqlite");
 
-var sys  = require("sys"),
-    assert = require("assert");
-
 var puts = sys.puts;
 var inspect = sys.inspect;
 

@@ -1,8 +1,9 @@
-var fs = require("fs");
+var fs     = require("fs"),
+    sys    = require("sys"),
+    sqlite = require("./sqlite");
 
-process.mixin(GLOBAL, require("assert"));
-process.mixin(GLOBAL, require("sys"));
-var sqlite = require("./sqlite");
+var puts = sys.puts;
+var inspect = sys.inspect;
 
 var db = new sqlite.Database();
 
