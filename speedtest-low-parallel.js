@@ -9,18 +9,26 @@ var db = new sqlite.Database();
 var total = 100000;
 var rows = 0;
 var t0;
+var statement;
 
-function onStep () {
-  puts("got a row back");
+function onStep(error, row) {
+  var d;
+  if (!row) {
+    statement.finalize(function () { puts("finalized") });
+    d = ((new Date)-t0)/1000;
+    puts("**** " + d + "s to fetch " + rows + " rows (" + (rows/d) + "/s)");
+    return;
+  }
+  rows++;
+  statement.step(arguments.callee);
 }
 
 function getRows() {
-  db.prepare("SELECT * FROM t1", function (error, statement) {
+  db.prepare("SELECT * FROM t1", function (error, st) {
     if (error) throw error;
-    
-    for (var i = 0; i < 5; i++) {
-      statement.step(onStep);
-    }
+    rows = 0;
+    statement = st;
+    statement.step(onStep);
   });
 }
 
