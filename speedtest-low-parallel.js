@@ -12,7 +12,9 @@ var t0;
 var statement;
 
 function onStep(error, row) {
+//   puts(inspect(arguments));
   var d;
+  if (error) throw error;
   if (!row) {
     statement.finalize(function () { puts("finalized") });
     d = ((new Date)-t0)/1000;

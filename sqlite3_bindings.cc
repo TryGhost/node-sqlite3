@@ -145,6 +145,7 @@ protected:
 
     TryCatch try_catch;
 
+    open_req->dbo->Unref();
     open_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
 
     if (try_catch.HasCaught()) {
@@ -154,7 +155,6 @@ protected:
     open_req->dbo->Emit(String::New("ready"), 0, NULL);
     open_req->cb.Dispose();
 
-    open_req->dbo->Unref();
     free(open_req);
 
     return 0;
@@ -243,6 +243,7 @@ protected:
 
     TryCatch try_catch;
 
+    close_req->dbo->Unref();
     close_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
 
     if (try_catch.HasCaught()) {
@@ -251,7 +252,6 @@ protected:
 
     close_req->cb.Dispose();
 
-    close_req->dbo->Unref();
     free(close_req);
 
     return 0;
@@ -367,13 +367,13 @@ protected:
 
     TryCatch try_catch;
 
+    prep_req->dbo->Unref();
     prep_req->cb->Call(Context::GetCurrent()->Global(), argc, argv);
 
     if (try_catch.HasCaught()) {
       FatalException(try_catch);
     }
 
-    prep_req->dbo->Unref();
     prep_req->cb.Dispose();
     free(prep_req);
 
@@ -471,8 +471,9 @@ protected:
       REQ_EXT_ARG(0, stmt);
       int first_rc = args[1]->IntegerValue();
 
-      Statement *s = new Statement((sqlite3_stmt*)stmt->Value(), first_rc);
-      s->Wrap(args.This());
+      Statement *sto = new Statement((sqlite3_stmt*)stmt->Value(), first_rc);
+      sto->Wrap(args.This());
+      sto->Ref();
 
       return args.This();
     }
@@ -546,7 +547,6 @@ protected:
       }
 
       bind_req->cb.Dispose();
-      sto->Unref();
 
       free(bind_req->key);
       free(bind_req->value);
@@ -681,7 +681,6 @@ protected:
       eio_custom(EIO_Bind, EIO_PRI_DEFAULT, EIO_AfterBind, bind_req);
 
       ev_ref(EV_DEFAULT_UC);
-      sto->Ref();
 
       return Undefined();
     }
@@ -716,6 +715,7 @@ protected:
 
       argv[0] = Local<Value>::New(Undefined());
 
+      finalize_req->sto->Unref();
       finalize_req->cb->Call(
           Context::GetCurrent()->Global(), 1, argv);
 
@@ -725,7 +725,6 @@ protected:
 
       finalize_req->cb.Dispose();
 
-      finalize_req->sto->Unref();
       free(finalize_req);
 
       return 0;
@@ -772,12 +771,12 @@ protected:
       return Undefined();
     }
 
-    static Handle<Value> Reset(const Arguments& args) {
-      HandleScope scope;
-      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
-      SCHECK(sqlite3_reset(*stmt));
-      return Undefined();
-    }
+//     static Handle<Value> Reset(const Arguments& args) {
+//       HandleScope scope;
+//       Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+//       SCHECK(sqlite3_reset(*stmt));
+//       return Undefined();
+//     }
 
     struct step_request {
       Persistent<Function> cb;
@@ -829,13 +828,11 @@ protected:
             case SQLITE_INTEGER:
               row->Set(String::NewSymbol((char*) step_req->column_names[i]),
                        Int32::New(*(int*) (step_req->column_data[i])));
-//               free((int*)(step_req->column_data[i]));
               break;
 
             case SQLITE_FLOAT:
               row->Set(String::New(step_req->column_names[i]),
                        Number::New(*(double*) (step_req->column_data[i])));
-//               free((double*)(step_req->column_data[i]));
               break;
 
             case SQLITE_TEXT:
@@ -854,6 +851,7 @@ protected:
 
       TryCatch try_catch;
 
+      step_req->sto->Unref();
       step_req->cb->Call(Context::GetCurrent()->Global(), 2, argv);
 
       if (try_catch.HasCaught()) {
@@ -868,7 +866,6 @@ protected:
         step_req->column_data = NULL;
       }
 
-      step_req->sto->Unref();
 
       return 0;
     }
