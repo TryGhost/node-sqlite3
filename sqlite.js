@@ -20,39 +20,38 @@ var sqlite = require("./sqlite3_bindings");
 
 var Database = exports.Database = function () {
   var self = this;
-  this.queue = [];
-  this.driver = new sqlite.Database();
-  this.driver.addListener("ready", function () {
-    self.dispatch();
-  });
+
+  var db = new sqlite.Database();
+  db.__proto__ = Database.prototype;
+
+//   this.queue = [];
+//
+//   this.addListener("ready", function () {
+//     db.dispatch();
+//   });
+
+  return db;
 };
 
-Database.prototype.dispatch = function () {
-  if (!this.queue || this.currentQuery
-                  || !this.queue.length) {
-    return;
-  }
-  this.currentQuery = this.queue.shift();
-  this.executeQuery.apply(this, this.currentQuery);
-}
+Database.prototype = {
+  __proto__: sqlite.Database.prototype,
+  constructor: Database,
+};
 
-Database.prototype.open = function () {
-  this.driver.open.apply(this.driver, arguments);
-}
+// Database.prototype.dispatch = function () {
+//   if (!this.queue || this.currentQuery
+//                   || !this.queue.length) {
+//     return;
+//   }
+//   this.currentQuery = this.queue.shift();
+//   this.executeQuery.apply(this, this.currentQuery);
+// }
 
-Database.prototype.close = function () {
-  this.driver.close.apply(this.driver, arguments);
-}
-
-Database.prototype.prepare = function () {
-  this.driver.prepare.apply(this.driver, arguments);
-}
-
-Database.prototype.query = function (sql, bindings, queryCallback) {
-  this.queue = this.queue || [];
-  this.queue.push([sql, bindings, queryCallback]);
-  this.dispatch();
-}
+// Database.prototype.query = function (sql, bindings, queryCallback) {
+//   this.queue = this.queue || [];
+//   this.queue.push([sql, bindings, queryCallback]);
+//   this.dispatch();
+// }
 
 // Iterate over the list of bindings. Since we can't use something as
 // simple as a for or while loop, we'll just chain them via the event loop
@@ -75,7 +74,7 @@ function _setBindingsByIndex(db,
 function _queryDone(db, statement) {
   if (statement.tail) {
     statement.finalize(function () {
-      db.driver.prepare(statement.tail, onPrepare);
+      db.prepare(statement.tail, onPrepare);
     });
     return;
   }
@@ -83,7 +82,7 @@ function _queryDone(db, statement) {
   statement.finalize(function () {
     db.currentQuery = undefined;
     // if there are any queries queued, let them know it's safe to go
-    db.driver.emit("ready");
+    db.emit("ready");
   });
 }
 
@@ -116,7 +115,7 @@ function _onPrepare(db, statement, bindings, rowCallback) {
   }
 }
 
-Database.prototype.executeQuery = function(sql, bindings, rowCallback) {
+Database.prototype.query = function(sql, bindings, rowCallback) {
   var self = this;
 
   if (typeof(bindings) == "function") {
@@ -124,7 +123,7 @@ Database.prototype.executeQuery = function(sql, bindings, rowCallback) {
     bindings = [];
   }
 
-  this.driver.prepare(sql, function(error, statement) {
+  this.prepare(sql, function(error, statement) {
     if (error) throw error;
     if (statement) {
       _onPrepare(self, statement, bindings, rowCallback)
@@ -132,7 +131,7 @@ Database.prototype.executeQuery = function(sql, bindings, rowCallback) {
       rowCallback();
       self.currentQuery = undefined;
       // if there are any queries queued, let them know it's safe to go
-      self.dispatch();
+    //  self.dispatch();
     }
   });
 }
