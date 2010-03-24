@@ -72,21 +72,25 @@ using namespace node;
 
 class Sqlite3Db : public EventEmitter {
 public:
+  static Persistent<FunctionTemplate> constructor_template;
   static void Init(v8::Handle<Object> target) {
     HandleScope scope;
 
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
 
-    t->Inherit(EventEmitter::constructor_template);
-    t->InstanceTemplate()->SetInternalFieldCount(1);
+    constructor_template = Persistent<FunctionTemplate>::New(t);
+    constructor_template->Inherit(EventEmitter::constructor_template);
+    constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
+    constructor_template->SetClassName(String::NewSymbol("Database"));
 
-    NODE_SET_PROTOTYPE_METHOD(t, "open", Open);
-    NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-//     NODE_SET_PROTOTYPE_METHOD(t, "changes", Changes);
-//     NODE_SET_PROTOTYPE_METHOD(t, "lastInsertRowid", LastInsertRowid);
-    NODE_SET_PROTOTYPE_METHOD(t, "prepare", Prepare);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "open", Open);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "prepare", Prepare);
+//     NODE_SET_PROTOTYPE_METHOD(constructor_template, "changes", Changes);
+//     NODE_SET_PROTOTYPE_METHOD(constructor_template, "lastInsertRowid", LastInsertRowid);
 
-    target->Set(v8::String::NewSymbol("Database"), t->GetFunction());
+    target->Set(v8::String::NewSymbol("Database"),
+            constructor_template->GetFunction());
 
     Statement::Init(target);
   }
@@ -438,10 +442,11 @@ protected:
       HandleScope scope;
 
       Local<FunctionTemplate> t = FunctionTemplate::New(New);
-      constructor_template = Persistent<FunctionTemplate>::New(t);
 
-      t->Inherit(EventEmitter::constructor_template);
-      t->InstanceTemplate()->SetInternalFieldCount(1);
+      constructor_template = Persistent<FunctionTemplate>::New(t);
+      constructor_template->Inherit(EventEmitter::constructor_template);
+      constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
+      constructor_template->SetClassName(String::NewSymbol("Statement"));
 
       NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
 //       NODE_SET_PROTOTYPE_METHOD(t, "clearBindings", ClearBindings);
@@ -878,7 +883,7 @@ protected:
         // If these pointers are NULL, look up and store the number of columns
         // their names and types.
         // Otherwise that means we have already looked up the column types and
-        // names so we can simply re-use that info. 
+        // names so we can simply re-use that info.
         if (   !step_req->column_types
             && !step_req->column_names) {
           step_req->column_count = sqlite3_column_count(stmt);
@@ -994,6 +999,7 @@ protected:
 };
 
 Persistent<FunctionTemplate> Sqlite3Db::Statement::constructor_template;
+Persistent<FunctionTemplate> Sqlite3Db::constructor_template;
 
 extern "C" void init (v8::Handle<Object> target) {
   Sqlite3Db::Init(target);
