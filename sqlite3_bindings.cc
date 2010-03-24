@@ -18,6 +18,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <v8.h>
 #include <node.h>
@@ -163,7 +164,13 @@ protected:
     struct open_request *open_req = (struct open_request *)(req->data);
 
     sqlite3 **dbptr = open_req->dbo->GetDBPtr();
-    int rc = sqlite3_open(open_req->filename, dbptr);
+    int rc = sqlite3_open_v2( open_req->filename
+                            , dbptr
+                            , SQLITE_OPEN_READWRITE
+                              | SQLITE_OPEN_CREATE
+                              | SQLITE_OPEN_FULLMUTEX
+                            , NULL);
+
     req->result = rc;
 
 //     sqlite3 *db = *dbptr;
@@ -799,7 +806,7 @@ protected:
       Local<Value> argv[2];
 
       if (step_req->error_msg) {
-        argv[0] = Exception::Error(String::New(step_req->error_msg));
+        argv[0] = Exception::Error(String::New("some error"));
       }
       else {
         argv[0] = Local<Value>::New(Undefined());
@@ -812,24 +819,27 @@ protected:
         Local<Object> row = Object::New();
 
         for (int i = 0; i < step_req->column_count; i++) {
-          assert(step_req->column_data[i]);
+          assert(step_req->column_data);
+          assert(((void**)step_req->column_data)[i]);
           assert(step_req->column_names[i]);
           assert(step_req->column_types[i]);
 
           switch(step_req->column_types[i]) {
+            // XXX why does using String::New make v8 croak here?
             case SQLITE_INTEGER:
-              row->Set(String::New(step_req->column_names[i]),
+              row->Set(String::NewSymbol((char*) step_req->column_names[i]),
                        Int32::New(*(int*) (step_req->column_data[i])));
-              free((int*)(step_req->column_data[i]));
+//               free((int*)(step_req->column_data[i]));
               break;
 
             case SQLITE_FLOAT:
               row->Set(String::New(step_req->column_names[i]),
                        Number::New(*(double*) (step_req->column_data[i])));
-              free((double*)(step_req->column_data[i]));
+//               free((double*)(step_req->column_data[i]));
               break;
 
             case SQLITE_TEXT:
+              assert(strlen((char*)step_req->column_data[i]));
               row->Set(String::New(step_req->column_names[i]),
                        String::New((char *) (step_req->column_data[i])));
               // don't free this pointer, it's owned by sqlite3
@@ -852,7 +862,8 @@ protected:
 
       step_req->cb.Dispose();
 
-      if (req->result == SQLITE_ROW && step_req->column_count) {
+      if (req->result == SQLITE_DONE && step_req->column_count) {
+          printf("disposing of memory\n");
         free((void**)step_req->column_data);
         step_req->column_data = NULL;
       }
@@ -887,6 +898,7 @@ protected:
         if (   !step_req->column_types
             && !step_req->column_names) {
           step_req->column_count = sqlite3_column_count(stmt);
+          assert(step_req->column_count);
           step_req->column_types =
             (int *) calloc(step_req->column_count, sizeof(int));
           step_req->column_names =
@@ -912,9 +924,13 @@ protected:
 
           switch(type) {
             case SQLITE_INTEGER: {
-                int *value = (int *) malloc(sizeof(int));
-                *value = sqlite3_column_int(stmt, i);
-                step_req->column_data[i] = value;
+                step_req->column_data[i] = (int *) malloc(sizeof(int));
+                int value = sqlite3_column_int(stmt, i);
+
+                if (!step_req->column_data[i]) { printf ("zomg\n"); }
+                *(int*)(step_req->column_data[i]) = value;
+//                 printf("addr was %p\n", step_req->column_data[i]);
+                assert(step_req->column_data[i]);
               }
               break;
 
@@ -937,18 +953,24 @@ protected:
               break;
 
             default: {
+              printf("unsupporto\n");
               // unsupported type
             }
-          }
           assert(step_req->column_data[i]);
           assert(step_req->column_names[i]);
           assert(step_req->column_types[i]);
+          }
         }
+        assert(step_req->column_data);
+        assert(step_req->column_names);
+        assert(step_req->column_types);
       }
       else if (rc == SQLITE_DONE) {
         // nothing to do in this case
+        printf("done\n");
       }
       else {
+        printf("error\n");
         step_req->error_msg = (char *)
           sqlite3_errmsg(sqlite3_db_handle(*sto));
       }
@@ -968,9 +990,6 @@ protected:
       if (!step_req) {
         sto->step_req = step_req = (struct step_request *)
           calloc(1, sizeof(struct step_request));
-        step_req->column_types = NULL;
-        step_req->column_names = NULL;
-        step_req->column_data = NULL;
       }
 
       if (!step_req) {
