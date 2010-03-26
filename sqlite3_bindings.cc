@@ -105,8 +105,6 @@ protected:
 
   sqlite3* db_;
 
-  operator sqlite3* () const { return db_; }
-
   // Return a pointer to the Sqlite handle pointer so that EIO_Open can
   // pass it to sqlite3_open which wants a pointer to an sqlite3 pointer. This
   // is because it wants to initialize our original (sqlite3*) pointer to
@@ -217,8 +215,8 @@ protected:
   // TODO: libeio'fy
   static Handle<Value> Changes(const Arguments& args) {
     HandleScope scope;
-    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
-    Local<Number> result = Integer::New(sqlite3_changes(*db));
+    Sqlite3Db* dbo = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+    Local<Number> result = Integer::New(sqlite3_changes(dbo->db_));
     return scope.Close(result);
   }
 
@@ -260,7 +258,7 @@ protected:
   static int EIO_Close(eio_req *req) {
     struct close_request *close_req = (struct close_request *)(req->data);
     Sqlite3Db* dbo = close_req->dbo;
-    int rc = req->result = sqlite3_close(*dbo);
+    int rc = req->result = sqlite3_close(dbo->db_);
     dbo->db_ = NULL;
     return 0;
   }
@@ -295,8 +293,8 @@ protected:
   // TODO: libeio'fy
   static Handle<Value> LastInsertRowid(const Arguments& args) {
     HandleScope scope;
-    Sqlite3Db* db = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
-    Local<Number> result = Integer::New(sqlite3_last_insert_rowid(*db));
+    Sqlite3Db* dbo = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
+    Local<Number> result = Integer::New(sqlite3_last_insert_rowid(dbo->db_));
     return scope.Close(result);
   }
 
@@ -385,7 +383,7 @@ protected:
 
     prep_req->stmt = NULL;
     prep_req->tail = NULL;
-    sqlite3* db = *(prep_req->dbo);
+    sqlite3* db = prep_req->dbo->db_;
 
     int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
                 &(prep_req->stmt), &(prep_req->tail));
