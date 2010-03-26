@@ -35,7 +35,7 @@ using namespace node;
 
 #define SCHECK(rc) { if ((rc) != SQLITE_OK)                             \
       return ThrowException(Exception::Error(String::New(               \
-                        sqlite3_errmsg(sqlite3_db_handle(*stmt))))); }
+                        sqlite3_errmsg(sqlite3_db_handle(sto->stmt_))))); }
 
 #define REQ_ARGS(N)                                                     \
   if (args.Length() < (N))                                              \
@@ -489,10 +489,6 @@ protected:
       if (step_req) free(step_req);
     }
 
-    sqlite3_stmt* stmt_;
-
-    operator sqlite3_stmt* () const { return stmt_; }
-
     //
     // JS prepared statement bindings
     //
@@ -566,8 +562,8 @@ protected:
           break;
 
         case KEY_STRING:
-          index = sqlite3_bind_parameter_index(
-                      *sto, (char*)(bind_req->key));
+          index = sqlite3_bind_parameter_index(sto->stmt_,
+                                               (char*)(bind_req->key));
           break;
 
          default: {
@@ -583,17 +579,17 @@ protected:
       int rc = 0;
       switch(bind_req->value_type) {
         case VALUE_INT:
-          rc = sqlite3_bind_int(*sto, index, *(int*)(bind_req->value));
+          rc = sqlite3_bind_int(sto->stmt_, index, *(int*)(bind_req->value));
           break;
         case VALUE_DOUBLE:
-          rc = sqlite3_bind_double(*sto, index, *(double*)(bind_req->value));
+          rc = sqlite3_bind_double(sto->stmt_, index, *(double*)(bind_req->value));
           break;
         case VALUE_STRING:
-          rc = sqlite3_bind_text(*sto, index, (char*)(bind_req->value),
+          rc = sqlite3_bind_text(sto->stmt_, index, (char*)(bind_req->value),
                             bind_req->value_size, SQLITE_TRANSIENT);
           break;
         case VALUE_NULL:
-          rc = sqlite3_bind_null(*sto, index);
+          rc = sqlite3_bind_null(sto->stmt_, index);
           break;
 
         default: {
@@ -688,15 +684,15 @@ protected:
     // XXX TODO
     static Handle<Value> BindParameterCount(const Arguments& args) {
       HandleScope scope;
-      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
-      Local<Number> result = Integer::New(sqlite3_bind_parameter_count(*stmt));
+      Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+      Local<Number> result = Integer::New(sqlite3_bind_parameter_count(sto->stmt_));
       return scope.Close(result);
     }
 
     static Handle<Value> ClearBindings(const Arguments& args) {
       HandleScope scope;
-      Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
-      SCHECK(sqlite3_clear_bindings(*stmt));
+      Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+      SCHECK(sqlite3_clear_bindings(sto->stmt_));
       return Undefined();
     }
 
@@ -735,7 +731,7 @@ protected:
         (struct finalize_request *)(req->data);
 
       Statement *sto = finalize_req->sto;
-      req->result = sqlite3_finalize(*sto);
+      req->result = sqlite3_finalize(sto->stmt_);
       sto->stmt_ = NULL;
       free(sto->step_req);
       sto->step_req = NULL;
@@ -773,8 +769,8 @@ protected:
 
 //     static Handle<Value> Reset(const Arguments& args) {
 //       HandleScope scope;
-//       Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
-//       SCHECK(sqlite3_reset(*stmt));
+//       Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+//       SCHECK(sqlite3_reset(sto->stmt_));
 //       return Undefined();
 //     }
 
@@ -874,7 +870,7 @@ protected:
       struct step_request *step_req = (struct step_request *)(req->data);
       Statement *sto = step_req->sto;
 
-      sqlite3_stmt *stmt = *sto;
+      sqlite3_stmt *stmt = sto->stmt_;
       int rc;
 
       // check if we have already taken a step immediately after prepare
@@ -969,7 +965,7 @@ protected:
       else {
         printf("error\n");
         step_req->error_msg = (char *)
-          sqlite3_errmsg(sqlite3_db_handle(*sto));
+          sqlite3_errmsg(sqlite3_db_handle(sto->stmt_));
       }
 
       return 0;
@@ -1011,6 +1007,7 @@ protected:
     }
 
     int first_rc_;
+    sqlite3_stmt* stmt_;
   };
 };
 
