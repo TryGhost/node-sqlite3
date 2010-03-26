@@ -29,6 +29,8 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 using namespace v8;
 using namespace node;
 
+static Persistent<String> callback_sym;
+
 #define CHECK(rc) { if ((rc) != SQLITE_OK)                              \
       return ThrowException(Exception::Error(String::New(               \
                                              sqlite3_errmsg(*db)))); }
@@ -460,6 +462,8 @@ protected:
 //       NODE_SET_PROTOTYPE_METHOD(t, "reset", Reset);
       NODE_SET_PROTOTYPE_METHOD(t, "step", Step);
 
+      callback_sym = Persistent<String>::New(String::New("callback"));
+
       //target->Set(v8::String::NewSymbol("SQLStatement"), t->GetFunction());
     }
 
@@ -477,12 +481,18 @@ protected:
 
   protected:
     Statement(sqlite3_stmt* stmt, int first_rc = -1)
-    : EventEmitter(), step_req(NULL), first_rc_(first_rc), stmt_(stmt) {
+    : EventEmitter(), first_rc_(first_rc), stmt_(stmt) {
+      column_count_ = -1;
+      column_types_ = NULL;
+      column_names_ = NULL;
+      column_data_ = NULL;
     }
 
     ~Statement() {
-      if (stmt_) { sqlite3_finalize(stmt_); }
-      if (step_req) free(step_req);
+      if (stmt_) sqlite3_finalize(stmt_);
+      if (column_types_) free(column_types_);
+      if (column_names_) free(column_names_);
+      if (column_data_) free(column_data_);
     }
 
     //
@@ -690,45 +700,33 @@ protected:
       return Undefined();
     }
 
-    struct finalize_request {
-      Persistent<Function> cb;
-      Statement *sto;
-    };
-
     static int EIO_AfterFinalize(eio_req *req) {
       ev_unref(EV_DEFAULT_UC);
-      struct finalize_request *finalize_req = (struct finalize_request *)(req->data);
+      Statement *sto = (class Statement *)(req->data);
 
       HandleScope scope;
+
+      Local<Function> cb = sto->GetCallback();
+
       TryCatch try_catch;
-      Local<Value> argv[1];
 
-      argv[0] = Local<Value>::New(Undefined());
-
-      finalize_req->sto->Unref();
-      finalize_req->cb->Call(
-          Context::GetCurrent()->Global(), 1, argv);
+      cb->Call(sto->handle_, 0, NULL);
 
       if (try_catch.HasCaught()) {
         FatalException(try_catch);
       }
 
-      finalize_req->cb.Dispose();
-
-      free(finalize_req);
+      sto->Unref();
 
       return 0;
     }
 
     static int EIO_Finalize(eio_req *req) {
-      struct finalize_request *finalize_req =
-        (struct finalize_request *)(req->data);
+      Statement *sto = (class Statement *)(req->data);
 
-      Statement *sto = finalize_req->sto;
+      assert(sto->stmt_);
       req->result = sqlite3_finalize(sto->stmt_);
       sto->stmt_ = NULL;
-      free(sto->step_req);
-      sto->step_req = NULL;
 
       return 0;
     }
@@ -736,27 +734,19 @@ protected:
     static Handle<Value> Finalize(const Arguments& args) {
       HandleScope scope;
 
-      REQ_FUN_ARG(0, cb);
-
       Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
 
-      struct finalize_request *finalize_req = (struct finalize_request *)
-          calloc(1, sizeof(struct finalize_request));
-
-      if (!finalize_req) {
-        V8::LowMemoryNotification();
-        return ThrowException(Exception::Error(
-          String::New("Could not allocate enough memory")));
+      if (sto->HasCallback()) {
+        return ThrowException(Exception::Error(String::New("Already stepping")));
       }
 
-      finalize_req->cb = Persistent<Function>::New(cb);
-      finalize_req->sto = sto;
+      REQ_FUN_ARG(0, cb);
 
+      sto->SetCallback(cb);
 
-      eio_custom(EIO_Finalize, EIO_PRI_DEFAULT, EIO_AfterFinalize, finalize_req);
+      eio_custom(EIO_Finalize, EIO_PRI_DEFAULT, EIO_AfterFinalize, sto);
 
       ev_ref(EV_DEFAULT_UC);
-      sto->Ref();
 
       return Undefined();
     }
@@ -768,33 +758,18 @@ protected:
 //       return Undefined();
 //     }
 
-    struct step_request {
-      Persistent<Function> cb;
-      Statement *sto;
-
-      int first_rc;
-      // Populate arrays: one will be the types of columns for the result,
-      // the second will be the data for the row.
-      int  column_count;
-      int  *column_types;
-      char **column_names;
-      void **column_data;
-
-      // if rc == 0 this will NULL
-      char *error_msg;
-    } *step_req;
-
     static int EIO_AfterStep(eio_req *req) {
       ev_unref(EV_DEFAULT_UC);
 
       HandleScope scope;
 
-      struct step_request *step_req = (struct step_request *)(req->data);
+      Statement *sto = (class Statement *)(req->data);
 
       Local<Value> argv[2];
 
-      if (step_req->error_msg) {
-        argv[0] = Exception::Error(String::New("Encountered an error while stepping through results"));
+      if (sto->error_) {
+        argv[0] = Exception::Error(
+            String::New(sqlite3_errmsg(sqlite3_db_handle(sto->stmt_))));
       }
       else {
         argv[0] = Local<Value>::New(Undefined());
@@ -806,28 +781,28 @@ protected:
       else {
         Local<Object> row = Object::New();
 
-        for (int i = 0; i < step_req->column_count; i++) {
-          assert(step_req->column_data);
-          assert(((void**)step_req->column_data)[i]);
-          assert(step_req->column_names[i]);
-          assert(step_req->column_types[i]);
+        for (int i = 0; i < sto->column_count_; i++) {
+          assert(sto->column_data_);
+          assert(((void**)sto->column_data_)[i]);
+          assert(sto->column_names_[i]);
+          assert(sto->column_types_[i]);
 
-          switch(step_req->column_types[i]) {
+          switch (sto->column_types_[i]) {
             // XXX why does using String::New make v8 croak here?
             case SQLITE_INTEGER:
-              row->Set(String::NewSymbol((char*) step_req->column_names[i]),
-                       Int32::New(*(int*) (step_req->column_data[i])));
+              row->Set(String::NewSymbol((char*) sto->column_names_[i]),
+                       Int32::New(*(int*) (sto->column_data_[i])));
               break;
 
             case SQLITE_FLOAT:
-              row->Set(String::New(step_req->column_names[i]),
-                       Number::New(*(double*) (step_req->column_data[i])));
+              row->Set(String::New(sto->column_names_[i]),
+                       Number::New(*(double*) (sto->column_data_[i])));
               break;
 
             case SQLITE_TEXT:
-              assert(strlen((char*)step_req->column_data[i]));
-              row->Set(String::New(step_req->column_names[i]),
-                       String::New((char *) (step_req->column_data[i])));
+              assert(strlen((char*)sto->column_data_[i]));
+              row->Set(String::New(sto->column_names_[i]),
+                       String::New((char *) (sto->column_data_[i])));
               // don't free this pointer, it's owned by sqlite3
               break;
 
@@ -840,89 +815,86 @@ protected:
 
       TryCatch try_catch;
 
-      step_req->sto->Unref();
-      step_req->cb->Call(Context::GetCurrent()->Global(), 2, argv);
+      Local<Function> cb = sto->GetCallback();
+
+      cb->Call(sto->handle_, 2, argv);
 
       if (try_catch.HasCaught()) {
         FatalException(try_catch);
       }
 
-      // Disposing of the callback here causes v8 to freak out
-//       step_req->cb.Dispose();
-
-      if (req->result == SQLITE_DONE && step_req->column_count) {
-        free(step_req->column_data);
-        step_req->column_data = NULL;
+      if (req->result == SQLITE_DONE && sto->column_count_) {
+        free(sto->column_data_);
+        sto->column_data_ = NULL;
       }
-
 
       return 0;
     }
 
     static int EIO_Step(eio_req *req) {
-      struct step_request *step_req = (struct step_request *)(req->data);
-      Statement *sto = step_req->sto;
-
+      Statement *sto = (class Statement *)(req->data);
       sqlite3_stmt *stmt = sto->stmt_;
+      assert(stmt);
       int rc;
 
       // check if we have already taken a step immediately after prepare
-      if (step_req->first_rc != -1) {
-        rc = req->result = step_req->first_rc;
+      if (sto->first_rc_ != -1) {
+        // This is the first one! Let's just use the rc from when we called
+        // it in EIO_Prepare
+        rc = req->result = sto->first_rc_;
+        // Now we set first_rc_ to -1 so that on the next step, it won't
+        // think this is the first.
+        sto->first_rc_ = -1;
       }
       else {
         rc = req->result = sqlite3_step(stmt);
       }
 
-      assert(step_req);
+      sto->error_ = false;
 
       if (rc == SQLITE_ROW) {
         // If these pointers are NULL, look up and store the number of columns
         // their names and types.
         // Otherwise that means we have already looked up the column types and
         // names so we can simply re-use that info.
-        if (   !step_req->column_types
-            && !step_req->column_names) {
-          step_req->column_count = sqlite3_column_count(stmt);
-          assert(step_req->column_count);
-          step_req->column_types =
-            (int *) calloc(step_req->column_count, sizeof(int));
-          step_req->column_names =
-            (char **) calloc(step_req->column_count, sizeof(char *));
+        if (!sto->column_types_ && !sto->column_names_) {
+          sto->column_count_ = sqlite3_column_count(stmt);
+          assert(sto->column_count_);
+          sto->column_types_ = (int *) calloc(sto->column_count_, sizeof(int));
+          sto->column_names_ = (char **) calloc(sto->column_count_,
+                                                sizeof(char *));
 
-          for (int i = 0; i < step_req->column_count; i++) {
-            step_req->column_types[i] = sqlite3_column_type(stmt, i);
-            step_req->column_names[i] = (char *) sqlite3_column_name(stmt, i);
+          for (int i = 0; i < sto->column_count_; i++) {
+            sto->column_types_[i] = sqlite3_column_type(stmt, i);
+            sto->column_names_[i] = (char *) sqlite3_column_name(stmt, i);
           }
         }
 
-        if (step_req->column_count) {
-          step_req->column_data =
-            (void **) calloc(step_req->column_count, sizeof(void *));
+        if (sto->column_count_) {
+          sto->column_data_ = (void **) calloc(sto->column_count_,
+                                               sizeof(void *));
         }
 
-        assert(step_req->column_types
-               && step_req->column_data
-               && step_req->column_names);
+        assert(sto->column_types_ && sto->column_data_ && sto->column_names_);
 
-        for (int i = 0; i < step_req->column_count; i++) {
-          int type = step_req->column_types[i];
+        for (int i = 0; i < sto->column_count_; i++) {
+          int type = sto->column_types_[i];
 
           switch(type) {
             case SQLITE_INTEGER: {
                 // XXX reuse this space instead of allocating every time
-                step_req->column_data[i] = (int *) malloc(sizeof(int));
+                sto->column_data_[i] = (int *) malloc(sizeof(int));
                 int value = sqlite3_column_int(stmt, i);
 
-                *(int*)(step_req->column_data[i]) = value;
-                assert(step_req->column_data[i]);
+                *(int*)(sto->column_data_[i]) = value;
+                assert(sto->column_data_[i]);
               }
               break;
 
             case SQLITE_FLOAT: {
                 double *value = (double *) malloc(sizeof(double));
                 *value = sqlite3_column_double(stmt, i);
-                step_req->column_data[i] = value;
+                sto->column_data_[i] = value;
               }
               break;
 
@@ -933,22 +905,21 @@ protected:
                 // I'm going to assume it's okay to keep this pointer around
                 // until it is used in `EIO_AfterStep`
                 char *value = (char *) sqlite3_column_text(stmt, i);
-                step_req->column_data[i] = value;
+                sto->column_data_[i] = value;
               }
               break;
 
             default: {
-              printf("unsupporto\n");
-              // unsupported type
+              assert(0 && "unsupported type");
             }
-          assert(step_req->column_data[i]);
-          assert(step_req->column_names[i]);
-          assert(step_req->column_types[i]);
           }
+          assert(sto->column_data_[i]);
+          assert(sto->column_names_[i]);
+          assert(sto->column_types_[i]);
         }
-        assert(step_req->column_data);
-        assert(step_req->column_names);
-        assert(step_req->column_types);
+        assert(sto->column_data_);
+        assert(sto->column_names_);
+        assert(sto->column_types_);
       }
       else if (rc == SQLITE_DONE) {
         // nothing to do in this case
@@ -956,8 +927,7 @@ protected:
       }
       else {
         printf("error\n");
-        step_req->error_msg = (char *)
-          sqlite3_errmsg(sqlite3_db_handle(sto->stmt_));
+        sto->error_ = true;
       }
 
       return 0;
@@ -966,37 +936,46 @@ protected:
     static Handle<Value> Step(const Arguments& args) {
       HandleScope scope;
 
+      Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+
+      if (sto->HasCallback()) {
+        return ThrowException(Exception::Error(String::New("Already stepping")));
+      }
+
       REQ_FUN_ARG(0, cb);
 
-      Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
-      struct step_request *step_req = sto->step_req;
+      sto->SetCallback(cb);
 
-
-      if (!step_req) {
-        sto->step_req = step_req = (struct step_request *)
-          calloc(1, sizeof(struct step_request));
-      }
-
-      if (!step_req) {
-        V8::LowMemoryNotification();
-        return ThrowException(Exception::Error(
-          String::New("Could not allocate enough memory")));
-      }
-
-      step_req->cb = Persistent<Function>::New(cb);
-      step_req->sto = sto;
-      step_req->error_msg = NULL;
-
-      step_req->first_rc = sto->first_rc_;
-      sto->first_rc_ = -1;
-
-      eio_custom(EIO_Step, EIO_PRI_DEFAULT, EIO_AfterStep, step_req);
+      eio_custom(EIO_Step, EIO_PRI_DEFAULT, EIO_AfterStep, sto);
 
       ev_ref(EV_DEFAULT_UC);
-      sto->Ref();
 
       return Undefined();
     }
+
+    // The following three methods must be called inside a HandleScope
+
+    bool HasCallback() {
+      return ! handle_->GetHiddenValue(callback_sym).IsEmpty();
+    }
+
+    void SetCallback(Local<Function> cb) {
+      handle_->SetHiddenValue(callback_sym, cb);
+    }
+
+    Local<Function> GetCallback() {
+      Local<Value> cb_v = handle_->GetHiddenValue(callback_sym);
+      assert(cb_v->IsFunction());
+      Local<Function> cb = Local<Function>::Cast(cb_v);
+      handle_->DeleteHiddenValue(callback_sym);
+      return cb;
+    }
+
+    int  column_count_;
+    int  *column_types_;
+    char **column_names_;
+    void **column_data_;
+    bool error_;
 
     int first_rc_;
     sqlite3_stmt* stmt_;
