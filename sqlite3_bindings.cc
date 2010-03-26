@@ -864,15 +864,32 @@ protected:
           sto->column_names_ = (char **) calloc(sto->column_count_,
                                                 sizeof(char *));
 
+          if (sto->column_count_) {
+            sto->column_data_ = (void **) calloc(sto->column_count_,
+                                                 sizeof(void *));
+          }
+
           for (int i = 0; i < sto->column_count_; i++) {
             sto->column_types_[i] = sqlite3_column_type(stmt, i);
             sto->column_names_[i] = (char *) sqlite3_column_name(stmt, i);
-          }
-        }
 
-        if (sto->column_count_) {
-          sto->column_data_ = (void **) calloc(sto->column_count_,
-                                               sizeof(void *));
+            switch(sto->column_types_[i]) {
+              case SQLITE_INTEGER:
+                // XXX reuse this space instead of allocating every time
+                sto->column_data_[i] = (int *) malloc(sizeof(int));
+                break;
+
+              case SQLITE_FLOAT:
+                sto->column_data_[i] = (double *) malloc(sizeof(double));
+                break;
+
+              // no need to allocate memory for strings
+
+              default: {
+                // unsupported type
+              }
+            }
+          }
         }
 
         assert(sto->column_types_ && sto->column_data_ && sto->column_names_);
@@ -881,21 +898,13 @@ protected:
           int type = sto->column_types_[i];
 
           switch(type) {
-            case SQLITE_INTEGER: {
-                // XXX reuse this space instead of allocating every time
-                sto->column_data_[i] = (int *) malloc(sizeof(int));
-                int value = sqlite3_column_int(stmt, i);
-
-                *(int*)(sto->column_data_[i]) = value;
-                assert(sto->column_data_[i]);
-              }
+            case SQLITE_INTEGER: 
+              *(int*)(sto->column_data_[i]) = sqlite3_column_int(stmt, i);
+              assert(sto->column_data_[i]);
               break;
 
-            case SQLITE_FLOAT: {
-                double *value = (double *) malloc(sizeof(double));
-                *value = sqlite3_column_double(stmt, i);
-                sto->column_data_[i] = value;
-              }
+            case SQLITE_FLOAT:
+              *(double*)(sto->column_data_[i]) = sqlite3_column_double(stmt, i);
               break;
 
             case SQLITE_TEXT: {
@@ -904,8 +913,7 @@ protected:
                 // it will be reclaimed on the next step, reset, or finalize.
                 // I'm going to assume it's okay to keep this pointer around
                 // until it is used in `EIO_AfterStep`
-                char *value = (char *) sqlite3_column_text(stmt, i);
-                sto->column_data_[i] = value;
+                sto->column_data_[i] = (char *) sqlite3_column_text(stmt, i);
               }
               break;
 
