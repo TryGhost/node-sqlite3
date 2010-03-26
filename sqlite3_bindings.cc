@@ -492,7 +492,7 @@ protected:
       if (stmt_) sqlite3_finalize(stmt_);
       if (column_types_) free(column_types_);
       if (column_names_) free(column_names_);
-      if (column_data_) free(column_data_);
+      if (column_data_) FreeColumnData();
     }
 
     //
@@ -824,11 +824,29 @@ protected:
       }
 
       if (req->result == SQLITE_DONE && sto->column_count_) {
-        free(sto->column_data_);
-        sto->column_data_ = NULL;
+        sto->FreeColumnData();
       }
 
       return 0;
+    }
+
+    void FreeColumnData(void) {
+      if (!column_count_) return;
+      for (int i = 0; i < column_count_; i++) {
+        switch (column_types_[i]) {
+          // XXX why does using String::New make v8 croak here?
+          case SQLITE_INTEGER:
+            free(column_data_[i]);
+            break;
+          case SQLITE_FLOAT:
+            free(column_data_[i]);
+            break;
+        }
+        column_data_[i] = NULL;
+      }
+
+      free(column_data_);
+      column_data_ = NULL;
     }
 
     static int EIO_Step(eio_req *req) {
@@ -875,7 +893,6 @@ protected:
 
             switch(sto->column_types_[i]) {
               case SQLITE_INTEGER:
-                // XXX reuse this space instead of allocating every time
                 sto->column_data_[i] = (int *) malloc(sizeof(int));
                 break;
 

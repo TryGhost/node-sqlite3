@@ -7,7 +7,7 @@ db.execute("CREATE TABLE t1 (alpha INTEGER)") do |row|
 
 end
 
-count = 100000;
+count = 1000000;
 
 t0 = Time.new;
 1.upto(count) do
