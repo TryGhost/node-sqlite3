@@ -52,7 +52,7 @@ using namespace node;
   if (args.Length() <= (I) || !args[I]->IsFunction())                   \
     return ThrowException(Exception::TypeError(                         \
                   String::New("Argument " #I " must be a function")));  \
-  Local<Function> cb = Local<Function>::Cast(args[I]);
+  Local<Function> VAR = Local<Function>::Cast(args[I]);
 
 #define REQ_EXT_ARG(I, VAR)                                             \
   if (args.Length() <= (I) || !args[I]->IsExternal())                   \
