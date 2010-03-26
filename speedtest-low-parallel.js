@@ -29,6 +29,7 @@ function getRows() {
   db.prepare("SELECT * FROM t1", function (error, st) {
     if (error) throw error;
     rows = 0;
+    t0 = new Date();
     statement = st;
     statement.step(onStep);
   });

@@ -258,7 +258,7 @@ protected:
   static int EIO_Close(eio_req *req) {
     struct close_request *close_req = (struct close_request *)(req->data);
     Sqlite3Db* dbo = close_req->dbo;
-    int rc = req->result = sqlite3_close(dbo->db_);
+    req->result = sqlite3_close(dbo->db_);
     dbo->db_ = NULL;
     return 0;
   }
@@ -465,7 +465,6 @@ protected:
 
     static Handle<Value> New(const Arguments& args) {
       HandleScope scope;
-      int I = 0;
       REQ_EXT_ARG(0, stmt);
       int first_rc = args[1]->IntegerValue();
 
@@ -478,8 +477,7 @@ protected:
 
   protected:
     Statement(sqlite3_stmt* stmt, int first_rc = -1)
-    : EventEmitter(), stmt_(stmt), step_req(NULL) {
-      first_rc_ = first_rc;
+    : EventEmitter(), step_req(NULL), first_rc_(first_rc), stmt_(stmt) {
     }
 
     ~Statement() {
@@ -522,8 +520,6 @@ protected:
 
       HandleScope scope;
       struct bind_request *bind_req = (struct bind_request *)(req->data);
-
-      Statement *sto = bind_req->sto;
 
       Local<Value> argv[1];
       bool err = false;
@@ -794,12 +790,11 @@ protected:
       HandleScope scope;
 
       struct step_request *step_req = (struct step_request *)(req->data);
-      void **data = step_req->column_data;
 
       Local<Value> argv[2];
 
       if (step_req->error_msg) {
-        argv[0] = Exception::Error(String::New("some error"));
+        argv[0] = Exception::Error(String::New("Encountered an error while stepping through results"));
       }
       else {
         argv[0] = Local<Value>::New(Undefined());
@@ -852,11 +847,11 @@ protected:
         FatalException(try_catch);
       }
 
-      step_req->cb.Dispose();
+      // Disposing of the callback here causes v8 to freak out
+//       step_req->cb.Dispose();
 
       if (req->result == SQLITE_DONE && step_req->column_count) {
-          printf("disposing of memory\n");
-        free((void**)step_req->column_data);
+        free(step_req->column_data);
         step_req->column_data = NULL;
       }
 
@@ -915,12 +910,11 @@ protected:
 
           switch(type) {
             case SQLITE_INTEGER: {
+                // XXX reuse this space instead of allocating every time
                 step_req->column_data[i] = (int *) malloc(sizeof(int));
                 int value = sqlite3_column_int(stmt, i);
 
-                if (!step_req->column_data[i]) { printf ("zomg\n"); }
                 *(int*)(step_req->column_data[i]) = value;
-//                 printf("addr was %p\n", step_req->column_data[i]);
                 assert(step_req->column_data[i]);
               }
               break;

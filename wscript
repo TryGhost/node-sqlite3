@@ -15,14 +15,17 @@ def configure(conf):
   conf.check_tool("node_addon")
   if not conf.check_cfg(package='sqlite3', args='--cflags --libs', uselib_store='SQLITE3'):
     conf.fatal('Missing sqlite3');
+#   conf.check_cfg(package='profiler', args='--cflags --libs', uselib_store='SQLITE3')
+#   conf.env.append_value('LIBPATH_PROFILER', '/usr/local/lib')
+#   conf.env.append_value('LIB_PROFILER', 'profiler')
 
 def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
-  obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE"]
+  obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
   obj.target = "sqlite3_bindings"
   obj.source = "sqlite3_bindings.cc"
   #obj.lib = "sqlite3"
-  obj.uselib ="SQLITE3"
+  obj.uselib = "SQLITE3 PROFILER"
 
 t = 'sqlite3_bindings.node'
 def shutdown():
