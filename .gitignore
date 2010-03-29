@@ -1,6 +1,3 @@
 build/
-README.html
-test.db
 .lock-wscript
-speedtest.db
 sqlite3_bindings.node
