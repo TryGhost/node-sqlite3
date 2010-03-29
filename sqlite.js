@@ -24,12 +24,6 @@ var Database = exports.Database = function () {
   var db = new sqlite.Database();
   db.__proto__ = Database.prototype;
 
-//   this.queue = [];
-//
-//   this.addListener("ready", function () {
-//     db.dispatch();
-//   });
-
   return db;
 };
 
@@ -37,21 +31,6 @@ Database.prototype = {
   __proto__: sqlite.Database.prototype,
   constructor: Database,
 };
-
-// Database.prototype.dispatch = function () {
-//   if (!this.queue || this.currentQuery
-//                   || !this.queue.length) {
-//     return;
-//   }
-//   this.currentQuery = this.queue.shift();
-//   this.executeQuery.apply(this, this.currentQuery);
-// }
-
-// Database.prototype.query = function (sql, bindings, queryCallback) {
-//   this.queue = this.queue || [];
-//   this.queue.push([sql, bindings, queryCallback]);
-//   this.dispatch();
-// }
 
 // Iterate over the list of bindings. Since we can't use something as
 // simple as a for or while loop, we'll just chain them via the event loop
@@ -97,7 +76,7 @@ function _doStep(db, statement, rowCallback) {
       return;
     }
     rowCallback(row);
-    process.nextTick(function () { _doStep(db, statement, rowCallback); });
+    _doStep(db, statement, rowCallback);
   });
 }
 
@@ -130,49 +109,6 @@ Database.prototype.query = function(sql, bindings, rowCallback) {
     } else {
       rowCallback();
       self.currentQuery = undefined;
-      // if there are any queries queued, let them know it's safe to go
-    //  self.dispatch();
     }
   });
 }
-
-function SQLTransactionSync(db, txCallback, errCallback, successCallback) {
-  this.database = db;
-
-  this.rolledBack = false;
-
-  this.executeSql = function(sqlStatement, arguments, callback) {
-    if (this.rolledBack) return;
-    var result = db.query(sqlStatement, arguments);
-    if (callback) {
-      var tx = this;
-      callback.apply(result, [tx].concat(result.all));
-    }
-    return result;
-  }
-
-  var that = this;
-  function unroll() {
-    that.rolledBack = true;
-  }
-
-  db.addListener("rollback", unroll);
-
-  this.executeSql("BEGIN TRANSACTION");
-  txCallback(this);
-  this.executeSql("COMMIT");
-
-  db.removeListener("rollback", unroll);
-
-  if (!this.rolledBack && successCallback)
-    successCallback(this);
-}
-
-
-Database.prototype.transaction = function (txCallback, errCallback,
-                                               successCallback) {
-  var tx = new SQLTransactionSync(this, txCallback,
-                                  errCallback, successCallback);
-}
-
-// TODO: readTransaction()
