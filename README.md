@@ -9,7 +9,7 @@ SYNOPSIS
 High-level Driver
 =================
 
-High-level bindings are provide a simple interface to SQLite3. They should be
+High-level bindings provide a simple interface to SQLite3. They should be
 fast enough for most purposes, but if you absolutely need more performance,
 the low level drivers are also straight-forward to use, but require a few
 additional steps.
@@ -122,10 +122,11 @@ SEE ALSO
 * http://sqlite.org/docs.html
 * http://github.com/grumdrig/node-sqlite/
 
-AUTHOR
-------
+AUTHORS
+-------
 
 Orlando Vazquez [ovazquez@gmail.com]
+Ryan Dahl [ry@tinyclouds.org]
 
 THANKS
 ------
