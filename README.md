@@ -126,6 +126,7 @@ AUTHORS
 -------
 
 Orlando Vazquez [ovazquez@gmail.com]
+
 Ryan Dahl [ry@tinyclouds.org]
 
 THANKS
@@ -134,8 +135,9 @@ THANKS
 Many thanks to Eric Fredricksen for his synchronous driver on which this was
 based.
 
-http://github.com/grumdrig/node-sqlite/
-http://grumdrig.com/node-sqlite/
+* http://github.com/grumdrig/node-sqlite/
+* http://grumdrig.com/node-sqlite/
 
 (c) 2010 Eric Fredricksen
+
 (c) 2010 Orlando Vazquez
