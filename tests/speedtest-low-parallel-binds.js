@@ -11,7 +11,7 @@ var rows = 0;
 var t0;
 
 function getRows() {
-  db.prepare("SELECT * FROM t1", function (error, statement) {
+  db.prepare("SELECT alpha FROM t1", function (error, statement) {
     if (error) throw error;
     rows = 0;
     t0 = new Date();
@@ -44,20 +44,28 @@ var count = 0;
 
 function onPrepare(error, statement) {
   var d;
+   
   if (error) throw error;
 
-  if (++rows == total) {
-    d = ((new Date)-t0)/1000;
-    puts("**** " + d + "s to insert " + rows + " rows (" + (rows/d) + "/s)");
-    getRows();
-  }
+  statement.bind(1, count++, function (error) {
+    if (error) throw error;
+    statement.step(function (row) {
+      statement.finalize(function () {
+        if (++rows == total) {
+          d = ((new Date)-t0)/1000;
+          puts("**** " + d + "s to insert " + rows + " rows (" + (rows/d) + "/s)");
+          getRows();
+        }
+      });
+    });
+  });
 }
 
 db.open(':memory:', function () {
   createTable(db, function () {
     t0 = new Date();
     for (var i = 0; i < total; i++) {
-      db.prepare("INSERT INTO t1 VALUES (1)", onPrepare);
+      db.prepare("INSERT INTO t1 VALUES (?)", onPrepare);
     }
   });
 });

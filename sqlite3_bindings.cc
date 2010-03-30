@@ -834,7 +834,6 @@ protected:
       if (!column_count_) return;
       for (int i = 0; i < column_count_; i++) {
         switch (column_types_[i]) {
-          // XXX why does using String::New make v8 croak here?
           case SQLITE_INTEGER:
             free(column_data_[i]);
             break;
@@ -948,10 +947,8 @@ protected:
       }
       else if (rc == SQLITE_DONE) {
         // nothing to do in this case
-        printf("done\n");
       }
       else {
-        printf("error\n");
         sto->error_ = true;
       }
 
