@@ -2,7 +2,6 @@ import Options
 from os import unlink, symlink
 from os.path import exists
 
-
 srcdir = "."
 blddir = "build"
 VERSION = "0.0.1"
@@ -14,7 +13,8 @@ def configure(conf):
   conf.check_tool("compiler_cxx")
   conf.check_tool("node_addon")
   if not conf.check_cfg(package='sqlite3', args='--cflags --libs', uselib_store='SQLITE3'):
-    conf.fatal('Missing sqlite3');
+    if not conf.check(lib="sqlite3", uselib_store="SQLITE3"):
+      conf.fatal('Missing sqlite3');
 #   conf.check_cfg(package='profiler', args='--cflags --libs', uselib_store='SQLITE3')
 #   conf.env.append_value('LIBPATH_PROFILER', '/usr/local/lib')
 #   conf.env.append_value('LIB_PROFILER', 'profiler')
