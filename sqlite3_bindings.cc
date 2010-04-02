@@ -343,7 +343,8 @@ protected:
 
     // if the prepare failed
     if (req->result != SQLITE_OK) {
-      argv[0] = Exception::Error(String::New("Error preparing statement"));
+      argv[0] = Exception::Error(
+                  String::New(sqlite3_errmsg(prep_req->dbo->db_)));
       argc = 1;
     }
     else {
