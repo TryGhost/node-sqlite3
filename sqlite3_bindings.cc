@@ -73,6 +73,13 @@ static Persistent<String> callback_sym;
               String::New("Argument " #I " must be an integer")));      \
   }
 
+enum ExecMode
+{
+    EXEC_EMPTY = 0,
+    EXEC_LAST_INSERT_ID = 1,
+    EXEC_AFFECTED_ROWS = 2
+};
+
 class Sqlite3Db : public EventEmitter {
 public:
   static Persistent<FunctionTemplate> constructor_template;
@@ -95,6 +102,11 @@ public:
     target->Set(v8::String::NewSymbol("Database"),
             constructor_template->GetFunction());
 
+    // insert/update execution result mask
+    NODE_DEFINE_CONSTANT (target, EXEC_EMPTY);
+    NODE_DEFINE_CONSTANT (target, EXEC_LAST_INSERT_ID);
+    NODE_DEFINE_CONSTANT (target, EXEC_AFFECTED_ROWS);
+    
     Statement::Init(target);
   }
 
@@ -298,7 +310,7 @@ protected:
     Sqlite3Db* dbo = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
     Local<Number> result = Integer::New(sqlite3_last_insert_rowid(dbo->db_));
     return scope.Close(result);
-  }
+  };
 
   // Hooks
 
@@ -329,6 +341,9 @@ protected:
     Persistent<Function> cb;
     Sqlite3Db *dbo;
     sqlite3_stmt* stmt;
+    int mode;
+    sqlite3_int64 lastInsertId;
+    int affectedRows;
     const char* tail;
     char sql[1];
   };
@@ -346,10 +361,30 @@ protected:
       argv[0] = Exception::Error(
                   String::New(sqlite3_errmsg(prep_req->dbo->db_)));
       argc = 1;
-    }
-    else {
+
+    } else {
       if (req->int1 == SQLITE_DONE) {
-        argc = 0;
+
+          if (prep_req->mode != EXEC_EMPTY) {
+            argv[0] = Local<Value>::New(Undefined());   // no error
+
+            Local<Object> info = Object::New();         
+
+            if (prep_req->mode & EXEC_LAST_INSERT_ID) {
+                info->Set(String::NewSymbol("last_inserted_id"),
+                    Integer::NewFromUnsigned (prep_req->lastInsertId));
+            }
+            if (prep_req->mode & EXEC_AFFECTED_ROWS) {
+                info->Set(String::NewSymbol("affected_rows"),
+                          Integer::New (prep_req->affectedRows));
+            }
+            argv[1] = info;
+            argc = 2;
+            
+        } else {
+            argc = 0;
+        }
+        
       } else {
         argv[0] = External::New(prep_req->stmt);
         argv[1] = Integer::New(req->int1);
@@ -410,6 +445,15 @@ protected:
       }
     }
 
+    prep_req->lastInsertId = 0;
+    prep_req->affectedRows = 0;
+        
+    // load custom properties
+    if (prep_req->mode & EXEC_LAST_INSERT_ID)
+        prep_req->lastInsertId = sqlite3_last_insert_rowid(db);
+    if (prep_req->mode & EXEC_AFFECTED_ROWS)
+        prep_req->affectedRows = sqlite3_changes(db);
+
     return 0;
   }
 
@@ -417,6 +461,7 @@ protected:
     HandleScope scope;
     REQ_STR_ARG(0, sql);
     REQ_FUN_ARG(1, cb);
+    OPT_INT_ARG(2, mode, EXEC_EMPTY);
 
     Sqlite3Db* dbo = ObjectWrap::Unwrap<Sqlite3Db>(args.This());
 
@@ -432,6 +477,7 @@ protected:
     strcpy(prep_req->sql, *sql);
     prep_req->cb = Persistent<Function>::New(cb);
     prep_req->dbo = dbo;
+    prep_req->mode = mode;
 
     eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, prep_req);
 

@@ -1,17 +1,16 @@
 var fs     = require("fs"),
     sys    = require("sys"),
-    sqlite = require("./sqlite");
+    sqlite = require("../sqlite");
 
 var puts = sys.puts;
 var inspect = sys.inspect;
 
-var sqlite = require("./sqlite");
 var db = new sqlite.Database();
 
 function readTest(db, callback) {
   var t0 = new Date;
   var rows = 0;
-  db.query("SELECT * FROM t1", function(row) {
+  db.query("SELECT * FROM t1", function(error, row) {
     if (!row) {
       var d = ((new Date)-t0)/1000;
       puts("**** " + rows + " rows in " + d + "s (" + (rows/d) + "/s)");
@@ -27,7 +26,7 @@ function readTest(db, callback) {
 }
 
 function writeTest(db, i, callback) {
-  db.query("INSERT INTO t1 VALUES (1, 'hello', 3.141)", function (row) {
+  db.insert("INSERT INTO t1 VALUES (1, 'hello', 3.141)", function (error, id) {
     if (!i--) {
       // end of results
       var dt = ((new Date)-t0)/1000;

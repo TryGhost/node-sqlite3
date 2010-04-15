@@ -1,5 +1,6 @@
 var sqlite = require('../sqlite3_bindings');
 var sys = require('sys');
+var assert = require('assert');
 
 var puts = sys.puts;
 var inspect = sys.inspect;
@@ -34,7 +35,7 @@ function getRows() {
 }
 
 function createTable(db, callback) {
-  db.prepare("CREATE TABLE t1 (alpha INTEGER)", function (error, statement) {
+  db.prepare("CREATE TABLE t1 (id INTEGER PRIMARY KEY, alpha INTEGER)", function (error, statement) {
     if (error) throw error;
     callback(); 
   });
@@ -42,9 +43,11 @@ function createTable(db, callback) {
 
 var count = 0;
 
-function onPrepare(error, statement) {
+function onInsert(error, info) {
   var d;
   if (error) throw error;
+
+  assert.ok (info && info.last_inserted_id > 0, 'Last inserted ID loading failed');
 
   if (++rows == total) {
     d = ((new Date)-t0)/1000;
@@ -57,7 +60,9 @@ db.open(':memory:', function () {
   createTable(db, function () {
     t0 = new Date();
     for (var i = 0; i < total; i++) {
-      db.prepare("INSERT INTO t1 VALUES (1)", onPrepare);
+      db.prepare("INSERT INTO t1 (alpha) VALUES (1)",
+        onInsert,
+        sqlite.EXEC_LAST_INSERT_ID);
     }
   });
 });

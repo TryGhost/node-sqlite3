@@ -1,22 +1,23 @@
 var fs = require("fs");
 var sys = require("sys");
+var assert = require("assert");
 
-var puts = sys.puts
-var inspect = sys.inspect
+var sqlite = require("../sqlite3_bindings");
 
-var sqlite = require("./sqlite3_bindings");
+var puts = sys.puts;
+var inspect = sys.inspect;
 
 var db = new sqlite.Database();
 
-throws(function () {
+assert.throws(function () {
   db.open();
 });
 
-throws(function () {
+assert.throws(function () {
   db.open("my.db");
 });
 
-throws(function () {
+assert.throws(function () {
   db.open("foo.db");
 });
 
@@ -74,9 +75,11 @@ function test_simple() {
   db.open("mydatabase.db", function () {
     db.prepare("SELECT bar, baz FROM foo WHERE baz > 5", function (error, statement) {
       puts('prepare callback');
+      if (error) throw (error);  
       puts(inspect(arguments));
 
-      statement.step(function () {
+      statement.step(function (error) {
+
         puts('query callback');
         puts(inspect(arguments));
         statement.step(function () {

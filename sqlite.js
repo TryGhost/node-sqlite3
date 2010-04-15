@@ -18,6 +18,14 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 var sys = require("sys");
 var sqlite = require("./sqlite3_bindings");
 
+// load numeric constants from sqlite3_bindings
+for (prop in sqlite) {
+    var obj = sqlite[prop];
+    if ((obj === +obj) || (toString.call(obj) === '[object Number]') ) {
+        exports[prop] = sqlite[prop];
+    }
+}
+
 var Database = exports.Database = function () {
   var self = this;
 
@@ -59,7 +67,6 @@ function _queryDone(db, statement) {
   }
 
   statement.finalize(function () {
-    db.currentQuery = undefined;
     // if there are any queries queued, let them know it's safe to go
     db.emit("ready");
   });
@@ -67,15 +74,16 @@ function _queryDone(db, statement) {
 
 function _doStep(db, statement, rowCallback) {
   statement.step(function (error, row) {
-    if (error) throw error;
+    if (error)
+        return rowCallback (error);
+
     if (!row) {
-//       rows.rowsAffected = this.changes();
-//       rows.insertId = this.lastInsertRowid();
       rowCallback();
       _queryDone(db, statement);
       return;
     }
-    rowCallback(row);
+    rowCallback(undefined, row);
+
     _doStep(db, statement, rowCallback);
   });
 }
@@ -94,21 +102,36 @@ function _onPrepare(db, statement, bindings, rowCallback) {
   }
 }
 
-Database.prototype.query = function(sql, bindings, rowCallback) {
+Database.prototype.query = function(sql, bindings, rowCallback, prepareMode) {
   var self = this;
 
   if (typeof(bindings) == "function") {
+    prepareMode = rowCallback || sqlite.EXEC_EMPTY;
     rowCallback = bindings;
     bindings = [];
   }
+  if (typeof(prepareMode) == "undefined")
+    prepareMode = sqlite.EXEC_EMPTY;
 
   this.prepare(sql, function(error, statement) {
-    if (error) throw error;
+    if (error)
+        return rowCallback (error);
     if (statement) {
-      _onPrepare(self, statement, bindings, rowCallback)
+      _onPrepare(self, statement, bindings, rowCallback);
     } else {
       rowCallback();
-      self.currentQuery = undefined;
     }
-  });
+  }, prepareMode);
 }
+
+Database.prototype.insert = function(sql, insertCallback) {
+  var self = this;
+
+  this.prepare(sql, function(error, info) {
+    if (error)
+        return insertCallback (error);
+
+    insertCallback (undefined, (info ? info.last_inserted_id : 0));
+  }, sqlite.EXEC_LAST_INSERT_ID);
+}
+

@@ -1,4 +1,4 @@
-var sqlite = require('./sqlite3_bindings');
+var sqlite = require('../sqlite3_bindings');
 var sys = require('sys');
 
 var puts = sys.puts;
