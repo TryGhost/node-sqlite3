@@ -131,8 +131,8 @@ Ryan Dahl [ry@tinyclouds.org]
 THANKS
 ------
 
-Many thanks to Eric Fredricksen for his synchronous driver on which this was
-based.
+Many thanks to Eric Fredricksen for his synchronous driver on which this
+driver was originally based.
 
 * http://github.com/grumdrig/node-sqlite/
 * http://grumdrig.com/node-sqlite/
@@ -141,7 +141,5 @@ LICENSE
 -------
 
 node-sqlite is BSD licensed.
-
-(c) 2010 Eric Fredricksen
 
 (c) 2010 Orlando Vazquez

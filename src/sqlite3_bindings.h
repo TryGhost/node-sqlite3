@@ -58,12 +58,4 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
     return ThrowException(Exception::TypeError(                         \
               String::New("Argument " #I " must be an integer")));      \
   }
-
-enum ExecMode
-{
-    EXEC_EMPTY = 0,
-    EXEC_LAST_INSERT_ID = 1,
-    EXEC_AFFECTED_ROWS = 2
-};
-
 #endif
