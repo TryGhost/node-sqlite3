@@ -24,8 +24,7 @@ def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
   obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
   obj.target = "sqlite3_bindings"
-  obj.source = "sqlite3_bindings.cc"
-  #obj.lib = "sqlite3"
+  obj.source = "src/sqlite3_bindings.cc src/statement.cc"
   obj.uselib = "SQLITE3 PROFILER"
 
 t = 'sqlite3_bindings.node'
