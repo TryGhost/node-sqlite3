@@ -50,13 +50,11 @@ class Statement : public EventEmitter {
       if (column_data_) FreeColumnData();
     }
     
-    static int EIO_AfterBind(eio_req *req);
-    static int EIO_Bind(eio_req *req);
     static Handle<Value> Bind(const Arguments& args);
-
-    static int EIO_AfterBindArray(eio_req *req);
-    static int EIO_BindArray(eio_req *req);
+    static Handle<Value> BindObject(const Arguments& args);
     static Handle<Value> BindArray(const Arguments& args);
+    static int EIO_BindArray(eio_req *req);
+    static int EIO_AfterBindArray(eio_req *req);
     
     static int EIO_AfterFinalize(eio_req *req);
     static int EIO_Finalize(eio_req *req);

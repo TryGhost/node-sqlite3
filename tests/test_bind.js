@@ -25,6 +25,7 @@ function test_by_index(callback) {
             statement.step(function (error, row) {
               if (error) throw error;
               assert.deepEqual(row, { foo: 'hi', bar: 'there', baz: 'world' });
+              puts("Test ok");
             });
           });
         });
@@ -45,6 +46,7 @@ function test_num_array(callback) {
         statement.step(function (error, row) {
           if (error) throw error;
           assert.deepEqual(row, { foo: 1, bar: 2, baz: 3 });
+          puts("Test ok");
         });
       });
     });
@@ -63,12 +65,42 @@ function test_by_array(callback) {
         if (error) throw error;
         puts("bound ok");
         statement.step(function (error, row) {
+          if (error) throw error;
           assert.deepEqual(row, { foo: 'hi', bar: 'there', baz: 'world' });
           statement.reset();
           statement.bindArray([1, 2, null], function (error) {
             statement.step(function (error, row) {
               if (error) throw error;
               assert.deepEqual(row, { foo: 1, bar: 2, baz: null });
+              puts("Test ok");
+            });
+          });
+        });
+      });
+    });
+  });
+}
+
+function test_by_object(callback) {
+  db = new sqlite.Database();
+  db.open(":memory:", function () {
+    puts("Opened ok");
+    db.prepare("SELECT $x AS foo, $y AS bar, $z AS baz"
+              , function (error, statement) {
+      if (error) throw error;
+      puts("Prepared ok");
+      statement.bindObject({ $x: 'hi', $y: null, $z: 'world' }, function (error) {
+        if (error) throw error;
+        puts("bound ok");
+        statement.step(function (error, row) {
+          if (error) throw error;
+          assert.deepEqual(row, { foo: 'hi', bar: null, baz: 'world' });
+          statement.reset();
+          statement.bindArray([1, 2, null], function (error) {
+            statement.step(function (error, row) {
+              if (error) throw error;
+              assert.deepEqual(row, { foo: 1, bar: 2, baz: null });
+              puts("Test ok");
             });
           });
         });
@@ -80,3 +112,4 @@ function test_by_array(callback) {
 test_num_array();
 test_by_index();
 test_by_array();
+test_by_object();

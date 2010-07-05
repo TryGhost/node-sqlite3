@@ -33,7 +33,9 @@ void Statement::Init(v8::Handle<Object> target) {
   constructor_template->SetClassName(String::NewSymbol("Statement"));
 
   NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
+  NODE_SET_PROTOTYPE_METHOD(t, "bindObject", BindObject);
   NODE_SET_PROTOTYPE_METHOD(t, "bindArray", BindArray);
+
   NODE_SET_PROTOTYPE_METHOD(t, "finalize", Finalize);
   NODE_SET_PROTOTYPE_METHOD(t, "reset", Reset);
   NODE_SET_PROTOTYPE_METHOD(t, "clearBindings", ClearBindings);
@@ -83,42 +85,6 @@ int Statement::EIO_AfterBindArray(eio_req *req) {
   free(bind_req);
 
   return 0;
-  return 0;
-}
-
-int Statement::EIO_AfterBind(eio_req *req) {
-  ev_unref(EV_DEFAULT_UC);
-
-  HandleScope scope;
-  struct bind_request *bind_req = (struct bind_request *)(req->data);
-
-  Local<Value> argv[1];
-  bool err = false;
-  if (req->result) {
-    err = true;
-    argv[0] = Exception::Error(String::New("Error binding parameter"));
-  }
-
-  TryCatch try_catch;
-
-  bind_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
-
-  if (try_catch.HasCaught()) {
-    FatalException(try_catch);
-  }
-
-  bind_req->cb.Dispose();
-
-  struct bind_pair *pair = bind_req->pairs;
-
-  for (size_t i = 0; i < bind_req->len; i++, pair++) {
-    free(pair->key);
-    free(pair->value);
-  }
-
-  free(bind_req->pairs);
-  free(bind_req);
-
   return 0;
 }
 
@@ -181,75 +147,82 @@ int Statement::EIO_BindArray(eio_req *req) {
   return 0;
 }
 
-int Statement::EIO_Bind(eio_req *req) {
-  struct bind_request *bind_req = (struct bind_request *)(req->data);
-  Statement *sto = bind_req->sto;
+Handle<Value> Statement::BindObject(const Arguments& args) {
+  HandleScope scope;
+  Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
 
-  int index(0);
-  switch(bind_req->pairs->key_type) {
-    case KEY_INT:
-      index = *(int*)(bind_req->pairs->key);
-      break;
+  REQ_ARGS(2);
+  REQ_FUN_ARG(1, cb);
 
-    case KEY_STRING:
-      index = sqlite3_bind_parameter_index(sto->stmt_,
-                                           (char*)(bind_req->pairs->key));
-      break;
+  if (! args[0]->IsObject())
+    return ThrowException(Exception::TypeError(
+           String::New("First argument must be an Array.")));
+  Local<Object> obj = args[0]->ToObject();
+  Local<Array> properties = obj->GetPropertyNames();
 
-     default: {
-       // this SHOULD be unreachable
-     }
-  }
+  struct bind_request *bind_req = (struct bind_request *)
+      calloc(1, sizeof(struct bind_request));
 
-  if (!index) {
-    req->result = SQLITE_MISMATCH;
-    return 0;
-  }
+  int len = bind_req->len = properties->Length();
+  bind_req->pairs = (struct bind_pair *)
+      calloc(len, sizeof(struct bind_pair));
 
-  int rc = 0;
-  switch(bind_req->pairs->value_type) {
-    case VALUE_INT:
-      rc = sqlite3_bind_int(sto->stmt_, index, *(int*)(bind_req->pairs->value));
-      break;
-    case VALUE_DOUBLE:
-      rc = sqlite3_bind_double(sto->stmt_, index, *(double*)(bind_req->pairs->value));
-      break;
-    case VALUE_STRING:
-      rc = sqlite3_bind_text(sto->stmt_, index, (char*)(bind_req->pairs->value),
-                        bind_req->pairs->value_size, SQLITE_TRANSIENT);
-      break;
-    case VALUE_NULL:
-      rc = sqlite3_bind_null(sto->stmt_, index);
-      break;
+  struct bind_pair *pairs = bind_req->pairs;
 
-    default: {
-      // should be unreachable
+  for (uint32_t i = 0; i < properties->Length(); i++, pairs++) {
+    Local<Value> name = properties->Get(Integer::New(i));
+    Local<Value> val = obj->Get(name->ToString());
+
+    String::Utf8Value keyValue(name);
+    printf("prop %d is %s\n", i, *keyValue);
+
+    // setting key type
+    pairs->key_type = KEY_STRING;
+    char *key = (char *) calloc(1, keyValue.length() + 1);
+    strcpy(key, *keyValue);
+    pairs->key = key;
+
+    // setup value
+    if (val->IsInt32()) {
+      pairs->value_type = VALUE_INT;
+      int *value = (int *) malloc(sizeof(int));
+      *value = val->Int32Value();
+      pairs->value = value;
+    }
+    else if (val->IsNumber()) {
+      pairs->value_type = VALUE_DOUBLE;
+      double *value = (double *) malloc(sizeof(double));
+      *value = val->NumberValue();
+      pairs->value = value;
+    }
+    else if (val->IsString()) {
+      pairs->value_type = VALUE_STRING;
+      String::Utf8Value text(val);
+      char *value = (char *) calloc(text.length()+1, sizeof(char*));
+      strcpy(value, *text);
+      pairs->value = value;
+      pairs->value_size = text.length()+1;
+    }
+    else if (val->IsNull() || val->IsUndefined()) {
+      pairs->value_type = VALUE_NULL;
+      pairs->value = NULL;
+    }
+    else {
+      free(pairs->key);
+      return ThrowException(Exception::TypeError(
+             String::New("Unable to bind value of this type")));
     }
   }
 
-  if (rc) {
-    req->result = rc;
-    return 0;
-  }
+  bind_req->cb = Persistent<Function>::New(cb);
+  bind_req->sto = sto;
 
-  return 0;
-}
+  eio_custom(EIO_BindArray, EIO_PRI_DEFAULT, EIO_AfterBindArray, bind_req);
 
+  ev_ref(EV_DEFAULT_UC);
 
-// db.prepare "SELECT $x, ?" -> statement
-//
-// Bind multiple placeholders by array
-//   statement.bind([ value0, value1 ], callback);
-//
-// Bind multiple placeholdders by name
-//   statement.bind({ $x: value }, callback);
-//
-// Bind single placeholder by name:
-//   statement.bind('$x', value, callback);
-//
-// Bind placeholder by index:
-//   statement.bind(1, value, callback);
-
+  return Undefined();
+};
 
 Handle<Value> Statement::BindArray(const Arguments& args) {
   HandleScope scope;
@@ -275,12 +248,11 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
   for (int i = 0; i < len; i++, pairs++) {
     Local<Value> val = array->Get(i);
 
-
     // setting key type
     pairs->key_type = KEY_INT;
     int *index = (int *) malloc(sizeof(int));
     *index = i+1;
-    pairs->value_size = sizeof(int);
+//     pairs->value_size = sizeof(int);
 
     // don't forget to `free` this
     pairs->key = index;
@@ -327,6 +299,20 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
   return Undefined();
 }
 
+// db.prepare "SELECT $x, ?" -> statement
+//
+// Bind multiple placeholders by array
+//   statement.bind([ value0, value1 ], callback);
+//
+// Bind multiple placeholdders by name
+//   statement.bind({ $x: value }, callback);
+//
+// Bind single placeholder by name:
+//   statement.bind('$x', value, callback);
+//
+// Bind placeholder by index:
+//   statement.bind(1, value, callback);
+
 Handle<Value> Statement::Bind(const Arguments& args) {
   HandleScope scope;
   Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
@@ -344,57 +330,56 @@ Handle<Value> Statement::Bind(const Arguments& args) {
   struct bind_request *bind_req = (struct bind_request *)
       calloc(1, sizeof(struct bind_request));
 
-  bind_req->pairs = (struct bind_pair *)
+  bind_req->len = 1;
+  struct bind_pair *pair = bind_req->pairs = (struct bind_pair *)
       calloc(1, sizeof(struct bind_pair));
 
   // setup key
   if (args[0]->IsString()) {
      String::Utf8Value keyValue(args[0]);
-     bind_req->pairs->key_type = KEY_STRING;
+     pair->key_type = KEY_STRING;
 
      char *key = (char *) calloc(1, keyValue.length() + 1);
-     bind_req->pairs->value_size = keyValue.length() + 1;
      strcpy(key, *keyValue);
 
-     bind_req->pairs->key = key;
+     pair->key = key;
   }
   else if (args[0]->IsInt32()) {
-    bind_req->pairs->key_type = KEY_INT;
+    pair->key_type = KEY_INT;
     int *index = (int *) malloc(sizeof(int));
     *index = args[0]->Int32Value();
-    bind_req->pairs->value_size = sizeof(int);
 
     // don't forget to `free` this
-    bind_req->pairs->key = index;
+    pair->key = index;
   }
 
   // setup value
   if (args[1]->IsInt32()) {
-    bind_req->pairs->value_type = VALUE_INT;
+    pair->value_type = VALUE_INT;
     int *value = (int *) malloc(sizeof(int));
     *value = args[1]->Int32Value();
-    bind_req->pairs->value = value;
+    pair->value = value;
   }
   else if (args[1]->IsNumber()) {
-    bind_req->pairs->value_type = VALUE_DOUBLE;
+    pair->value_type = VALUE_DOUBLE;
     double *value = (double *) malloc(sizeof(double));
     *value = args[1]->NumberValue();
-    bind_req->pairs->value = value;
+    pair->value = value;
   }
   else if (args[1]->IsString()) {
-    bind_req->pairs->value_type = VALUE_STRING;
+    pair->value_type = VALUE_STRING;
     String::Utf8Value text(args[1]);
     char *value = (char *) calloc(text.length()+1, sizeof(char*));
     strcpy(value, *text);
-    bind_req->pairs->value = value;
-    bind_req->pairs->value_size = text.length()+1;
+    pair->value = value;
+    pair->value_size = text.length()+1;
   }
   else if (args[1]->IsNull() || args[1]->IsUndefined()) {
-    bind_req->pairs->value_type = VALUE_NULL;
-    bind_req->pairs->value = NULL;
+    pair->value_type = VALUE_NULL;
+    pair->value = NULL;
   }
   else {
-    free(bind_req->pairs->key);
+    free(pair->key);
     return ThrowException(Exception::TypeError(
            String::New("Unable to bind value of this type")));
   }
@@ -402,7 +387,7 @@ Handle<Value> Statement::Bind(const Arguments& args) {
   bind_req->cb = Persistent<Function>::New(cb);
   bind_req->sto = sto;
 
-  eio_custom(EIO_Bind, EIO_PRI_DEFAULT, EIO_AfterBind, bind_req);
+  eio_custom(EIO_BindArray, EIO_PRI_DEFAULT, EIO_AfterBindArray, bind_req);
 
   ev_ref(EV_DEFAULT_UC);
 

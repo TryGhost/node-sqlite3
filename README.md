@@ -60,7 +60,7 @@ from the API have been made to improve performance.
 
     db.open("lilponies.db", function () {
       var colour = 'pink';
-      var sql = 'SELECT name FROM ponies WHERE hair_colour = ? and gemstones = ?';
+      var sql = 'SELECT name FROM ponies WHERE hair_colour = $hair_colour and gemstones = ?';
 
       var ponies = [];
 
@@ -74,13 +74,14 @@ from the API have been made to improve performance.
       db.prepare(sql, function (error, statement) {
         if (error) throw error;
 
-        // fill in the placeholders
+        // Fill in the placeholders
         // Could also have used:
-        //   statement.bind($index, $value, function () { ... });
-        statement.bindArray('pink', 4], function () {
+        //   statement.bind(position, value, function () { ... });
+        //   statement.bindObject({ $hair_colour: 'pink' }, function () {});
+        statement.bindArray(['pink', 4], function () {
 
           // call step once per row result
-          statement.step(function (row) {
+          statement.step(function (error, row) {
             if (!row) {
               // end of rows
             }
