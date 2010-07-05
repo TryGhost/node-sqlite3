@@ -89,16 +89,14 @@ function _doStep(db, statement, rowCallback) {
 }
 
 function _onPrepare(db, statement, bindings, rowCallback) {
-  if (Array.isArray(bindings)) {
-    if (bindings.length) {
-      _setBindingsByIndex(db, statement, bindings, _doStep, rowCallback);
-    }
-    else {
-      _doStep(db, statement, rowCallback);
-    }
+  function next() {
+    _doStep(db, statement, rowCallback);
   }
-  else if (typeof(bindings) !== 'undefined') {
-    // TODO index by keys
+  if (Array.isArray(bindings)) {
+    statement.bindArray(bindings, next);
+  }
+  else if (typeof(bindings) === 'object') {
+    statement.bindObject(bindings, next);
   }
 }
 

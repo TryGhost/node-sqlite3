@@ -79,8 +79,11 @@ int Statement::EIO_AfterBindArray(eio_req *req) {
 
   bind_req->cb.Dispose();
 
-  free(bind_req->pairs->key);;
-  free(bind_req->pairs->value);
+  if (bind_req->len) {
+    free(bind_req->pairs->key);
+    free(bind_req->pairs->value);
+  }
+
   free(bind_req->pairs);
   free(bind_req);
 
@@ -259,6 +262,7 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
 
     // setup value
     if (val->IsInt32()) {
+      printf("Binding int\n");
       pairs->value_type = VALUE_INT;
       int *value = (int *) malloc(sizeof(int));
       *value = val->Int32Value();
