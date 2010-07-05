@@ -33,8 +33,10 @@ void Statement::Init(v8::Handle<Object> target) {
   constructor_template->SetClassName(String::NewSymbol("Statement"));
 
   NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
+  NODE_SET_PROTOTYPE_METHOD(t, "bindArray", BindArray);
   NODE_SET_PROTOTYPE_METHOD(t, "finalize", Finalize);
   NODE_SET_PROTOTYPE_METHOD(t, "reset", Reset);
+  NODE_SET_PROTOTYPE_METHOD(t, "clearBindings", ClearBindings);
   NODE_SET_PROTOTYPE_METHOD(t, "step", Step);
 
   callback_sym = Persistent<String>::New(String::New("callback"));
@@ -50,6 +52,38 @@ Handle<Value> Statement::New(const Arguments& args) {
   sto->Ref();
 
   return args.This();
+}
+
+int Statement::EIO_AfterBindArray(eio_req *req) {
+  ev_unref(EV_DEFAULT_UC);
+
+  HandleScope scope;
+  struct bind_request *bind_req = (struct bind_request *)(req->data);
+
+  Local<Value> argv[1];
+  bool err = false;
+  if (req->result) {
+    err = true;
+    argv[0] = Exception::Error(String::New("Error binding parameter"));
+  }
+
+  TryCatch try_catch;
+
+  bind_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
+
+  if (try_catch.HasCaught()) {
+    FatalException(try_catch);
+  }
+
+  bind_req->cb.Dispose();
+
+  free(bind_req->pairs->key);;
+  free(bind_req->pairs->value);
+  free(bind_req->pairs);
+  free(bind_req);
+
+  return 0;
+  return 0;
 }
 
 int Statement::EIO_AfterBind(eio_req *req) {
@@ -75,9 +109,74 @@ int Statement::EIO_AfterBind(eio_req *req) {
 
   bind_req->cb.Dispose();
 
-  free(bind_req->key);
-  free(bind_req->value);
+  struct bind_pair *pair = bind_req->pairs;
+
+  for (size_t i = 0; i < bind_req->len; i++, pair++) {
+    free(pair->key);
+    free(pair->value);
+  }
+
+  free(bind_req->pairs);
   free(bind_req);
+
+  return 0;
+}
+
+int Statement::EIO_BindArray(eio_req *req) {
+  struct bind_request *bind_req = (struct bind_request *)(req->data);
+  Statement *sto = bind_req->sto;
+  int rc(0);
+
+  struct bind_pair *pair = bind_req->pairs;
+
+  int index = 0;
+  for (size_t i = 0; i < bind_req->len; i++, pair++) {
+    switch(pair->key_type) {
+      case KEY_INT:
+        index = *(int*)(pair->key);
+        break;
+
+      case KEY_STRING:
+        index = sqlite3_bind_parameter_index(sto->stmt_,
+                                             (char*)(pair->key));
+        break;
+
+       default: {
+         // this SHOULD be unreachable
+       }
+    }
+
+    if (!index) {
+      req->result = SQLITE_MISMATCH;
+      return 0;
+    }
+
+    int rc = 0;
+    switch(pair->value_type) {
+      case VALUE_INT:
+        rc = sqlite3_bind_int(sto->stmt_, index, *(int*)(pair->value));
+        break;
+      case VALUE_DOUBLE:
+        rc = sqlite3_bind_double(sto->stmt_, index, *(double*)(pair->value));
+        break;
+      case VALUE_STRING:
+        rc = sqlite3_bind_text(sto->stmt_, index, (char*)(pair->value),
+                          pair->value_size, SQLITE_TRANSIENT);
+        break;
+      case VALUE_NULL:
+        rc = sqlite3_bind_null(sto->stmt_, index);
+        break;
+
+      default: {
+        // should be unreachable
+      }
+    }
+  }
+
+  if (rc) {
+    req->result = rc;
+    return 0;
+  }
 
   return 0;
 }
@@ -87,14 +186,14 @@ int Statement::EIO_Bind(eio_req *req) {
   Statement *sto = bind_req->sto;
 
   int index(0);
-  switch(bind_req->key_type) {
+  switch(bind_req->pairs->key_type) {
     case KEY_INT:
-      index = *(int*)(bind_req->key);
+      index = *(int*)(bind_req->pairs->key);
       break;
 
     case KEY_STRING:
       index = sqlite3_bind_parameter_index(sto->stmt_,
-                                           (char*)(bind_req->key));
+                                           (char*)(bind_req->pairs->key));
       break;
 
      default: {
@@ -108,16 +207,16 @@ int Statement::EIO_Bind(eio_req *req) {
   }
 
   int rc = 0;
-  switch(bind_req->value_type) {
+  switch(bind_req->pairs->value_type) {
     case VALUE_INT:
-      rc = sqlite3_bind_int(sto->stmt_, index, *(int*)(bind_req->value));
+      rc = sqlite3_bind_int(sto->stmt_, index, *(int*)(bind_req->pairs->value));
       break;
     case VALUE_DOUBLE:
-      rc = sqlite3_bind_double(sto->stmt_, index, *(double*)(bind_req->value));
+      rc = sqlite3_bind_double(sto->stmt_, index, *(double*)(bind_req->pairs->value));
       break;
     case VALUE_STRING:
-      rc = sqlite3_bind_text(sto->stmt_, index, (char*)(bind_req->value),
-                        bind_req->value_size, SQLITE_TRANSIENT);
+      rc = sqlite3_bind_text(sto->stmt_, index, (char*)(bind_req->pairs->value),
+                        bind_req->pairs->value_size, SQLITE_TRANSIENT);
       break;
     case VALUE_NULL:
       rc = sqlite3_bind_null(sto->stmt_, index);
@@ -136,6 +235,98 @@ int Statement::EIO_Bind(eio_req *req) {
   return 0;
 }
 
+
+// db.prepare "SELECT $x, ?" -> statement
+//
+// Bind multiple placeholders by array
+//   statement.bind([ value0, value1 ], callback);
+//
+// Bind multiple placeholdders by name
+//   statement.bind({ $x: value }, callback);
+//
+// Bind single placeholder by name:
+//   statement.bind('$x', value, callback);
+//
+// Bind placeholder by index:
+//   statement.bind(1, value, callback);
+
+
+Handle<Value> Statement::BindArray(const Arguments& args) {
+  HandleScope scope;
+  Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+
+  REQ_ARGS(2);
+  REQ_FUN_ARG(1, cb);
+  if (! args[0]->IsArray())
+    return ThrowException(Exception::TypeError(
+           String::New("First argument must be an Array.")));
+
+  struct bind_request *bind_req = (struct bind_request *)
+      calloc(1, sizeof(struct bind_request));
+
+  Local<Array> array = Local<Array>::Cast(args[0]);
+  int len = bind_req->len = array->Length();
+  bind_req->pairs = (struct bind_pair *)
+      calloc(len, sizeof(struct bind_pair));
+
+  struct bind_pair *pairs = bind_req->pairs;
+
+  // pack the binds into the struct
+  for (int i = 0; i < len; i++, pairs++) {
+    Local<Value> val = array->Get(i);
+
+
+    // setting key type
+    pairs->key_type = KEY_INT;
+    int *index = (int *) malloc(sizeof(int));
+    *index = i+1;
+    pairs->value_size = sizeof(int);
+
+    // don't forget to `free` this
+    pairs->key = index;
+
+    // setup value
+    if (val->IsInt32()) {
+      pairs->value_type = VALUE_INT;
+      int *value = (int *) malloc(sizeof(int));
+      *value = val->Int32Value();
+      pairs->value = value;
+    }
+    else if (val->IsNumber()) {
+      pairs->value_type = VALUE_DOUBLE;
+      double *value = (double *) malloc(sizeof(double));
+      *value = val->NumberValue();
+      pairs->value = value;
+    }
+    else if (val->IsString()) {
+      pairs->value_type = VALUE_STRING;
+      String::Utf8Value text(val);
+      char *value = (char *) calloc(text.length()+1, sizeof(char*));
+      strcpy(value, *text);
+      pairs->value = value;
+      pairs->value_size = text.length()+1;
+    }
+    else if (val->IsNull() || val->IsUndefined()) {
+      pairs->value_type = VALUE_NULL;
+      pairs->value = NULL;
+    }
+    else {
+      free(pairs->key);
+      return ThrowException(Exception::TypeError(
+             String::New("Unable to bind value of this type")));
+    }
+  }
+
+  bind_req->cb = Persistent<Function>::New(cb);
+  bind_req->sto = sto;
+
+  eio_custom(EIO_BindArray, EIO_PRI_DEFAULT, EIO_AfterBindArray, bind_req);
+
+  ev_ref(EV_DEFAULT_UC);
+
+  return Undefined();
+}
+
 Handle<Value> Statement::Bind(const Arguments& args) {
   HandleScope scope;
   Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
@@ -143,61 +334,67 @@ Handle<Value> Statement::Bind(const Arguments& args) {
   REQ_ARGS(2);
   REQ_FUN_ARG(2, cb);
 
-  if (!args[0]->IsString() && !args[0]->IsInt32())
+  if (!(   args[0]->IsString()
+        || args[0]->IsInt32()
+        || args[0]->IsArray()
+        || args[0]->IsObject()))
     return ThrowException(Exception::TypeError(
-           String::New("First argument must be a string or integer")));
+           String::New("First argument must be a string, number, array or object.")));
 
   struct bind_request *bind_req = (struct bind_request *)
       calloc(1, sizeof(struct bind_request));
 
+  bind_req->pairs = (struct bind_pair *)
+      calloc(1, sizeof(struct bind_pair));
+
   // setup key
   if (args[0]->IsString()) {
      String::Utf8Value keyValue(args[0]);
-     bind_req->key_type = KEY_STRING;
+     bind_req->pairs->key_type = KEY_STRING;
 
      char *key = (char *) calloc(1, keyValue.length() + 1);
-     bind_req->value_size = keyValue.length() + 1;
+     bind_req->pairs->value_size = keyValue.length() + 1;
      strcpy(key, *keyValue);
 
-     bind_req->key = key;
+     bind_req->pairs->key = key;
   }
   else if (args[0]->IsInt32()) {
-    bind_req->key_type = KEY_INT;
+    bind_req->pairs->key_type = KEY_INT;
     int *index = (int *) malloc(sizeof(int));
     *index = args[0]->Int32Value();
-    bind_req->value_size = sizeof(int);
+    bind_req->pairs->value_size = sizeof(int);
 
     // don't forget to `free` this
-    bind_req->key = index;
+    bind_req->pairs->key = index;
   }
 
   // setup value
   if (args[1]->IsInt32()) {
-    bind_req->value_type = VALUE_INT;
+    bind_req->pairs->value_type = VALUE_INT;
     int *value = (int *) malloc(sizeof(int));
     *value = args[1]->Int32Value();
-    bind_req->value = value;
+    bind_req->pairs->value = value;
   }
   else if (args[1]->IsNumber()) {
-    bind_req->value_type = VALUE_DOUBLE;
+    bind_req->pairs->value_type = VALUE_DOUBLE;
     double *value = (double *) malloc(sizeof(double));
     *value = args[1]->NumberValue();
-    bind_req->value = value;
+    bind_req->pairs->value = value;
   }
   else if (args[1]->IsString()) {
-    bind_req->value_type = VALUE_STRING;
+    bind_req->pairs->value_type = VALUE_STRING;
     String::Utf8Value text(args[1]);
     char *value = (char *) calloc(text.length()+1, sizeof(char*));
     strcpy(value, *text);
-    bind_req->value = value;
-    bind_req->value_size = text.length()+1;
+    bind_req->pairs->value = value;
+    bind_req->pairs->value_size = text.length()+1;
   }
   else if (args[1]->IsNull() || args[1]->IsUndefined()) {
-    bind_req->value_type = VALUE_NULL;
-    bind_req->value = NULL;
+    bind_req->pairs->value_type = VALUE_NULL;
+    bind_req->pairs->value = NULL;
   }
   else {
-    free(bind_req->key);
+    free(bind_req->pairs->key);
     return ThrowException(Exception::TypeError(
            String::New("Unable to bind value of this type")));
   }
@@ -263,9 +460,17 @@ Handle<Value> Statement::Finalize(const Arguments& args) {
   return Undefined();
 }
 
+Handle<Value> Statement::ClearBindings(const Arguments& args) {
+  HandleScope scope;
+  Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+  SCHECK(sqlite3_clear_bindings(sto->stmt_));
+  return Undefined();
+}
+
 Handle<Value> Statement::Reset(const Arguments& args) {
   HandleScope scope;
   Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
+  sto->FreeColumnData();
   SCHECK(sqlite3_reset(sto->stmt_));
   return Undefined();
 }
@@ -295,27 +500,32 @@ int Statement::EIO_AfterStep(eio_req *req) {
 
     for (int i = 0; i < sto->column_count_; i++) {
       assert(sto->column_data_);
-      assert(((void**)sto->column_data_)[i]);
+      if (((int*)sto->column_types_)[i] != SQLITE_NULL)
+        assert(((void**)sto->column_data_)[i]);
       assert(sto->column_names_[i]);
       assert(sto->column_types_[i]);
 
       switch (sto->column_types_[i]) {
-        // XXX why does using String::New make v8 croak here?
         case SQLITE_INTEGER:
           row->Set(String::NewSymbol((char*) sto->column_names_[i]),
                    Int32::New(*(int*) (sto->column_data_[i])));
           break;
 
         case SQLITE_FLOAT:
-          row->Set(String::New(sto->column_names_[i]),
+          row->Set(String::NewSymbol(sto->column_names_[i]),
                    Number::New(*(double*) (sto->column_data_[i])));
           break;
 
         case SQLITE_TEXT:
           assert(strlen((char*)sto->column_data_[i]));
-          row->Set(String::New(sto->column_names_[i]),
+          row->Set(String::NewSymbol(sto->column_names_[i]),
                    String::New((char *) (sto->column_data_[i])));
           // don't free this pointer, it's owned by sqlite3
+          break;
+
+        case SQLITE_NULL:
+          row->Set(String::New(sto->column_names_[i]),
+              Local<Value>::New(Null()));
           break;
 
         // no default
@@ -355,8 +565,12 @@ void Statement::FreeColumnData(void) {
     }
     column_data_[i] = NULL;
   }
-
+  free(column_names_);
+  free(column_types_);
   free(column_data_);
+  column_count_ = 0;
+  column_types_ = NULL;
+  column_names_ = NULL;
   column_data_ = NULL;
 }
 
@@ -397,25 +611,31 @@ int Statement::EIO_Step(eio_req *req) {
         sto->column_data_ = (void **) calloc(sto->column_count_,
                                              sizeof(void *));
       }
+    }
 
-      for (int i = 0; i < sto->column_count_; i++) {
-        sto->column_types_[i] = sqlite3_column_type(stmt, i);
-        sto->column_names_[i] = (char *) sqlite3_column_name(stmt, i);
+    for (int i = 0; i < sto->column_count_; i++) {
+      sto->column_types_[i] = sqlite3_column_type(stmt, i);
 
-        switch(sto->column_types_[i]) {
-          case SQLITE_INTEGER:
-            sto->column_data_[i] = (int *) malloc(sizeof(int));
-            break;
+      // Don't free this!
+      sto->column_names_[i] = (char *) sqlite3_column_name(stmt, i);
 
-          case SQLITE_FLOAT:
-            sto->column_data_[i] = (double *) malloc(sizeof(double));
-            break;
+      switch(sto->column_types_[i]) {
+        case SQLITE_INTEGER:
+          sto->column_data_[i] = (int *) malloc(sizeof(int));
+          break;
 
-          // no need to allocate memory for strings
+        case SQLITE_FLOAT:
+          sto->column_data_[i] = (double *) malloc(sizeof(double));
+          break;
 
-          default: {
-            // unsupported type
-          }
+        case SQLITE_NULL:
+          sto->column_data_[i] = NULL;
+          break;
+
+        // no need to allocate memory for strings
+
+        default: {
+          // unsupported type
         }
       }
     }
@@ -426,7 +646,7 @@ int Statement::EIO_Step(eio_req *req) {
       int type = sto->column_types_[i];
 
       switch(type) {
-        case SQLITE_INTEGER: 
+        case SQLITE_INTEGER:
           *(int*)(sto->column_data_[i]) = sqlite3_column_int(stmt, i);
           assert(sto->column_data_[i]);
           break;
@@ -445,11 +665,16 @@ int Statement::EIO_Step(eio_req *req) {
           }
           break;
 
+        case SQLITE_NULL:
+          sto->column_data_[i] = NULL;
+          break;
+
         default: {
           assert(0 && "unsupported type");
         }
       }
-      assert(sto->column_data_[i]);
+      if (sto->column_types_[i] != SQLITE_NULL)
+        assert(sto->column_data_[i]);
       assert(sto->column_names_[i]);
       assert(sto->column_types_[i]);
     }

@@ -53,12 +53,17 @@ class Statement : public EventEmitter {
     static int EIO_AfterBind(eio_req *req);
     static int EIO_Bind(eio_req *req);
     static Handle<Value> Bind(const Arguments& args);
+
+    static int EIO_AfterBindArray(eio_req *req);
+    static int EIO_BindArray(eio_req *req);
+    static Handle<Value> BindArray(const Arguments& args);
     
     static int EIO_AfterFinalize(eio_req *req);
     static int EIO_Finalize(eio_req *req);
     static Handle<Value> Finalize(const Arguments& args);
     
     static Handle<Value> Reset(const Arguments& args);
+    static Handle<Value> ClearBindings(const Arguments& args);
     
     static int EIO_AfterStep(eio_req *req);
     static int EIO_Step(eio_req *req);
@@ -100,6 +105,11 @@ struct bind_request {
   Persistent<Function> cb;
   Statement *sto;
 
+  struct bind_pair *pairs;
+  size_t len;
+};
+
+struct bind_pair {
   enum BindKeyType   key_type;
   enum BindValueType value_type;
 

@@ -29,13 +29,13 @@ additional steps.
       // bindings list is optional
 
       var ponies = [];
-      
+
       db.query(sql, [colour], function (pony) {
         if (!pony) {
           // no more ponies
           if (!ponies.length)
             sys.puts('There are no ponies with ' + colour + ' tails. :(');
-          else 
+          else
             sys.puts('The following ponies have ' + colour + ' tails: ' + ponies.join(', '));
         }
         sys.puts(sys.inspect(pony));
@@ -88,7 +88,7 @@ from the API have been made to improve performance.
         });
       });
     });
-    
+
 
 DESCRIPTION
 -----------
