@@ -21,6 +21,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <node.h>
 #include <node_events.h>
 #include <sqlite3.h>
+#include <stdlib.h>
 
 using namespace v8;
 using namespace node;
