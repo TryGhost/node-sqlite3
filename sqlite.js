@@ -40,24 +40,6 @@ Database.prototype = {
   constructor: Database,
 };
 
-// Iterate over the list of bindings. Since we can't use something as
-// simple as a for or while loop, we'll just chain them via the event loop
-function _setBindingsByIndex(db,
-  statement, bindings, nextCallback, rowCallback, bindIndex) {
-
-  if (!bindings.length) {
-    nextCallback(db, statement, rowCallback);
-    return;
-  }
-
-  bindIndex = bindIndex || 1;
-  var value = bindings.shift();
-
-  statement.bind(bindIndex, value, function () {
-    _setBindingsByIndex(db, statement, bindings, nextCallback, rowCallback, bindIndex+1);
-  });
-}
-
 function _queryDone(db, statement) {
   if (statement.tail) {
     statement.finalize(function () {
