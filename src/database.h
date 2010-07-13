@@ -36,6 +36,7 @@ class Database : public EventEmitter {
 
     ~Database() {
       assert(db_ == NULL);
+      printf("Destroying statement\n");
     }
 
     static Handle<Value> New(const Arguments& args);
@@ -49,6 +50,10 @@ class Database : public EventEmitter {
     static Handle<Value> Close(const Arguments& args);
 
 //     static Handle<Value> LastInsertRowid(const Arguments& args);
+    static int EIO_AfterPrepareAndStep(eio_req *req);
+    static int EIO_PrepareAndStep(eio_req *req);
+    static Handle<Value> PrepareAndStep(const Arguments& args);
+
     static int EIO_AfterPrepare(eio_req *req);
     static int EIO_Prepare(eio_req *req);
     static Handle<Value> Prepare(const Arguments& args);

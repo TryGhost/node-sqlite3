@@ -61,7 +61,7 @@ function _setBindingsByIndex(db,
 function _queryDone(db, statement) {
   if (statement.tail) {
     statement.finalize(function () {
-      db.prepare(statement.tail, onPrepare);
+      db.prepareAndStep(statement.tail, onPrepare);
     });
     return;
   }
@@ -111,7 +111,7 @@ Database.prototype.query = function(sql, bindings, rowCallback, prepareMode) {
   if (typeof(prepareMode) == "undefined")
     prepareMode = sqlite.EXEC_EMPTY;
 
-  this.prepare(sql, function(error, statement) {
+  this.prepareAndStep(sql, function(error, statement) {
     if (error)
         return rowCallback (error);
     if (statement) {
@@ -125,7 +125,7 @@ Database.prototype.query = function(sql, bindings, rowCallback, prepareMode) {
 Database.prototype.insert = function(sql, insertCallback) {
   var self = this;
 
-  this.prepare(sql, function(error, info) {
+  this.prepareAndStep(sql, function(error, info) {
     if (error)
         return insertCallback (error);
 

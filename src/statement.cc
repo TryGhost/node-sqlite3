@@ -255,7 +255,6 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
     pairs->key_type = KEY_INT;
     int *index = (int *) malloc(sizeof(int));
     *index = i+1;
-//     pairs->value_size = sizeof(int);
 
     // don't forget to `free` this
     pairs->key = index;

@@ -39,6 +39,7 @@ void Database::Init(v8::Handle<Object> target) {
   NODE_SET_PROTOTYPE_METHOD(constructor_template, "open", Open);
   NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
   NODE_SET_PROTOTYPE_METHOD(constructor_template, "prepare", Prepare);
+  NODE_SET_PROTOTYPE_METHOD(constructor_template, "prepareAndStep", PrepareAndStep);
 //   NODE_SET_PROTOTYPE_METHOD(constructor_template, "changes", Changes);
 //   NODE_SET_PROTOTYPE_METHOD(constructor_template, "lastInsertRowid", LastInsertRowid);
 
@@ -245,7 +246,7 @@ Handle<Value> Database::Close(const Arguments& args) {
 //     db->Emit(String::New("update"), 4, args);
 //   }
 
-int Database::EIO_AfterPrepare(eio_req *req) {
+int Database::EIO_AfterPrepareAndStep(eio_req *req) {
   ev_unref(EV_DEFAULT_UC);
   struct prepare_request *prep_req = (struct prepare_request *)(req->data);
   HandleScope scope;
@@ -266,7 +267,7 @@ int Database::EIO_AfterPrepare(eio_req *req) {
         if (prep_req->mode != EXEC_EMPTY) {
           argv[0] = Local<Value>::New(Undefined());   // no error
 
-          Local<Object> info = Object::New();         
+          Local<Object> info = Object::New();
 
           if (prep_req->mode & EXEC_LAST_INSERT_ID) {
               info->Set(String::NewSymbol("last_inserted_id"),
@@ -278,11 +279,11 @@ int Database::EIO_AfterPrepare(eio_req *req) {
           }
           argv[1] = info;
           argc = 2;
-          
+
       } else {
           argc = 0;
       }
-      
+
     }
     else {
       argv[0] = External::New(prep_req->stmt);
@@ -315,7 +316,7 @@ int Database::EIO_AfterPrepare(eio_req *req) {
   return 0;
 }
 
-int Database::EIO_Prepare(eio_req *req) {
+int Database::EIO_PrepareAndStep(eio_req *req) {
   struct prepare_request *prep_req = (struct prepare_request *)(req->data);
 
   prep_req->stmt = NULL;
@@ -346,7 +347,104 @@ int Database::EIO_Prepare(eio_req *req) {
 
   prep_req->lastInsertId = 0;
   prep_req->affectedRows = 0;
-      
+
+  // load custom properties
+  if (prep_req->mode & EXEC_LAST_INSERT_ID)
+      prep_req->lastInsertId = sqlite3_last_insert_rowid(db);
+  if (prep_req->mode & EXEC_AFFECTED_ROWS)
+      prep_req->affectedRows = sqlite3_changes(db);
+
+  return 0;
+}
+
+Handle<Value> Database::PrepareAndStep(const Arguments& args) {
+  HandleScope scope;
+  REQ_STR_ARG(0, sql);
+  REQ_FUN_ARG(1, cb);
+  OPT_INT_ARG(2, mode, EXEC_EMPTY);
+
+  Database* dbo = ObjectWrap::Unwrap<Database>(args.This());
+
+  struct prepare_request *prep_req = (struct prepare_request *)
+      calloc(1, sizeof(struct prepare_request) + sql.length());
+
+  if (!prep_req) {
+    V8::LowMemoryNotification();
+    return ThrowException(Exception::Error(
+      String::New("Could not allocate enough memory")));
+  }
+
+  strcpy(prep_req->sql, *sql);
+  prep_req->cb = Persistent<Function>::New(cb);
+  prep_req->dbo = dbo;
+  prep_req->mode = mode;
+
+  eio_custom(EIO_PrepareAndStep, EIO_PRI_DEFAULT, EIO_AfterPrepareAndStep, prep_req);
+
+  ev_ref(EV_DEFAULT_UC);
+  dbo->Ref();
+
+  return Undefined();
+}
+
+int Database::EIO_AfterPrepare(eio_req *req) {
+  ev_unref(EV_DEFAULT_UC);
+  struct prepare_request *prep_req = (struct prepare_request *)(req->data);
+  HandleScope scope;
+
+  Local<Value> argv[2];
+  int argc = 0;
+
+  // if the prepare failed
+  if (req->result != SQLITE_OK) {
+    argv[0] = Exception::Error(
+                String::New(sqlite3_errmsg(prep_req->dbo->db_)));
+    argc = 1;
+  }
+  else {
+    argv[0] = External::New(prep_req->stmt);
+    argv[1] = Integer::New(-1);
+    Persistent<Object> statement(
+      Statement::constructor_template->GetFunction()->NewInstance(2, argv));
+
+    if (prep_req->tail) {
+      statement->Set(String::New("tail"), String::New(prep_req->tail));
+    }
+
+    argv[0] = Local<Value>::New(Undefined());
+    argv[1] = Local<Value>::New(statement);
+    argc = 2;
+  }
+
+  TryCatch try_catch;
+
+  prep_req->dbo->Unref();
+  prep_req->cb->Call(Context::GetCurrent()->Global(), argc, argv);
+
+  if (try_catch.HasCaught()) {
+    FatalException(try_catch);
+  }
+
+  prep_req->cb.Dispose();
+  free(prep_req);
+
+  return 0;
+}
+int Database::EIO_Prepare(eio_req *req) {
+  struct prepare_request *prep_req = (struct prepare_request *)(req->data);
+
+  prep_req->stmt = NULL;
+  prep_req->tail = NULL;
+  sqlite3* db = prep_req->dbo->db_;
+
+  int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
+              &(prep_req->stmt), &(prep_req->tail));
+
+  req->result = rc;
+
+  prep_req->lastInsertId = 0;
+  prep_req->affectedRows = 0;
+
   // load custom properties
   if (prep_req->mode & EXEC_LAST_INSERT_ID)
       prep_req->lastInsertId = sqlite3_last_insert_rowid(db);
