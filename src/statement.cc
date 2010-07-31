@@ -16,6 +16,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 #include <string.h>
 
+#include "database.h"
 #include "statement.h"
 #include "sqlite3_bindings.h"
 
@@ -48,8 +49,9 @@ Handle<Value> Statement::New(const Arguments& args) {
   HandleScope scope;
   REQ_EXT_ARG(0, stmt);
   int first_rc = args[1]->IntegerValue();
+  int mode = args[2]->IntegerValue();
 
-  Statement *sto = new Statement((sqlite3_stmt*)stmt->Value(), first_rc);
+  Statement *sto = new Statement((sqlite3_stmt*)stmt->Value(), first_rc, mode);
   sto->Wrap(args.This());
   sto->Ref();
 
@@ -107,12 +109,12 @@ int Statement::EIO_BindArray(eio_req *req) {
 
       case KEY_STRING:
         index = sqlite3_bind_parameter_index(sto->stmt_,
-                                             (char*)(pair->key));
+            (char*)(pair->key));
         break;
 
-       default: {
-         // this SHOULD be unreachable
-       }
+      default: {
+                 // this SHOULD be unreachable
+               }
     }
 
     if (!index) {
@@ -130,15 +132,13 @@ int Statement::EIO_BindArray(eio_req *req) {
         break;
       case VALUE_STRING:
         rc = sqlite3_bind_text(sto->stmt_, index, (char*)(pair->value),
-                          pair->value_size, SQLITE_TRANSIENT);
+            pair->value_size, SQLITE_TRANSIENT);
         break;
       case VALUE_NULL:
         rc = sqlite3_bind_null(sto->stmt_, index);
         break;
 
-      default: {
-        // should be unreachable
-      }
+      // should be unreachable
     }
   }
 
@@ -159,16 +159,16 @@ Handle<Value> Statement::BindObject(const Arguments& args) {
 
   if (! args[0]->IsObject())
     return ThrowException(Exception::TypeError(
-           String::New("First argument must be an Array.")));
+          String::New("First argument must be an Array.")));
   Local<Object> obj = args[0]->ToObject();
   Local<Array> properties = obj->GetPropertyNames();
 
   struct bind_request *bind_req = (struct bind_request *)
-      calloc(1, sizeof(struct bind_request));
+    calloc(1, sizeof(struct bind_request));
 
   int len = bind_req->len = properties->Length();
   bind_req->pairs = (struct bind_pair *)
-      calloc(len, sizeof(struct bind_pair));
+    calloc(len, sizeof(struct bind_pair));
 
   struct bind_pair *pairs = bind_req->pairs;
 
@@ -177,7 +177,6 @@ Handle<Value> Statement::BindObject(const Arguments& args) {
     Local<Value> val = obj->Get(name->ToString());
 
     String::Utf8Value keyValue(name);
-    printf("prop %d is %s\n", i, *keyValue);
 
     // setting key type
     pairs->key_type = KEY_STRING;
@@ -213,7 +212,7 @@ Handle<Value> Statement::BindObject(const Arguments& args) {
     else {
       free(pairs->key);
       return ThrowException(Exception::TypeError(
-             String::New("Unable to bind value of this type")));
+            String::New("Unable to bind value of this type")));
     }
   }
 
@@ -235,15 +234,15 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
   REQ_FUN_ARG(1, cb);
   if (! args[0]->IsArray())
     return ThrowException(Exception::TypeError(
-           String::New("First argument must be an Array.")));
+      String::New("First argument must be an Array.")));
 
   struct bind_request *bind_req = (struct bind_request *)
-      calloc(1, sizeof(struct bind_request));
+    calloc(1, sizeof(struct bind_request));
 
   Local<Array> array = Local<Array>::Cast(args[0]);
   int len = bind_req->len = array->Length();
   bind_req->pairs = (struct bind_pair *)
-      calloc(len, sizeof(struct bind_pair));
+    calloc(len, sizeof(struct bind_pair));
 
   struct bind_pair *pairs = bind_req->pairs;
 
@@ -261,7 +260,6 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
 
     // setup value
     if (val->IsInt32()) {
-      printf("Binding int\n");
       pairs->value_type = VALUE_INT;
       int *value = (int *) malloc(sizeof(int));
       *value = val->Int32Value();
@@ -288,7 +286,7 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
     else {
       free(pairs->key);
       return ThrowException(Exception::TypeError(
-             String::New("Unable to bind value of this type")));
+            String::New("Unable to bind value of this type")));
     }
   }
 
@@ -328,24 +326,24 @@ Handle<Value> Statement::Bind(const Arguments& args) {
         || args[0]->IsArray()
         || args[0]->IsObject()))
     return ThrowException(Exception::TypeError(
-           String::New("First argument must be a string, number, array or object.")));
+          String::New("First argument must be a string, number, array or object.")));
 
   struct bind_request *bind_req = (struct bind_request *)
-      calloc(1, sizeof(struct bind_request));
+    calloc(1, sizeof(struct bind_request));
 
   bind_req->len = 1;
   struct bind_pair *pair = bind_req->pairs = (struct bind_pair *)
-      calloc(1, sizeof(struct bind_pair));
+    calloc(1, sizeof(struct bind_pair));
 
   // setup key
   if (args[0]->IsString()) {
-     String::Utf8Value keyValue(args[0]);
-     pair->key_type = KEY_STRING;
+    String::Utf8Value keyValue(args[0]);
+    pair->key_type = KEY_STRING;
 
-     char *key = (char *) calloc(1, keyValue.length() + 1);
-     strcpy(key, *keyValue);
+    char *key = (char *) calloc(1, keyValue.length() + 1);
+    strcpy(key, *keyValue);
 
-     pair->key = key;
+    pair->key = key;
   }
   else if (args[0]->IsInt32()) {
     pair->key_type = KEY_INT;
@@ -384,7 +382,7 @@ Handle<Value> Statement::Bind(const Arguments& args) {
   else {
     free(pair->key);
     return ThrowException(Exception::TypeError(
-           String::New("Unable to bind value of this type")));
+          String::New("Unable to bind value of this type")));
   }
 
   bind_req->cb = Persistent<Function>::New(cb);
@@ -434,7 +432,7 @@ Handle<Value> Statement::Finalize(const Arguments& args) {
   Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
 
   if (sto->HasCallback()) {
-    return ThrowException(Exception::Error(String::New("Already stepping")));
+      return ThrowException(Exception::Error(String::New("Already stepping")));
   }
 
   REQ_FUN_ARG(0, cb);
@@ -470,11 +468,12 @@ int Statement::EIO_AfterStep(eio_req *req) {
 
   Statement *sto = (class Statement *)(req->data);
 
+  sqlite3* db = sqlite3_db_handle(sto->stmt_);
   Local<Value> argv[2];
 
   if (sto->error_) {
     argv[0] = Exception::Error(
-        String::New(sqlite3_errmsg(sqlite3_db_handle(sto->stmt_))));
+        String::New(sqlite3_errmsg(db)));
   }
   else {
     argv[0] = Local<Value>::New(Undefined());
@@ -521,6 +520,16 @@ int Statement::EIO_AfterStep(eio_req *req) {
     }
 
     argv[1] = row;
+  }
+
+  if (sto->mode_ & EXEC_LAST_INSERT_ID) {
+    sto->handle_->Set(String::New("lastInsertRowID"),
+      Integer::New(sqlite3_last_insert_rowid(db)));
+  }
+
+  if (sto->mode_ & EXEC_AFFECTED_ROWS) {
+    sto->handle_->Set(String::New("affectedRows"),
+      Integer::New(sqlite3_changes(db)));
   }
 
   TryCatch try_catch;

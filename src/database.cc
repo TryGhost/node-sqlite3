@@ -257,31 +257,31 @@ int Database::EIO_AfterPrepareAndStep(eio_req *req) {
   // if the prepare failed
   if (req->result != SQLITE_OK) {
     argv[0] = Exception::Error(
-                String::New(sqlite3_errmsg(prep_req->dbo->db_)));
+        String::New(sqlite3_errmsg(prep_req->dbo->db_)));
     argc = 1;
 
   }
   else {
     if (req->int1 == SQLITE_DONE) {
 
-        if (prep_req->mode != EXEC_EMPTY) {
-          argv[0] = Local<Value>::New(Undefined());   // no error
+      if (prep_req->mode != EXEC_EMPTY) {
+        argv[0] = Local<Value>::New(Undefined());   // no error
 
-          Local<Object> info = Object::New();
+        Local<Object> info = Object::New();
 
-          if (prep_req->mode & EXEC_LAST_INSERT_ID) {
-              info->Set(String::NewSymbol("last_inserted_id"),
-                  Integer::NewFromUnsigned (prep_req->lastInsertId));
-          }
-          if (prep_req->mode & EXEC_AFFECTED_ROWS) {
-              info->Set(String::NewSymbol("affected_rows"),
-                        Integer::New (prep_req->affectedRows));
-          }
-          argv[1] = info;
-          argc = 2;
+        if (prep_req->mode & EXEC_LAST_INSERT_ID) {
+          info->Set(String::NewSymbol("last_inserted_id"),
+              Integer::NewFromUnsigned (prep_req->lastInsertId));
+        }
+        if (prep_req->mode & EXEC_AFFECTED_ROWS) {
+          info->Set(String::NewSymbol("affected_rows"),
+              Integer::New (prep_req->affectedRows));
+        }
+        argv[1] = info;
+        argc = 2;
 
       } else {
-          argc = 0;
+        argc = 0;
       }
 
     }
@@ -289,7 +289,7 @@ int Database::EIO_AfterPrepareAndStep(eio_req *req) {
       argv[0] = External::New(prep_req->stmt);
       argv[1] = Integer::New(req->int1);
       Persistent<Object> statement(
-        Statement::constructor_template->GetFunction()->NewInstance(2, argv));
+          Statement::constructor_template->GetFunction()->NewInstance(2, argv));
 
       if (prep_req->tail) {
         statement->Set(String::New("tail"), String::New(prep_req->tail));
@@ -359,6 +359,7 @@ int Database::EIO_PrepareAndStep(eio_req *req) {
 
 Handle<Value> Database::PrepareAndStep(const Arguments& args) {
   HandleScope scope;
+
   REQ_STR_ARG(0, sql);
   REQ_FUN_ARG(1, cb);
   OPT_INT_ARG(2, mode, EXEC_EMPTY);
@@ -392,7 +393,7 @@ int Database::EIO_AfterPrepare(eio_req *req) {
   struct prepare_request *prep_req = (struct prepare_request *)(req->data);
   HandleScope scope;
 
-  Local<Value> argv[2];
+  Local<Value> argv[3];
   int argc = 0;
 
   // if the prepare failed
@@ -404,16 +405,17 @@ int Database::EIO_AfterPrepare(eio_req *req) {
   else {
     argv[0] = External::New(prep_req->stmt);
     argv[1] = Integer::New(-1);
+    argv[2] = Integer::New(prep_req->mode);
     Persistent<Object> statement(
-      Statement::constructor_template->GetFunction()->NewInstance(2, argv));
+      Statement::constructor_template->GetFunction()->NewInstance(3, argv));
 
     if (prep_req->tail) {
       statement->Set(String::New("tail"), String::New(prep_req->tail));
     }
 
+    argc = 2;
     argv[0] = Local<Value>::New(Undefined());
     argv[1] = Local<Value>::New(statement);
-    argc = 2;
   }
 
   TryCatch try_catch;
@@ -454,11 +456,49 @@ int Database::EIO_Prepare(eio_req *req) {
   return 0;
 }
 
+// Statement#prepare(sql, [ options ,] callback);
 Handle<Value> Database::Prepare(const Arguments& args) {
   HandleScope scope;
+  Local<Object> options;
+  Local<Function> cb;
+  int mode;
+
   REQ_STR_ARG(0, sql);
-  REQ_FUN_ARG(1, cb);
-  OPT_INT_ARG(2, mode, EXEC_EMPTY);
+
+  // middle argument could be options or
+  switch (args.Length()) {
+    case 2:
+      if (!args[1]->IsFunction()) {
+        return ThrowException(Exception::TypeError(
+                  String::New("Argument 1 must be a function")));
+      }
+      cb = Local<Function>::Cast(args[1]);
+      options = Object::New();
+      break;
+
+    case 3:
+      if (!args[1]->IsObject()) {
+        return ThrowException(Exception::TypeError(
+                  String::New("Argument 1 must be an object")));
+      }
+      options = Local<Function>::Cast(args[1]);
+
+      if (!args[2]->IsFunction()) {
+        return ThrowException(Exception::TypeError(
+                  String::New("Argument 2 must be a function")));
+      }
+      cb = Local<Function>::Cast(args[2]);
+      break;
+  }
+
+  mode = EXEC_EMPTY;
+
+  if (options->Get(String::New("lastInsertRowID"))->IsTrue()) {
+    mode |= EXEC_LAST_INSERT_ID;
+  }
+  if (options->Get(String::New("affectedRows"))->IsTrue())  {
+    mode |= EXEC_AFFECTED_ROWS;
+  }
 
   Database* dbo = ObjectWrap::Unwrap<Database>(args.This());
 

@@ -28,52 +28,52 @@ using namespace node;
 
 class Statement : public EventEmitter {
   public:
-  
+
     static Persistent<FunctionTemplate> constructor_template;
-    
+
     static void Init(v8::Handle<Object> target);
     static Handle<Value> New(const Arguments& args);
-  
+
   protected:
-  
-    Statement(sqlite3_stmt* stmt, int first_rc = -1)
-    : EventEmitter(), first_rc_(first_rc), stmt_(stmt) {
+
+    Statement(sqlite3_stmt* stmt, int first_rc = -1, int mode = 0)
+    : EventEmitter(), first_rc_(first_rc), mode_(mode), stmt_(stmt) {
       column_count_ = -1;
       column_types_ = NULL;
       column_names_ = NULL;
       column_data_ = NULL;
     }
-    
+
     ~Statement() {
       if (stmt_) sqlite3_finalize(stmt_);
       if (column_types_) free(column_types_);
       if (column_names_) free(column_names_);
       if (column_data_) FreeColumnData();
     }
-    
+
     static Handle<Value> Bind(const Arguments& args);
     static Handle<Value> BindObject(const Arguments& args);
     static Handle<Value> BindArray(const Arguments& args);
     static int EIO_BindArray(eio_req *req);
     static int EIO_AfterBindArray(eio_req *req);
-    
+
     static int EIO_AfterFinalize(eio_req *req);
     static int EIO_Finalize(eio_req *req);
     static Handle<Value> Finalize(const Arguments& args);
-    
+
     static Handle<Value> Reset(const Arguments& args);
     static Handle<Value> ClearBindings(const Arguments& args);
-    
+
     static int EIO_AfterStep(eio_req *req);
     static int EIO_Step(eio_req *req);
     static Handle<Value> Step(const Arguments& args);
     void FreeColumnData(void);
-    
+
     bool HasCallback();
     void SetCallback(Local<Function> cb);
-    
+
     Local<Function> GetCallback();
-  
+
   private:
 
     int  column_count_;
@@ -81,8 +81,9 @@ class Statement : public EventEmitter {
     char **column_names_;
     void **column_data_;
     bool error_;
-    
+
     int first_rc_;
+    int mode_;
     sqlite3_stmt* stmt_;
 };
 
