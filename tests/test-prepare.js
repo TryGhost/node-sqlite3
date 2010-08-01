@@ -1,5 +1,3 @@
-require.paths.push(__dirname + '/..');
-
 sys = require('sys');
 fs = require('fs');
 path = require('path');
@@ -10,7 +8,8 @@ sqlite = require('sqlite3_bindings');
 puts = sys.puts;
 inspect = sys.inspect;
 
-var suite = exports.suite = new TestSuite("node-sqlite low level tests");
+var name = "SQLite bindings";
+var suite = exports[name] = new TestSuite(name);
 
 function createTestTable(db, callback) {
   db.prepare('CREATE TABLE test1 (column1 TEXT)',

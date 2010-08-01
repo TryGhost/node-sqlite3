@@ -1,115 +1,127 @@
-var sqlite = require('../sqlite3_bindings');
-var sys = require('sys');
-assert = require('assert');
+require.paths.push(__dirname + '/..');
 
-var puts = sys.puts;
-var inspect = sys.inspect;
+sys = require('sys');
+fs = require('fs');
+path = require('path');
 
-function test_by_index(callback) {
-  db = new sqlite.Database();
-  db.open(":memory:", function () {
-    puts("Opened ok");
-    db.prepare("SELECT ? AS foo, ? AS bar, ? AS baz"
-              , function (error, statement) {
-      if (error) throw error;
-      puts("Prepared ok");
-      statement.bind(1, "hi", function (error) {
-        if (error) throw error;
-        puts("bound ok");
-        statement.bind(2, "there", function (error) {
+TestSuite = require('async-testing/async_testing').TestSuite;
+sqlite = require('sqlite3_bindings');
+
+puts = sys.puts;
+inspect = sys.inspect;
+
+var name = "Binding statement place holders";
+var suite = exports[name] = new TestSuite("Binding statement place holders");
+
+var tests = [
+  { "Bind placeholders by index":
+    function (assert, finished) {
+      var self = this;
+      self.db.open(":memory:", function () {
+        self.db.prepare("SELECT ? AS foo, ? AS bar, ? AS baz"
+                  , function (error, statement) {
           if (error) throw error;
-          puts("bound ok");
-          statement.bind(3, "world", function (error) {
+          statement.bind(1, "hi", function (error) {
             if (error) throw error;
-            puts("bound ok");
-            statement.step(function (error, row) {
+            statement.bind(2, "there", function (error) {
               if (error) throw error;
-              assert.deepEqual(row, { foo: 'hi', bar: 'there', baz: 'world' });
-              puts("Test ok");
+              statement.bind(3, "world", function (error) {
+                if (error) throw error;
+                statement.step(function (error, row) {
+                  if (error) throw error;
+                  assert.deepEqual(row
+                                 , { foo: 'hi'
+                                   , bar: 'there'
+                                   , baz: 'world'
+                                   });
+                  finished();
+                });
+              });
             });
           });
         });
       });
-    });
-  });
-}
-
-function test_num_array(callback) {
-  db = new sqlite.Database();
-  db.open(":memory:", function () {
-    puts("Opened ok");
-    db.prepare("SELECT CAST(? AS INTEGER) AS foo, CAST(? AS INTEGER) AS bar, CAST(? AS INTEGER) AS baz"
-              , function (error, statement) {
-      if (error) throw error;
-      puts("Prepared ok");
-      statement.bindArray([1, 2, 3], function (error) {
-        statement.step(function (error, row) {
+    }
+  }
+, { "Bind placeholders using an array":
+    function (assert, finished) {
+      var self = this;
+      self.db.open(":memory:", function () {
+        self.db.prepare("SELECT ? AS foo, ? AS bar, ? AS baz"
+                 , function (error, statement) {
           if (error) throw error;
-          assert.deepEqual(row, { foo: 1, bar: 2, baz: 3 });
-          puts("Test ok");
-        });
-      });
-    });
-  });
-}
 
-function test_by_array(callback) {
-  db = new sqlite.Database();
-  db.open(":memory:", function () {
-    puts("Opened ok");
-    db.prepare("SELECT ? AS foo, ? AS bar, ? AS baz"
-              , function (error, statement) {
-      if (error) throw error;
-      puts("Prepared ok");
-      statement.bindArray(['hi', 'there', 'world'], function (error) {
-        if (error) throw error;
-        puts("bound ok");
-        statement.step(function (error, row) {
-          if (error) throw error;
-          assert.deepEqual(row, { foo: 'hi', bar: 'there', baz: 'world' });
-          statement.reset();
-          statement.bindArray([1, 2, null], function (error) {
+          statement.bindArray(['hi', 'there', 'world'], function (error) {
+            if (error) throw error;
+
             statement.step(function (error, row) {
               if (error) throw error;
-              assert.deepEqual(row, { foo: 1, bar: 2, baz: null });
-              puts("Test ok");
+
+              assert.deepEqual(row
+                             , { foo: 'hi'
+                               , bar: 'there'
+                               , baz: 'world'
+                               });
+              statement.reset();
+              statement.bindArray([1, 2, null], function (error) {
+                statement.step(function (error, row) {
+                  if (error) throw error;
+                  assert.deepEqual(row, { foo: 1, bar: 2, baz: null });
+                  finished();
+                });
+              });
             });
           });
         });
       });
-    });
-  });
-}
-
-function test_by_object(callback) {
-  db = new sqlite.Database();
-  db.open(":memory:", function () {
-    puts("Opened ok");
-    db.prepare("SELECT $x AS foo, $y AS bar, $z AS baz"
-              , function (error, statement) {
-      if (error) throw error;
-      puts("Prepared ok");
-      statement.bindObject({ $x: 'hi', $y: null, $z: 'world' }, function (error) {
-        if (error) throw error;
-        puts("bound ok");
-        statement.step(function (error, row) {
+    }
+  }
+, { "Bind placeholders using an object":
+    function (assert, finished) {
+      var self = this;
+      self.db.open(":memory:", function () {
+        self.db.prepare("SELECT $x AS foo, $y AS bar, $z AS baz"
+                  , function (error, statement) {
           if (error) throw error;
-          assert.deepEqual(row, { foo: 'hi', bar: null, baz: 'world' });
-          statement.reset();
-          statement.bindArray([1, 2, null], function (error) {
+          statement.bindObject({ $x: 'hi', $y: null, $z: 'world' }, function (error) {
+            if (error) throw error;
             statement.step(function (error, row) {
               if (error) throw error;
-              assert.deepEqual(row, { foo: 1, bar: 2, baz: null });
-              puts("Test ok");
+              assert.deepEqual(row, { foo: 'hi', bar: null, baz: 'world' });
+              statement.reset();
+              statement.bindArray([1, 2, null], function (error) {
+                statement.step(function (error, row) {
+                  if (error) throw error;
+                  assert.deepEqual(row, { foo: 1, bar: 2, baz: null });
+                  finished();
+                });
+              });
             });
           });
         });
       });
-    });
-  });
+    }
+  }
+];
+
+for (var i=0,il=tests.length; i < il; i++) {
+  suite.addTests(tests[i]);
 }
 
-test_num_array();
-test_by_index();
-test_by_array();
-test_by_object();
+var currentTest = 0;
+var testCount = tests.length;
+
+suite.setup(function(finished, test) {
+  this.db = new sqlite.Database();
+  finished();
+});
+suite.teardown(function(finished) {
+  if (this.db) this.db.close(function (error) {
+                               finished();
+                             });
+  ++currentTest == testCount;
+});
+
+if (module == require.main) {
+  suite.runTests();
+}

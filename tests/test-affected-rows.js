@@ -1,5 +1,3 @@
-require.paths.push(__dirname + '/..');
-
 sys = require('sys');
 fs = require('fs');
 path = require('path');
@@ -10,12 +8,8 @@ sqlite = require('sqlite3_bindings');
 puts = sys.puts;
 inspect = sys.inspect;
 
-// createa table
-// prepare a statement (with options) that inserts
-// do a step
-// check that the result has a lastInsertedId property
-
-var suite = exports.suite = new TestSuite("node-sqlite last inserted id test");
+var name = "Caching of affectedRows";
+var suite = exports[name] = new TestSuite(name);
 
 function createTestTable(db, callback) {
   db.prepare('CREATE TABLE table1 (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)',

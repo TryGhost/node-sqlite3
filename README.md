@@ -119,6 +119,23 @@ interface however lacks the necessary notification mechanism to alert the
 caller when the SQLite call has completed. In other words, to be able to
 support callbacks, we use the synchronous driver within a seperate thread.
 
+BUILDING
+--------
+
+To build the bindings:
+
+    git clone http://github.com/orlandov/node-sqlite.git
+    cd node-sqlite
+    node-waf configure build
+
+TESTS
+-----
+
+Running the unit tests could not be easier. Simply:
+
+    git submodule update --init
+    ./run-tests
+
 SEE ALSO
 --------
 

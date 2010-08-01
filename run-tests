@@ -1,0 +1,1 @@
+NODE_PATH=. async-testing/node-async-test tests
