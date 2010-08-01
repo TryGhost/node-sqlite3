@@ -38,7 +38,6 @@ var tests = [
           if (error) throw error;
           statement.step(function (error, row) {
           if (error) throw error;
-            puts("This is " + inspect(this));
             assert.equal(this.affectedRows, 10, "Last inserted id should be 10");
 
             finished();

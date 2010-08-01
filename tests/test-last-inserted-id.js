@@ -28,28 +28,6 @@ function createTestTable(db, callback) {
     });
 }
 
-function fetchAll(db, sql, callback) {
-  db.prepare(
-    sql,
-    function (error, statement) {
-      if (error) throw error;
-      var rows = [];
-      function doStep() {
-        statement.step(function (error, row) {
-          if (error) throw error;
-          if (row) {
-            rows.push(row);
-            doStep();
-          }
-          else {
-            callback(rows);
-          }
-        });
-      }
-      doStep();
-    });
-}
-
 var tests = [
   { 'insert a row with lastinsertedid':
     function (assert, finished) {
@@ -59,13 +37,11 @@ var tests = [
         function createStatement(error, statement) {
           if (error) throw error;
           statement.step(function (error, row) {
-            puts("This is " + inspect(this));
             assert.equal(this.lastInsertRowID, 101, "Last inserted id should be 1");
             assert.equal(this.affectedRows, 1, "Last inserted id should be 1");
             statement.reset();
 
             statement.step(function (error, row) {
-              puts("This is " + inspect(this));
               assert.equal(this.lastInsertRowID, 102, "Last inserted id should be 1");
               assert.equal(this.affectedRows, 1, "Last inserted id should be 1");
 
