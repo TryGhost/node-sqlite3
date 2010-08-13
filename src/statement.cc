@@ -504,7 +504,6 @@ int Statement::EIO_AfterStep(eio_req *req) {
           break;
 
         case SQLITE_TEXT:
-          assert(strlen((char*)sto->column_data_[i]));
           row->Set(String::NewSymbol(sto->column_names_[i]),
                    String::New((char *) (sto->column_data_[i])));
           // don't free this pointer, it's owned by sqlite3
