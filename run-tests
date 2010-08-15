@@ -1,1 +1,1 @@
-NODE_PATH=. async-testing/node-async-test tests
+NODE_PATH=`pwd` async-testing/node-async-test tests
