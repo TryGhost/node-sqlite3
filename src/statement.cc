@@ -553,10 +553,10 @@ void Statement::FreeColumnData(void) {
   for (int i = 0; i < column_count_; i++) {
     switch (column_types_[i]) {
       case SQLITE_INTEGER:
-        free(column_data_[i]);
+        free((int *)column_data_[i]);
         break;
       case SQLITE_FLOAT:
-        free(column_data_[i]);
+        free((double *) column_data_[i]);
         break;
     }
     column_data_[i] = NULL;
@@ -607,31 +607,31 @@ int Statement::EIO_Step(eio_req *req) {
         sto->column_data_ = (void **) calloc(sto->column_count_,
                                              sizeof(void *));
       }
-    }
 
-    for (int i = 0; i < sto->column_count_; i++) {
-      sto->column_types_[i] = sqlite3_column_type(stmt, i);
+      for (int i = 0; i < sto->column_count_; i++) {
+        sto->column_types_[i] = sqlite3_column_type(stmt, i);
 
-      // Don't free this!
-      sto->column_names_[i] = (char *) sqlite3_column_name(stmt, i);
+        // Don't free this!
+        sto->column_names_[i] = (char *) sqlite3_column_name(stmt, i);
 
-      switch(sto->column_types_[i]) {
-        case SQLITE_INTEGER:
-          sto->column_data_[i] = (int *) malloc(sizeof(int));
-          break;
+        switch (sto->column_types_[i]) {
+          case SQLITE_INTEGER:
+            sto->column_data_[i] = (int *) malloc(sizeof(int));
+            break;
 
-        case SQLITE_FLOAT:
-          sto->column_data_[i] = (double *) malloc(sizeof(double));
-          break;
+          case SQLITE_FLOAT:
+            sto->column_data_[i] = (double *) malloc(sizeof(double));
+            break;
 
-        case SQLITE_NULL:
-          sto->column_data_[i] = NULL;
-          break;
+          case SQLITE_NULL:
+            sto->column_data_[i] = NULL;
+            break;
 
-        // no need to allocate memory for strings
+          // no need to allocate memory for strings
 
-        default: {
-          // unsupported type
+          default: {
+            // unsupported type
+          }
         }
       }
     }
