@@ -180,8 +180,8 @@ Handle<Value> Statement::BindObject(const Arguments& args) {
 
     // setting key type
     pairs->key_type = KEY_STRING;
-    char *key = (char *) calloc(1, keyValue.length() + 1);
-    strcpy(key, *keyValue);
+    char *key = (char *) calloc(1, keyValue.length()+1);
+    memcpy(key, *keyValue, keyValue.length()+1);
     pairs->key = key;
 
     // setup value
@@ -200,10 +200,10 @@ Handle<Value> Statement::BindObject(const Arguments& args) {
     else if (val->IsString()) {
       pairs->value_type = VALUE_STRING;
       String::Utf8Value text(val);
-      char *value = (char *) calloc(text.length()+1, sizeof(char*));
-      strcpy(value, *text);
+      char *value = (char *) calloc(text.length(), sizeof(char));
+      memcpy(value, *text, text.length());
       pairs->value = value;
-      pairs->value_size = text.length()+1;
+      pairs->value_size = text.length();
     }
     else if (val->IsNull() || val->IsUndefined()) {
       pairs->value_type = VALUE_NULL;
@@ -274,10 +274,10 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
     else if (val->IsString()) {
       pairs->value_type = VALUE_STRING;
       String::Utf8Value text(val);
-      char *value = (char *) calloc(text.length()+1, sizeof(char*));
-      strcpy(value, *text);
+      char *value = (char *) calloc(text.length(), sizeof(char));
+      memcpy(value, *text, text.length());
       pairs->value = value;
-      pairs->value_size = text.length()+1;
+      pairs->value_size = text.length();
     }
     else if (val->IsNull() || val->IsUndefined()) {
       pairs->value_type = VALUE_NULL;
@@ -311,7 +311,7 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
 // Bind single placeholder by name:
 //   statement.bind('$x', value, callback);
 //
-// Bind placeholder by index:
+// Bind placeholder by position:
 //   statement.bind(1, value, callback);
 
 Handle<Value> Statement::Bind(const Arguments& args) {
@@ -340,8 +340,8 @@ Handle<Value> Statement::Bind(const Arguments& args) {
     String::Utf8Value keyValue(args[0]);
     pair->key_type = KEY_STRING;
 
-    char *key = (char *) calloc(1, keyValue.length() + 1);
-    strcpy(key, *keyValue);
+    char *key = (char *) calloc(1, keyValue.length()+1);
+    memcpy(key, *keyValue, keyValue.length()+1);
 
     pair->key = key;
   }
@@ -370,10 +370,10 @@ Handle<Value> Statement::Bind(const Arguments& args) {
   else if (args[1]->IsString()) {
     pair->value_type = VALUE_STRING;
     String::Utf8Value text(args[1]);
-    char *value = (char *) calloc(text.length()+1, sizeof(char*));
-    strcpy(value, *text);
+    char *value = (char *) calloc(text.length(), sizeof(char));
+    memcpy(value, *text, text.length());
     pair->value = value;
-    pair->value_size = text.length()+1;
+    pair->value_size = text.length();
   }
   else if (args[1]->IsNull() || args[1]->IsUndefined()) {
     pair->value_type = VALUE_NULL;

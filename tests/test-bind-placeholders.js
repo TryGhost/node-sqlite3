@@ -11,10 +11,10 @@ puts = sys.puts;
 inspect = sys.inspect;
 
 var name = "Binding statement place holders";
-var suite = exports[name] = new TestSuite("Binding statement place holders");
+var suite = exports[name] = new TestSuite(name);
 
 var tests = [
-  { "Bind placeholders by index":
+  { "Bind placeholders by position":
     function (assert, finished) {
       var self = this;
       self.db.open(":memory:", function () {
