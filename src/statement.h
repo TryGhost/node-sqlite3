@@ -51,22 +51,28 @@ class Statement : public EventEmitter {
       if (column_data_) FreeColumnData();
     }
 
-    static Handle<Value> Bind(const Arguments& args);
-    static Handle<Value> BindObject(const Arguments& args);
-    static Handle<Value> BindArray(const Arguments& args);
+    static Handle<Value> Bind(const Arguments &args);
+    static Handle<Value> BindObject(const Arguments &args);
+    static Handle<Value> BindArray(const Arguments &args);
     static int EIO_BindArray(eio_req *req);
     static int EIO_AfterBindArray(eio_req *req);
 
     static int EIO_AfterFinalize(eio_req *req);
     static int EIO_Finalize(eio_req *req);
-    static Handle<Value> Finalize(const Arguments& args);
+    static Handle<Value> Finalize(const Arguments &args);
 
-    static Handle<Value> Reset(const Arguments& args);
-    static Handle<Value> ClearBindings(const Arguments& args);
+    static Handle<Value> Reset(const Arguments &args);
+    static Handle<Value> ClearBindings(const Arguments &args);
 
     static int EIO_AfterStep(eio_req *req);
     static int EIO_Step(eio_req *req);
-    static Handle<Value> Step(const Arguments& args);
+    static Handle<Value> Step(const Arguments &args);
+
+    static int EIO_AfterFetchAll(eio_req *req);
+    static int EIO_FetchAll(eio_req *req);
+    static Handle<Value> FetchAll(const Arguments &args);
+
+    void InitializeColumns(void);
     void FreeColumnData(void);
 
     bool HasCallback();

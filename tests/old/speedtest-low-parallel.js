@@ -24,6 +24,7 @@ function getRows() {
         statement.finalize(function () { db.close(function () {}); });
         d = ((new Date)-t0)/1000;
         puts("**** " + d + "s to fetch " + rows + " rows (" + (rows/d) + "/s)");
+        getRowsFetchAll();
         return;
       }
       rows++;
@@ -31,6 +32,20 @@ function getRows() {
     }
 
     statement.step(onStep);
+  });
+}
+
+function getRowsFetchAll() {
+  db.prepare("SELECT * FROM t1", function (error, statement) {
+    if (error) throw error;
+    t0 = new Date();
+
+    statement.fetchAll(function (error, rows) {
+      d = ((new Date)-t0)/1000;
+      puts("**** " + d + "s to fetchAll " + rows.length + " rows (" + (rows.length/d) + "/s)");
+      statement.finalize(function () { db.close(function () {}); });
+      return;
+    });
   });
 }
 

@@ -1,6 +1,6 @@
 import Options
 from os import unlink, symlink
-from os.path import exists
+from os.path import exists, abspath
 
 srcdir = "."
 blddir = "build"
@@ -20,12 +20,17 @@ def configure(conf):
 #   conf.env.append_value('LIBPATH_PROFILER', '/usr/local/lib')
 #   conf.env.append_value('LIB_PROFILER', 'profiler')
 
+  conf.env.append_value("LIBPATH_MPOOL", abspath("./deps/mpool-2.1.0/"))
+  conf.env.append_value("LIB_MPOOL",     "mpool")
+  conf.env.append_value("CPPPATH_MPOOL", abspath("./deps/mpool-2.1.0/"))
+
+
 def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
   obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
   obj.target = "sqlite3_bindings"
   obj.source = "src/sqlite3_bindings.cc src/database.cc src/statement.cc"
-  obj.uselib = "SQLITE3 PROFILER"
+  obj.uselib = "SQLITE3 PROFILER MPOOL"
 
 t = 'sqlite3_bindings.node'
 def shutdown():

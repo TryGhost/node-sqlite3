@@ -40,8 +40,6 @@ void Database::Init(v8::Handle<Object> target) {
   NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
   NODE_SET_PROTOTYPE_METHOD(constructor_template, "prepare", Prepare);
   NODE_SET_PROTOTYPE_METHOD(constructor_template, "prepareAndStep", PrepareAndStep);
-//   NODE_SET_PROTOTYPE_METHOD(constructor_template, "changes", Changes);
-//   NODE_SET_PROTOTYPE_METHOD(constructor_template, "lastInsertRowid", LastInsertRowid);
 
   target->Set(v8::String::NewSymbol("Database"),
           constructor_template->GetFunction());
@@ -140,14 +138,6 @@ Handle<Value> Database::Open(const Arguments& args) {
   return Undefined();
 }
 
-// // TODO: libeio'fy
-// Handle<Value> Changes(const Arguments& args) {
-//   HandleScope scope;
-//   Database* dbo = ObjectWrap::Unwrap<Database>(args.This());
-//   Local<Number> result = Integer::New(sqlite3_changes(dbo->db_));
-//   return scope.Close(result);
-// }
-
 int Database::EIO_AfterClose(eio_req *req) {
   ev_unref(EV_DEFAULT_UC);
 
@@ -214,15 +204,8 @@ Handle<Value> Database::Close(const Arguments& args) {
 }
 
 // // TODO: libeio'fy
-// Handle<Value> LastInsertRowid(const Arguments& args) {
-//   HandleScope scope;
-//   Database* dbo = ObjectWrap::Unwrap<Database>(args.This());
-//   Local<Number> result = Integer::New(sqlite3_last_insert_rowid(dbo->db_));
-//   return scope.Close(result);
-// };
 
-  // Hooks
-
+// Hooks
 //   static int CommitHook(void* v_this) {
 //     HandleScope scope;
 //     Database* db = static_cast<Database*>(v_this);
