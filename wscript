@@ -1,5 +1,5 @@
 import Options
-from os import unlink, symlink
+from os import unlink, symlink, system
 from os.path import exists, abspath
 
 srcdir = "."
@@ -26,6 +26,7 @@ def configure(conf):
 
 
 def build(bld):
+  system("cd deps/mpool-2.1.0/; make");
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
   obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
   obj.target = "sqlite3_bindings"
@@ -38,6 +39,7 @@ def shutdown():
   # better way to do this?
   if Options.commands['clean']:
     if exists(t): unlink(t)
+    system("cd deps/mpool-2.1.0/; make clean");
   else:
     if exists('build/default/' + t) and not exists(t):
       symlink('build/default/' + t, t)
