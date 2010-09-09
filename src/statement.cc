@@ -17,7 +17,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <string.h>
 
 extern "C" {
-#include <mpool.h>
+  #include <mpool.h>
 };
 
 #include "database.h"
@@ -724,34 +724,6 @@ Handle<Value> Statement::Step(const Arguments& args) {
 
   return Undefined();
 }
-
-// Results will stored in a multi-dimensional linked list.
-// That is, a linked list (rows) of linked lists (row values)
-// Results are composed of rows. Rows are composed of cells.
-struct cell_node {
-  void *value;
-  int type;
-  struct cell_node *next;
-};
-
-struct row_node {
-  struct cell_node *cells;
-  struct row_node *next;
-};
-
-struct fetchall_request {
-  Persistent<Function> cb;
-  Statement *sto;
-  mpool_t *pool;
-  char *error;
-  struct row_node *rows;
-};
-
-// represent strings with this struct
-struct string_t {
-  size_t bytes;
-  char data[];
-};
 
 int Statement::EIO_AfterFetchAll(eio_req *req) {
   HandleScope scope;
