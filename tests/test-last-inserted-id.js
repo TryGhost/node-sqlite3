@@ -4,6 +4,7 @@ path = require('path');
 
 TestSuite = require('async-testing/async_testing').TestSuite;
 sqlite = require('sqlite3_bindings');
+common = require('./lib/common');
 
 puts = sys.puts;
 inspect = sys.inspect;
@@ -46,17 +47,14 @@ var tests = [
 
         createTestTable(self.db,
           function () {
-            var insertSQL
-                = 'INSERT INTO table1 (id, name) VALUES (100, "first post!")';
-
-            self.db.prepareAndStep(insertSQL, function (error, row) {
-              if (error) throw error;
-
-              assert.ok(!row, "Row was trueish, but should be falseish");
-
+            common.insertMany(self.db , 'table1'
+                            , ['id', 'name']
+                            , [ [100, "first post!"] ]
+                            , function () {
               self.db.prepare('INSERT INTO table1 (name) VALUES ("orlando")'
                               , { affectedRows: true, lastInsertRowID: true }
                               , createStatement);
+                
             });
           });
       });

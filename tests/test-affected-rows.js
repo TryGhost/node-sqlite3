@@ -59,7 +59,19 @@ var tests = [
             var updateSQL
                 = 'UPDATE table1 SET name="o hai"';
 
-            insertRows(self.db, 10, function () {
+            common.insertMany(self.db, 'table1',
+                              ['name'],
+                              [['o hai'],
+                               ['o hai'],
+                               ['o hai'],
+                               ['o hai'],
+                               ['o hai'],
+                               ['o hai'],
+                               ['o hai'],
+                               ['o hai'],
+                               ['o hai'],
+                               ['o hai']],
+                              function () {
               self.db.prepare(updateSQL
                               , { affectedRows: true }
                               , updateStatementCreated);
