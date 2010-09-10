@@ -38,3 +38,25 @@ exports.insertMany = function (db, table, fields, rows, callback) {
     doStep(--i);
   });
 }
+
+exports.getResultsStep = function (db, callback) {
+  var results = [];
+
+  db.prepare('SELECT * FROM table1', function (error, statement) {
+    function doStep() {
+      statement.step(function (error, row) {
+        if (row) {
+          results.push(row);
+          doStep();
+        }
+        else {
+          statement.finalize(function () {
+            callback && callback(results);
+          });
+        }
+      });
+    }
+
+    doStep();
+  });
+}

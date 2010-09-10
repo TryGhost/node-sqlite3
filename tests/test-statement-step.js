@@ -43,52 +43,19 @@ var tests = [
       var self = this;
 
       self.db.open(':memory:', function (error) {
-        function selectStatementPrepared(error, statement) {
-          if (error) throw error;
-          statement.fetchAll(function (error, rows) {
-            if (error) throw error;
-
-            assert.deepEqual(testRowsExpected, rows);
-
-            self.db.close(function () {
-              finished();
-            });
-          });
-        }
 
         createTestTable(self.db,
           function () {
-            function insertRows(db, rows, callback) {
-              var i = rows.length;
-              db.prepare('INSERT INTO table1 (id, name, age) VALUES (?, ?, ?)',
-                function (error, statement) {
-                  function doStep(i) {
-                    statement.bindArray(rows[i], function () {
-                      statement.step(function (error, row) {
-                        if (error) throw error;
-                        assert.ok(!row, "Row should be unset");
-                        statement.reset();
-                        if (i) {
-                          doStep(--i);
-                        }
-                        else {
-                          statement.finalize(function () {
-                            callback();
-                          });
-                        }
-                      });
-                    });
-                  }
-
-                  doStep(--i);
-                });
-            }
-
-            var selectSQL
-                = 'SELECT * from table1';
-
-            common.insertMany(self.db, 'table1', ['id', 'name', 'age'], testRows, function () {
-              self.db.prepare(selectSQL, selectStatementPrepared);
+            common.insertMany(self.db
+                            , 'table1'
+                            , ['id', 'name', 'age']
+                            , testRows
+                            , function () {
+              common.getResultsStep(self.db, function (rows) {
+                console.log(sys.inspect(arguments));
+                assert.deepEqual(rows, testRowsExpected);
+                finished();
+              });
             });
           });
       });
