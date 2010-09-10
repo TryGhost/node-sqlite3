@@ -479,7 +479,7 @@ int Statement::EIO_AfterStep(eio_req *req) {
 
   HandleScope scope;
 
-  Statement *sto = (class Statement *)(req->data);
+  Statement *sto = (class Statement *) req->data;
 
   sqlite3* db = sqlite3_db_handle(sto->stmt_);
   Local<Value> argv[2];
@@ -498,39 +498,42 @@ int Statement::EIO_AfterStep(eio_req *req) {
   else {
     Local<Object> row = Object::New();
 
-    for (int i = 0; i < sto->column_count_; i++) {
-      assert(sto->column_data_);
-      if (((int*)sto->column_types_)[i] != SQLITE_NULL)
-        assert(((void**)sto->column_data_)[i]);
-      assert(sto->column_names_[i]);
-      assert(sto->column_types_[i]);
+    struct cell_node *cell = sto->cells
+                   , *next = NULL;
 
-      switch (sto->column_types_[i]) {
+    for (int i = 0; cell; i++) {
+      switch (cell->type) {
         case SQLITE_INTEGER:
           row->Set(String::NewSymbol((char*) sto->column_names_[i]),
-                   Int32::New(*(int*) (sto->column_data_[i])));
+                   Int32::New(*(int*) cell->value));
+          free(cell->value);
           break;
 
         case SQLITE_FLOAT:
           row->Set(String::NewSymbol(sto->column_names_[i]),
-                   Number::New(*(double*) (sto->column_data_[i])));
+                   Number::New(*(double*) cell->value));
+          free(cell->value);
           break;
 
-        case SQLITE_TEXT:
-          row->Set(String::NewSymbol(sto->column_names_[i]),
-                   String::New((char *) (sto->column_data_[i])));
-          // don't free this pointer, it's owned by sqlite3
+        case SQLITE_TEXT: {
+            struct string_t *str = (struct string_t *) cell->value;
+
+            // str->bytes-1 to compensate for the NULL terminator
+            row->Set(String::NewSymbol(sto->column_names_[i]),
+                     String::New(str->data, str->bytes-1));
+            free(str);
+          }
           break;
 
         case SQLITE_NULL:
           row->Set(String::New(sto->column_names_[i]),
               Local<Value>::New(Null()));
           break;
-
-        // no default
       }
+      next = cell->next;
+      free(cell);
+      cell=next;
     }
-
     argv[1] = row;
   }
 
@@ -563,63 +566,18 @@ int Statement::EIO_AfterStep(eio_req *req) {
 
 void Statement::FreeColumnData(void) {
   if (!column_count_) return;
-  for (int i = 0; i < column_count_; i++) {
-    switch (column_types_[i]) {
-      case SQLITE_INTEGER:
-        free((int *)column_data_[i]);
-        break;
-      case SQLITE_FLOAT:
-        free((double *) column_data_[i]);
-        break;
-    }
-    column_data_[i] = NULL;
-  }
   free(column_names_);
-  free(column_types_);
-  free(column_data_);
   column_count_ = 0;
-  column_types_ = NULL;
   column_names_ = NULL;
-  column_data_ = NULL;
 }
 
 void Statement::InitializeColumns(void) {
   this->column_count_ = sqlite3_column_count(this->stmt_);
-  assert(this->column_count_);
-  this->column_types_ = (int *) calloc(this->column_count_, sizeof(int));
-  this->column_names_ = (char **) calloc(this->column_count_,
-                                        sizeof(char *));
-
-  if (this->column_count_) {
-    this->column_data_ = (void **) calloc(this->column_count_,
-                                         sizeof(void *));
-  }
+  this->column_names_ = (char **) calloc(this->column_count_, sizeof(char *));
 
   for (int i = 0; i < this->column_count_; i++) {
-    this->column_types_[i] = sqlite3_column_type(this->stmt_, i);
-
     // Don't free this!
     this->column_names_[i] = (char *) sqlite3_column_name(this->stmt_, i);
-
-    switch(this->column_types_[i]) {
-      case SQLITE_INTEGER:
-        this->column_data_[i] = (int *) malloc(sizeof(int));
-        break;
-
-      case SQLITE_FLOAT:
-        this->column_data_[i] = (double *) malloc(sizeof(double));
-        break;
-
-      case SQLITE_NULL:
-        this->column_data_[i] = NULL;
-        break;
-
-      // no need to allocate memory for strings
-
-      default: {
-        // unsupported type
-      }
-    }
   }
 }
 
@@ -645,55 +603,65 @@ int Statement::EIO_Step(eio_req *req) {
   sto->error_ = false;
 
   if (rc == SQLITE_ROW) {
-    // If these pointers are NULL, look up and store the number of columns
-    // their names and types.
-    // Otherwise that means we have already looked up the column types and
-    // names so we can simply re-use that info.
-    if (!sto->column_types_ && !sto->column_names_) {
+    // If this pointer is NULL, look up and store the columns names.
+    if (!sto->column_names_) {
       sto->InitializeColumns();
     }
 
-    assert(sto->column_types_ && sto->column_data_ && sto->column_names_);
+    struct cell_node *cell_head = NULL
+                   , *cell_prev = NULL
+                   , *cell      = NULL;
 
     for (int i = 0; i < sto->column_count_; i++) {
-      int type = sto->column_types_[i];
+      cell = (struct cell_node *) malloc(sizeof(struct cell_node));
 
-      switch(type) {
+      // If this is the first cell, set `cell_head` to it, otherwise attach
+      // the new cell to the end of the list `cell_prev->next`.
+      (!cell_head ? cell_head : cell_prev->next) = cell;
+
+      cell->type = sqlite3_column_type(sto->stmt_, i);
+      cell->next = NULL;
+
+      switch (cell->type) {
         case SQLITE_INTEGER:
-          *(int*)(sto->column_data_[i]) = sqlite3_column_int(stmt, i);
-          assert(sto->column_data_[i]);
+          cell->value = (int *) malloc(sizeof(int));
+          * (int *) cell->value = sqlite3_column_int(stmt, i);
           break;
 
         case SQLITE_FLOAT:
-          *(double*)(sto->column_data_[i]) = sqlite3_column_double(stmt, i);
+          cell->value = (double *) malloc(sizeof(double));
+          * (double *) cell->value = sqlite3_column_double(stmt, i);
           break;
 
         case SQLITE_TEXT: {
-            // It shouldn't be necessary to copy or free() this value,
-            // according to http://www.sqlite.org/c3ref/column_blob.html
-            // it will be reclaimed on the next step, reset, or finalize.
-            // I'm going to assume it's okay to keep this pointer around
-            // until it is used in `EIO_AfterStep`
-            sto->column_data_[i] = (char *) sqlite3_column_text(stmt, i);
+            char *text = (char *) sqlite3_column_text(stmt, i);
+            int size = 1+sqlite3_column_bytes(stmt, i);
+            struct string_t *str = (struct string_t *)
+                                     malloc(sizeof(size_t) + size);
+            str->bytes = size;
+            memcpy(str->data, text, size);
+            cell->value = str;
           }
           break;
 
         case SQLITE_NULL:
-          sto->column_data_[i] = NULL;
+          cell->value = NULL;
           break;
 
         default: {
           assert(0 && "unsupported type");
         }
+
+        if (cell->type != SQLITE_NULL) {
+          assert(cell->value);
+        }
       }
-      if (sto->column_types_[i] != SQLITE_NULL)
-        assert(sto->column_data_[i]);
-      assert(sto->column_names_[i]);
-      assert(sto->column_types_[i]);
+
+      cell_prev = cell;
     }
-    assert(sto->column_data_);
+
+    sto->cells = cell_head;
     assert(sto->column_names_);
-    assert(sto->column_types_);
   }
   else if (rc == SQLITE_DONE) {
     // nothing to do in this case
@@ -735,6 +703,7 @@ int Statement::EIO_AfterFetchAll(eio_req *req) {
   Statement *sto = fetchall_req->sto;
 
   struct row_node *cur = fetchall_req->rows;
+  struct cell_node *cell = NULL;
 
   Local<Value> argv[2];
 
@@ -750,7 +719,7 @@ int Statement::EIO_AfterFetchAll(eio_req *req) {
     for (int row_count = 0; cur; row_count++, cur=cur->next) {
       Local<Object> row = Object::New();
 
-      struct cell_node *cell = cur->cells;
+      cell = cur->cells;
 
       // walk down the list
       for (int i = 0; cell; i++, cell=cell->next) {
@@ -881,54 +850,49 @@ int Statement::EIO_FetchAll(eio_req *req) {
                                          , &ret);
     cur->next = NULL;
 
-    if (!head) {
-      head = cur;
-    }
-    else {
-      prev->next = cur;
-    }
+    // If this is the first row, set head to cur and hold it there since it
+    // was the first result. Otherwise set the `next` field on the `prev`
+    // pointer to attach the newly allocated element.
+    (!head ? head : prev->next) = cur;
 
     struct cell_node *cell_head = NULL
                    , *cell_prev = NULL
                    , *cell      = NULL;
 
     for (int i = 0; i < sto->column_count_; i++) {
-      cell = (struct cell_node *) mpool_alloc(fetchall_req->pool
-                                             , sizeof(struct cell_node)
-                                             , &ret);
+      cell = (struct cell_node *)
+        mpool_alloc(fetchall_req->pool, sizeof(struct cell_node), &ret);
 
-      if (!cell_head) {
-        cell_head = cell;
-      }
-      else {
-        cell_prev->next = cell;
-      }
+      // If this is the first cell, set cell_head to cell and hold it there
+      // since it was the first result. Otherwise set the `next` field on the
+      // `prev` pointer to attach the newly allocated element.
+      (!cell_head ? cell_head : cell_prev->next) = cell;
 
       cell->type = sqlite3_column_type(sto->stmt_, i);
       cell->next = NULL;
 
       switch (cell->type) {
         case SQLITE_INTEGER:
-          cell->value = (int *) mpool_alloc(fetchall_req->pool
-                                           , sizeof(int)
-                                           , &ret);
+          cell->value = (int *)
+            mpool_alloc(fetchall_req->pool , sizeof(int) , &ret);
+
           * (int *) cell->value = sqlite3_column_int(stmt, i);
           break;
 
         case SQLITE_FLOAT:
-          cell->value = (int *) mpool_alloc(fetchall_req->pool
-                                           , sizeof(int)
-                                           , &ret);
+          cell->value = (double *)
+            mpool_alloc(fetchall_req->pool , sizeof(double) , &ret);
+
           * (double *) cell->value = sqlite3_column_double(stmt, i);
           break;
 
         case SQLITE_TEXT: {
             char *text = (char *) sqlite3_column_text(stmt, i);
             int size = 1+sqlite3_column_bytes(stmt, i);
+
             struct string_t *str = (struct string_t *)
-                                     mpool_alloc(fetchall_req->pool
-                                                , sizeof(size_t) + size-1
-                                                , &ret);
+              mpool_alloc(fetchall_req->pool, sizeof(size_t) + size, &ret);
+
             str->bytes = size;
             memcpy(str->data, text, size);
             cell->value = str;

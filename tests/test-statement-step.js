@@ -25,14 +25,14 @@ function createTestTable(db, callback) {
 
 var testRows = [ [ 1, "foo",  9 ]
                , [ 2, "bar",  8 ]
-               , [ 3, "baz",  7 ]
+               , [ 3, null,  7 ]
                , [ 4, "quux", 6 ]
-               , [ 5, "juju", 5 ]
+               , [ 5, "juju", null ]
                ];
 
-var testRowsExpected = [ { id: 5, name: 'juju', age: 5 }
+var testRowsExpected = [ { id: 5, name: 'juju', age: null }
                        , { id: 4, name: 'quux', age: 6 }
-                       , { id: 3, name: 'baz', age: 7 }
+                       , { id: 3, name: null, age: 7 }
                        , { id: 2, name: 'bar', age: 8 }
                        , { id: 1, name: 'foo', age: 9 }
                        ];

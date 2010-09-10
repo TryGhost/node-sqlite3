@@ -30,6 +30,24 @@ extern "C" {
 using namespace v8;
 using namespace node;
 
+struct cell_node {
+  void *value;
+  int type;
+  struct cell_node *next;
+};
+
+struct row_node {
+  struct cell_node *cells;
+  struct row_node *next;
+};
+
+
+// represent strings with this struct
+struct string_t {
+  size_t bytes;
+  char data[];
+};
+
 class Statement : public EventEmitter {
   public:
 
@@ -43,16 +61,12 @@ class Statement : public EventEmitter {
     Statement(sqlite3_stmt* stmt, int first_rc = -1, int mode = 0)
     : EventEmitter(), first_rc_(first_rc), mode_(mode), stmt_(stmt) {
       column_count_ = -1;
-      column_types_ = NULL;
       column_names_ = NULL;
-      column_data_ = NULL;
     }
 
     ~Statement() {
       if (stmt_) sqlite3_finalize(stmt_);
-      if (column_types_) free(column_types_);
-      if (column_names_) free(column_names_);
-      if (column_data_) FreeColumnData();
+      if (column_names_) FreeColumnData();
     }
 
     static Handle<Value> Bind(const Arguments &args);
@@ -87,14 +101,15 @@ class Statement : public EventEmitter {
   private:
 
     int  column_count_;
-    int  *column_types_;
     char **column_names_;
-    void **column_data_;
     bool error_;
 
     int first_rc_;
     int mode_;
     sqlite3_stmt* stmt_;
+
+    // for statment.step
+    cell_node *cells;
 };
 
 // indicates the key type (integer index or name string)
@@ -128,32 +143,12 @@ struct bind_pair {
   size_t value_size;
 };
 
-// Results will stored in a multi-dimensional linked list.
-// That is, a linked list (rows) of linked lists (row values)
-// Results are composed of rows. Rows are composed of cells.
-struct cell_node {
-  void *value;
-  int type;
-  struct cell_node *next;
-};
-
-struct row_node {
-  struct cell_node *cells;
-  struct row_node *next;
-};
-
 struct fetchall_request {
   Persistent<Function> cb;
   Statement *sto;
   mpool_t *pool;
   char *error;
   struct row_node *rows;
-};
-
-// represent strings with this struct
-struct string_t {
-  size_t bytes;
-  char data[];
 };
 
 #endif

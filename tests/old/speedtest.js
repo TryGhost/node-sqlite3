@@ -1,6 +1,6 @@
 var fs     = require("fs"),
     sys    = require("sys"),
-    sqlite = require("../sqlite");
+    sqlite = require("sqlite");
 
 var puts = sys.puts;
 var inspect = sys.inspect;
