@@ -36,7 +36,8 @@ additional steps.
 
       var ponies = [];
 
-      db.query(sql, [colour], function (pony) {
+      db.query(sql, [colour], function (error, pony) {
+        if (error) throw error;
         if (!pony) {
           // no more ponies
           if (!ponies.length)
