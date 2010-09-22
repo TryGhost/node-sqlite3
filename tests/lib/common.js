@@ -34,6 +34,7 @@ exports.insertMany = function (db, table, fields, rows, callback) {
   }
 
   db.prepare(sql, function (error, stmt) {
+    if (error) return callback(error);
     statement = stmt;
     doStep(--i);
   });

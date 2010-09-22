@@ -56,7 +56,7 @@ The low-level bindings directly interface with the SQLite C API. The API
 approximately matches the SQLite3 API when it makes sense.
 
     var sys    = require('sys'),
-        sqlite = require('sqlite/sqlite3_bindings');
+        sqlite = require('sqlite');
 
     var db = new sqlite.Database();
 
@@ -99,7 +99,7 @@ approximately matches the SQLite3 API when it makes sense.
 
 To create a new database object:
 
-    var db = sqlite_bindings.Database();
+    var db = sqlite.Database();
 
 ### database.open(filename, function (error) {})
 
@@ -112,6 +112,23 @@ A filename of ":memory:" may be used to create an in-memory database.
 ### database.close(function (error) {})
 
 Close the database handle.
+
+### database.executeScript(SQL, function (error) {});
+
+    db.executeScript
+      (   "CREATE TABLE table1 (id, name);"
+        + "CREATE TABLE table2 (id, age);"
+        + "INSERT INTO table1 (1, 'Mister Shake');"
+        + "INSER INTO table2 (1, 34);"
+      , function (error) {
+          if (error) throw error;
+          // ...
+        });
+
+Execute multiple semi-colon separated SQL statements. Statements must take no
+placeholders. Each statements will be executed with a single step() and then
+reset. This is ideally suited to executing DDL statements that take no
+arguments and return no results.
 
 ### database.prepare(SQL, [options,] function (error, statement) {})
 

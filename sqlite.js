@@ -18,14 +18,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 var sys = require("sys");
 var sqlite = require("./sqlite3_bindings");
 
-// load numeric constants from sqlite3_bindings
-for (prop in sqlite) {
-    var obj = sqlite[prop];
-    if ((obj === +obj) || (toString.call(obj) === '[object Number]') ) {
-        exports[prop] = sqlite[prop];
-    }
-}
-
 var Database = exports.Database = function () {
   var self = this;
 
@@ -40,28 +32,48 @@ Database.prototype = {
   constructor: Database,
 };
 
-function _queryDone(db, statement) {
-  if (statement.tail) {
-    statement.finalize(function () {
-      db.prepareAndStep(statement.tail, onPrepare);
-    });
-    return;
+Database.prototype.query = function(sql, bindings, rowCallback) {
+  var self = this;
+
+  if (typeof(bindings) == "function") {
+    rowCallback = bindings;
+    bindings = undefined;
   }
 
-  statement.finalize(function () {
-    // if there are any queries queued, let them know it's safe to go
-    db.emit("ready");
+  this.prepare(sql, function(error, statement) {
+    function next() {
+      _doStep(self, statement, rowCallback);
+    }
+
+    if (error) {
+      return rowCallback (error);
+    }
+    if (statement) {
+      if (Array.isArray(bindings)) {
+        statement.bindArray(bindings, next);
+      }
+      else if (typeof(bindings) === 'object') {
+        statement.bindObject(bindings, next);
+      }
+      else {
+        next();
+      }
+    }
+    else {
+      rowCallback();
+    }
   });
 }
 
 function _doStep(db, statement, rowCallback) {
   statement.step(function (error, row) {
-    if (error)
-        return rowCallback (error);
+    if (error) {
+      return rowCallback(error);
+    }
 
     if (!row) {
       rowCallback();
-      _queryDone(db, statement);
+      statement.finalize(function(){});
       return;
     }
     rowCallback(undefined, row);
@@ -70,48 +82,38 @@ function _doStep(db, statement, rowCallback) {
   });
 }
 
-function _onPrepare(db, statement, bindings, rowCallback) {
-  function next() {
-    _doStep(db, statement, rowCallback);
-  }
-  if (Array.isArray(bindings)) {
-    statement.bindArray(bindings, next);
-  }
-  else if (typeof(bindings) === 'object') {
-    statement.bindObject(bindings, next);
-  }
-}
-
-Database.prototype.query = function(sql, bindings, rowCallback, prepareMode) {
+// Execute SQL statements separated by semi-colons.
+// SQL must contain no placeholders. Results are discarded.
+Database.prototype.executeScript = function (script, callback) {
   var self = this;
 
-  if (typeof(bindings) == "function") {
-    prepareMode = rowCallback || sqlite.EXEC_EMPTY;
-    rowCallback = bindings;
-    bindings = [];
-  }
-  if (typeof(prepareMode) == "undefined")
-    prepareMode = sqlite.EXEC_EMPTY;
+  (function stepOverSQL(sql) {
+    self.prepare(sql, function(error, statement) {
+      if (error) {
+        return callback(error);
+      }
 
-  this.prepareAndStep(sql, function(error, statement) {
-    if (error)
-        return rowCallback (error);
-    if (statement) {
-      _onPrepare(self, statement, bindings, rowCallback);
-    } else {
-      rowCallback();
-    }
-  }, prepareMode);
+      statement.step(function (error, row) {
+        var tail;
+        if (error) {
+          callback(error);
+          return;
+        }
+        if (!row) {
+          statement.finalize(function(){});
+
+          tail = statement.tail;
+          if (typeof tail == "string") {
+            tail = tail.trim();
+          }
+          if (tail) {
+            stepOverSQL(tail);
+          }
+          else {
+            callback();
+          }
+        }
+      });
+    });
+  })(script);
 }
-
-Database.prototype.insert = function(sql, insertCallback) {
-  var self = this;
-
-  this.prepareAndStep(sql, function(error, info) {
-    if (error)
-        return insertCallback (error);
-
-    insertCallback (undefined, (info ? info.last_inserted_id : 0));
-  }, sqlite.EXEC_LAST_INSERT_ID);
-}
-
