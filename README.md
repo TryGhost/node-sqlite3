@@ -2,24 +2,14 @@
 
 node-sqlite - Asynchronous SQLite3 driver for Node.js
 
-This distribution includes two SQLite libraries: a low level driver
-written in C++ and a high level driver. The latter wraps the former to add
-simpler API.
-
 SQLite calls block, so to work around this, synchronous calls happen within
 Node's libeio thread-pool, in a similar manner to how POSIX calls are
-currently made. SQLite's serialized threading mode is used to make sure we
-use SQLite safely. See http://www.sqlite.org/threadsafe.html for more info.
+currently made.
 
 # SYNOPSIS
 
 ## High-level Driver
 
-High-level bindings provide a simple interface to SQLite3. They should be
-fast enough for most purposes, but if you absolutely need more performance,
-the low level drivers are also straight-forward to use, but require a few
-additional steps.
-
     var sys    = require('sys'),
         sqlite = require('sqlite');
 
@@ -28,66 +18,21 @@ additional steps.
     // open the database for reading if file exists
     // create new database file if not
 
-    db.open("lilponies.db", function () {
-      var colour = 'pink';
-      var sql = 'SELECT name FROM ponies WHERE hair_colour = ?';
-
-      // bindings list is optional
-
-      var ponies = [];
-
-      db.query(sql, [colour], function (error, pony) {
-        if (error) throw error;
-        if (!pony) {
-          // no more ponies
-          if (!ponies.length)
-            sys.puts('There are no ponies with ' + colour + ' tails. :(');
-          else
-            sys.puts('The following ponies have ' + colour + ' tails: ' + ponies.join(', '));
-        }
-        sys.puts(sys.inspect(pony));
-        ponies.push(pony);
-      });
-    });
-
-## Low-level Driver
-
-The low-level bindings directly interface with the SQLite C API. The API
-approximately matches the SQLite3 API when it makes sense.
-
-    var sys    = require('sys'),
-        sqlite = require('sqlite');
-
-    var db = new sqlite.Database();
-
-    // open the database for reading if file exists
-    // create new database file if not
-
-    db.open("lilponies.db", function () {
-      var colour = 'pink';
-      var sql = 'SELECT name FROM ponies' +
-                ' WHERE hair_colour = $hair_colour' +
-                ' AND gemstones = ?';
-
-      var ponies = [];
+    db.open("aquateen.db", function (error) {
+      if (error) {
+          console.log("Purple Alert! Aqua Teen Database unabled to be opened!"));
+          throw error;
+      }
+      var sql = 'SELECT name FROM dudes WHERE type = ? AND age > ?';
 
       db.prepare(sql, function (error, statement) {
         if (error) throw error;
 
         // Fill in the placeholders
-        // Could also have used:
-        //   statement.bind(position, value, function () { ... });
-        //   statement.bindObject({ $hair_colour: 'pink' }, function () {});
-        statement.bindArray(['pink', 4], function () {
+        statement.bindArray(['milkshake', 30], function () {
 
-          // call step once per row result
-          statement.step(function (error, row) {
-            if (!row) {
-              // end of rows
-            }
-
-            // do some stuff
-            // call statement.step() again for next row
+          statement.fetchAll(function (error, rows) {
+            // ...
           });
         });
       });
@@ -98,6 +43,7 @@ approximately matches the SQLite3 API when it makes sense.
 ## Database Objects
 
 To create a new database object:
+    var sqlite = require('sqlite');
 
     var db = sqlite.Database();
 
@@ -113,6 +59,12 @@ A filename of ":memory:" may be used to create an in-memory database.
 
 Close the database handle.
 
+### database.query(sql, [bindings,] function (error, row) {})
+
+Execute a SQL query, `sql`, with optional bindings `bindings` on the currently
+opened database. The callback will be executed once per row returned, plus
+once more with row set to undefined to indicate end of results.
+
 ### database.executeScript(SQL, function (error) {});
 
     db.executeScript
@@ -126,25 +78,24 @@ Close the database handle.
         });
 
 Execute multiple semi-colon separated SQL statements. Statements must take no
-placeholders. Each statements will be executed with a single step() and then
-reset. This is ideally suited to executing DDL statements that take no
-arguments and return no results.
+placeholders. Each statement will be executed with a single step() and then
+reset. This is ideally suited to executing multiple DDL statements.
 
 ### database.prepare(SQL, [options,] function (error, statement) {})
 
 Create a prepared statement from an SQL string. Prepared statements can be
 used used to iterate over results and to avoid compiling SQL each time a query
-is performed.  
+is performed.
 
 Options:
 
 - lastInsertRowID: boolean, default false.
-    If true, when this statement is stepped over, the context object (this) in
+    If true, when this statement is step()'d over, the context object (this) in
     the callback will contain a lastInsertRowID member with the ID of the last
     inserted row.
 
 - affectedRows: boolean, default false.
-    If true, when this statement is stepped over, the context object (this) in
+    If true, when this statement is step()'d over, the context object (this) in
     the callback will contain an affectedRows member with the number of
     affected rows for the last step.
 
@@ -180,8 +131,7 @@ Immediately clear the bindings from the statement. There is no callback.
 
 Fetch one row from a prepared statement and hand it off to a callback. If
 there are no more rows to be fetched, row will be undefined. Rows are
-represented as objects with
-properties named after the respective columns.
+represented as objects with properties named after the respective columns.
 
 ### statement.fetchAll(function (error, rows) {})
 
