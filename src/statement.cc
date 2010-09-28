@@ -785,11 +785,14 @@ int Statement::EIO_AfterFetchAll(eio_req *req) {
 //          max_alloced_p,
 //          tot_alloced_p
 //         );
-  int ret = mpool_close(fetchall_req->pool);
-  if (ret != MPOOL_ERROR_NONE) {
-    req->result = -1;
-    argv[0] = Exception::Error(String::New(mpool_strerror(ret)));
-    argv[1] = Local<Value>::New(Undefined());
+
+  if (fetchall_req->rows) {
+    int ret = mpool_close(fetchall_req->pool);
+    if (ret != MPOOL_ERROR_NONE) {
+      req->result = -1;
+      argv[0] = Exception::Error(String::New(mpool_strerror(ret)));
+      argv[1] = Local<Value>::New(Undefined());
+    }
   }
 
   TryCatch try_catch;
@@ -834,25 +837,24 @@ int Statement::EIO_FetchAll(eio_req *req) {
                 , *prev = NULL
                 , *head = NULL;
 
-  while (1) {
-    int rc = sqlite3_step(stmt);
-
-    if (rc == SQLITE_DONE) {
-      break;
-    }
+  for (;; rc = sqlite3_step(stmt)) {
+    if (rc != SQLITE_ROW) break;
+    // TODO: test for != SQLITE_ROW (errors)
 
     if (!sto->column_names_) {
       sto->InitializeColumns();
     }
 
-    cur = (struct row_node *) mpool_alloc(fetchall_req->pool
-                                         , sizeof(struct row_node)
-                                         , &ret);
+    cur = (struct row_node *) mpool_alloc
+                                ( fetchall_req->pool
+                                , sizeof(struct row_node)
+                                , &ret
+                                );
     cur->next = NULL;
 
-    // If this is the first row, set head to cur and hold it there since it
-    // was the first result. Otherwise set the `next` field on the `prev`
-    // pointer to attach the newly allocated element.
+    // If this is the first row, assign `cur` to `head` and `hold` head there
+    // since it was the first result. Otherwise set the `next` field on
+    // the`prev` pointer to attach the newly allocated element.
     (!head ? head : prev->next) = cur;
 
     struct cell_node *cell_head = NULL
@@ -863,14 +865,13 @@ int Statement::EIO_FetchAll(eio_req *req) {
       cell = (struct cell_node *)
         mpool_alloc(fetchall_req->pool, sizeof(struct cell_node), &ret);
 
-      // If this is the first cell, set cell_head to cell and hold it there
-      // since it was the first result. Otherwise set the `next` field on the
-      // `prev` pointer to attach the newly allocated element.
+      // Same as above with the row linked list.
       (!cell_head ? cell_head : cell_prev->next) = cell;
 
       cell->type = sqlite3_column_type(sto->stmt_, i);
       cell->next = NULL;
 
+      // TODO: Cache column data in the fetchall req struct.
       switch (cell->type) {
         case SQLITE_INTEGER:
           cell->value = (int *)
