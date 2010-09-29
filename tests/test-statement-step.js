@@ -52,7 +52,6 @@ var tests = [
                             , testRows
                             , function () {
               common.getResultsStep(self.db, function (rows) {
-                console.log(sys.inspect(arguments));
                 assert.deepEqual(rows, testRowsExpected);
                 finished();
               });

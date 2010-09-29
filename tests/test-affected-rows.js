@@ -1,83 +1,74 @@
+path = require('path');
+require.paths.unshift(path.join(__dirname, 'lib'));
 sys = require('sys');
 fs = require('fs');
-path = require('path');
 
 TestSuite = require('async-testing/async_testing').TestSuite;
-sqlite = require('sqlite3_bindings');
+sqlite = require('sqlite');
 
+common = require('common');
 puts = sys.puts;
 inspect = sys.inspect;
 
 var name = "Caching of affectedRows";
 var suite = exports[name] = new TestSuite(name);
 
-function createTestTable(db, callback) {
-  db.prepare('CREATE TABLE table1 (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)',
-    function (error, createStatement) {
-      if (error) throw error;
-      createStatement.step(function (error, row) {
-        if (error) throw error;
-        callback();
-      });
-    });
-}
-
 var tests = [
   { 'insert a row with lastinsertedid':
     function (assert, finished) {
       var self = this;
 
-      self.db.open(':memory:', function (error) {
-        function updateStatementCreated(error, statement) {
-          if (error) throw error;
-          statement.step(function (error, row) {
-          if (error) throw error;
-            assert.equal(this.affectedRows, 10, "Last inserted id should be 10");
+      var data = [ ['foo 0']
+                 , ['foo 1']
+                 , ['foo 2']
+                 , ['foo 3']
+                 , ['foo 4']
+                 , ['foo 5']
+                 , ['foo 6']
+                 , ['foo 7']
+                 , ['foo 8']
+                 , ['foo 9']
+                 ];
 
-            finished();
-          });
-        }
-
-        createTestTable(self.db,
-          function () {
-            function insertRows(db, count, callback) {
-              var i = count;
-              db.prepare('INSERT INTO table1 (name) VALUES ("oh boy")',
-                function (error, statement) {
-                  statement.step(function (error, row) {
-                    if (error) throw error;
-                    assert.ok(!row, "Row should be unset");
-                    statement.reset();
-                    if (--i)
-                      statement.step(arguments.callee);
-                    else
-                      callback();
-                  });
-                });
-            }
-
+      common.createTable
+        ( self.db
+        , 'table1'
+        , [ { name: 'id',   type: 'INT' }
+          , { name: 'name', type: 'TEXT' }
+          ]
+        , function (error) {
+            if (error) throw error;
             var updateSQL
                 = 'UPDATE table1 SET name="o hai"';
 
-            common.insertMany(self.db, 'table1',
-                              ['name'],
-                              [['o hai'],
-                               ['o hai'],
-                               ['o hai'],
-                               ['o hai'],
-                               ['o hai'],
-                               ['o hai'],
-                               ['o hai'],
-                               ['o hai'],
-                               ['o hai'],
-                               ['o hai']],
-                              function () {
-              self.db.prepare(updateSQL
-                              , { affectedRows: true }
-                              , updateStatementCreated);
-            });
-          });
-      });
+            common.insertMany
+              ( self.db
+              , 'table1'
+              , ['name']
+              , data
+              , function () {
+                  self.db.prepare
+                    ( updateSQL
+                    , { affectedRows: true }
+                    , onUpdateStatementCreated
+                    );
+                });
+          }
+        );
+
+      function onUpdateStatementCreated(error, statement) {
+        if (error) throw error;
+        statement.step(function (error, row) {
+          if (error) throw error;
+          assert.equal
+            ( this.affectedRows
+            , data.length
+            , "Last inserted id should be 10"
+            );
+
+          finished();
+        });
+      }
     }
   }
 ];
@@ -92,7 +83,9 @@ var testCount = tests.length;
 
 suite.setup(function(finished, test) {
   this.db = new sqlite.Database();
-  finished();
+  this.db.open(':memory:', function (error) {
+    finished();
+  });
 });
 suite.teardown(function(finished) {
   if (this.db) this.db.close(function (error) {
