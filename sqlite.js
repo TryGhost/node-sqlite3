@@ -82,6 +82,54 @@ function _doStep(db, statement, rowCallback) {
   });
 }
 
+// Execute a single SQL query with the given optional parameters. Calls
+// `callback` with all rows or an error on query completion.
+Database.prototype.execute = function (sql /* , bindings, callback */) {
+  var self = this;
+  var bindings, callback;
+  var n = arguments.length;
+
+  switch (n) {
+    case 3:
+      callback = arguments[2];
+      bindings = arguments[1];
+      break;
+    case 2:
+      callback = arguments[1];
+      break;
+    default: throw new Error("Invalid number of arguments ("+n+")");
+  }
+
+  self.prepare(sql, function (error, statement) {
+    if (error) {
+      return callback(error);
+    }
+    if (bindings) {
+      statement.bind(bindings, function (error) {
+        if (error) {
+          return callback(
+            new Error("Binding error: " + error.toString()));
+        }
+        fetchAll(statement);
+      });
+    }
+    else {
+      fetchAll(statement);
+    }
+
+    function fetchAll(statement) {
+      statement.fetchAll(function (error, rows) {
+        if (error) {
+          return callback(error);
+        }
+        statement.finalize(function () {
+          callback(undefined, rows);
+        });
+      });
+    }
+  });
+}
+
 // Execute SQL statements separated by semi-colons.
 // SQL must contain no placeholders. Results are discarded.
 Database.prototype.executeScript = function (script, callback) {

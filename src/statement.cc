@@ -820,17 +820,27 @@ int Statement::EIO_FetchAll(eio_req *req) {
   assert(stmt);
   int ret;
 
-  /* open the pool */
-  fetchall_req->pool = mpool_open(MPOOL_FLAG_USE_MAP_ANON
-                                , 0
-                                , NULL
-                                , &ret);
-  if (fetchall_req->pool == NULL) {
-    req->result = -1;
-    fetchall_req->rows = NULL;
-    fetchall_req->error = (char *) mpool_strerror(ret);
-    return 0;
+
+  int rc = sqlite3_step(stmt);
+
+  if (rc == SQLITE_ROW) {
+    /* open the pool */
+    fetchall_req->pool = mpool_open(MPOOL_FLAG_USE_MAP_ANON
+                                  , 0
+                                  , NULL
+                                  , &ret);
+    if (fetchall_req->pool == NULL) {
+      req->result = -1;
+      fetchall_req->rows = NULL;
+      fetchall_req->error = (char *) mpool_strerror(ret);
+      return 0;
+    }
   }
+  else {
+    fetchall_req->pool = NULL;
+    fetchall_req->rows = NULL;
+  }
+
 
   // We're going to be traversing a linked list in two dimensions.
   struct row_node *cur  = NULL

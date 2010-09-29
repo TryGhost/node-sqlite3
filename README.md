@@ -20,9 +20,17 @@ currently made.
 
     db.open("aquateen.db", function (error) {
       if (error) {
-          console.log("Purple Alert! Aqua Teen Database unabled to be opened!"));
+          console.log("Tonight. You."));
           throw error;
       }
+      db.execute
+        ( "INSERT INTO aqua_teens (name) VALUES (?)"
+        , ['meaty meaty moo']
+        , function (error, rows) {
+            if (error) throw error;
+            console.log("Aqua teen added.");
+          }
+        );
       var sql = 'SELECT name FROM dudes WHERE type = ? AND age > ?';
 
       db.prepare(sql, function (error, statement) {
@@ -58,6 +66,12 @@ A filename of ":memory:" may be used to create an in-memory database.
 ### database.close(function (error) {})
 
 Close the database handle.
+
+### database.execute(sql[, bindings], function (error, rows) {})
+
+Execute a SQL query, `sql` with optional bindings `bindings` on the currently
+opened database. The callback will be executed once with all the rows returned
+for the query. This is much faster than `database.query` since there are less roundtrips into the thread-pool.
 
 ### database.query(sql, [bindings,] function (error, row) {})
 
