@@ -101,20 +101,24 @@ Database.prototype.execute = function (sql /* , bindings, callback */) {
   }
 
   self.prepare(sql, function (error, statement) {
+    function next (error) {
+      if (error) return callback(new Error("Error binding: " + error.toString()));
+      fetchAll(statement);
+    }
+
     if (error) {
       return callback(error);
     }
     if (bindings) {
-      statement.bind(bindings, function (error) {
-        if (error) {
-          return callback(
-            new Error("Binding error: " + error.toString()));
-        }
-        fetchAll(statement);
-      });
+      if (Array.isArray(bindings)) {
+        statement.bindArray(bindings, next);
+      }
+      else if (typeof(bindings) === 'object') {
+        statement.bindObject(bindings, next);
+      }
     }
     else {
-      fetchAll(statement);
+      next();
     }
 
     function fetchAll(statement) {
