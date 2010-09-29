@@ -41,6 +41,9 @@ currently made.
 
           statement.fetchAll(function (error, rows) {
             // ...
+            statement.finalize(function (error) {
+              console.log("All done!");
+            });
           });
         });
       });
