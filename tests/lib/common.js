@@ -61,3 +61,21 @@ exports.getResultsStep = function (db, callback) {
     doStep();
   });
 }
+
+exports.createTable = function (db, name, columns, callback) {
+  var columnFragment
+    = '(' +
+        columns.map(function (i) {
+          return i.name + " " + i.type
+        }).join(', ') +
+      ')';
+
+  db.prepare('CREATE TABLE ' + name + ' ' + columnFragment,
+    function (error, createStatement) {
+      if (error) throw error;
+      createStatement.step(function (error, row) {
+        if (error) throw error;
+        callback();
+      });
+    });
+}
