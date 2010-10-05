@@ -668,6 +668,7 @@ int Statement::EIO_Step(eio_req *req) {
   }
   else {
     sto->error_ = true;
+    sto->cells = NULL;
   }
 
   return 0;

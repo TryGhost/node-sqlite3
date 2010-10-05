@@ -169,3 +169,54 @@ Database.prototype.executeScript = function (script, callback) {
     });
   })(script);
 }
+
+Database.prototype.insertMany = function (table, columns, rows, callback) {
+  var columnsFragment = columns.join(",");
+  var placeholdersFragment = [];
+  var i = columns.length;
+
+  while (i--) {
+    placeholdersFragment.push('?');
+  }
+  placeholdersFragment = placeholdersFragment.join(", ");
+
+  var sql = [ 'INSERT INTO'
+            , table
+            , '('
+            , columnsFragment
+            , ')'
+            , 'VALUES'
+            , '('
+            , placeholdersFragment
+            , ')'
+            ]
+            .join(" ");
+
+  var i = rows.length;
+
+  var statement;
+
+  function doStep(i) {
+    statement.bindArray(rows[i], function () {
+      statement.step(function (error, row) {
+        if (error) return callback(error);
+        statement.reset();
+        if (i) {
+          doStep(--i);
+        }
+        else {
+          statement.finalize(function () {
+            callback();
+          });
+        }
+      });
+    });
+  }
+
+  this.prepare(sql, function (error, stmt) {
+    if (error) return callback(error);
+    statement = stmt;
+    doStep(--i);
+  });
+}
+
