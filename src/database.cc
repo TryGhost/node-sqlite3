@@ -101,6 +101,10 @@ int Database::EIO_Open(eio_req *req) {
 
   req->result = rc;
 
+  // Set the a 10s timeout valuei for retries on BUSY errors.
+  sqlite3_busy_timeout(*dbptr, 10000);
+
+
 //   sqlite3 *db = *dbptr;
 //   sqlite3_commit_hook(db, CommitHook, open_req->dbo);
 //   sqlite3_rollback_hook(db, RollbackHook, open_req->dbo);
