@@ -175,6 +175,11 @@ Database.prototype.insertMany = function (table, columns, rows, callback) {
   var placeholdersFragment = [];
   var i = columns.length;
 
+  if (!rows.length) {
+    callback();
+    return;
+  }
+
   while (i--) {
     placeholdersFragment.push('?');
   }
