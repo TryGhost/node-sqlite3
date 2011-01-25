@@ -22,6 +22,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <node_events.h>
 #include <sqlite3.h>
 #include <stdlib.h>
+#include <node_buffer.h>
 
 extern "C" {
   #include <mpool.h>
@@ -34,6 +35,7 @@ struct cell_node {
   void *value;
   int type;
   struct cell_node *next;
+  int size;
 };
 
 struct row_node {
@@ -122,6 +124,7 @@ enum BindKeyType {
 enum BindValueType {
   VALUE_INT,
   VALUE_DOUBLE,
+  VALUE_BLOB,
   VALUE_STRING,
   VALUE_NULL
 };

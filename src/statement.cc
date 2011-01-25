@@ -147,6 +147,10 @@ int Statement::EIO_BindArray(eio_req *req) {
         rc = sqlite3_bind_text(sto->stmt_, index, (char*)(pair->value),
             pair->value_size, SQLITE_TRANSIENT);
         break;
+      case VALUE_BLOB:
+        rc = sqlite3_bind_blob(sto->stmt_, index, (char*)(pair->value),
+          pair->value_size, SQLITE_TRANSIENT);
+        break;
       case VALUE_NULL:
         rc = sqlite3_bind_null(sto->stmt_, index);
         break;
@@ -388,6 +392,12 @@ Handle<Value> Statement::Bind(const Arguments& args) {
     pair->value = value;
     pair->value_size = text.length();
   }
+  else if (Buffer::HasInstance(args[1])) {
+    pair->value_type = VALUE_BLOB;
+    Buffer* buffer = Buffer::Unwrap<Buffer>(args[1]->ToObject());
+    pair->value = buffer->data();
+    pair->value_size = buffer->length();
+  }
   else if (args[1]->IsNull() || args[1]->IsUndefined()) {
     pair->value_type = VALUE_NULL;
     pair->value = NULL;
@@ -525,6 +535,14 @@ int Statement::EIO_AfterStep(eio_req *req) {
           }
           break;
 
+        case SQLITE_BLOB: {
+            node::Buffer *buf = Buffer::New(cell->size);
+            memcpy(buf->data(), cell->value, cell->size);
+            row->Set(String::New(sto->column_names_[i]), buf->handle_);
+            free(cell->value);
+          }
+          break;
+
         case SQLITE_NULL:
           row->Set(String::New(sto->column_names_[i]),
               Local<Value>::New(Null()));
@@ -641,6 +659,16 @@ int Statement::EIO_Step(eio_req *req) {
             str->bytes = size;
             memcpy(str->data, text, size);
             cell->value = str;
+          }
+          break;
+
+        case SQLITE_BLOB: {
+            const void* blob = sqlite3_column_blob(stmt, i);
+            int size = sqlite3_column_bytes(stmt, i);
+            cell->size = size;
+            unsigned char *pzBlob = (unsigned char *)malloc(size);
+            memcpy(pzBlob, blob, size);
+            cell->value = pzBlob;
           }
           break;
 
