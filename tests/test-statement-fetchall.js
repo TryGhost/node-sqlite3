@@ -92,6 +92,30 @@ var tests = [
             });
           });
       });
+    },
+    'check errors are generated correctly':
+    function (assert, finished) {
+      var self = this;
+      self.db.open(':memory:', function (error) {
+        if (error) throw error;
+        execSQL("CREATE TABLE table2 (value INTEGER, CHECK (value BETWEEN 0 AND 11))", function (error) {
+          if (error) throw error;
+          execSQL("INSERT INTO table2 (value) VALUES (12)", function (error) {
+            assert.equal(error.message, "constraint failed");
+            finished();
+          });
+        });
+      });
+      function execSQL(sql, cb) {
+        self.db.prepare(sql, function (err, stmt) {
+          if (err) throw err;
+          stmt.fetchAll(function (err, rows) {
+            stmt.finalize(function () {
+              cb(err, rows);
+            });
+          });
+        });
+      }
     }
   }
 ];
