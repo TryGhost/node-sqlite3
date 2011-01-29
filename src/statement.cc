@@ -708,7 +708,7 @@ int Statement::EIO_AfterFetchAll(eio_req *req) {
 
   Local<Value> argv[2];
 
-  if (req->result) {
+  if (fetchall_req->error != NULL) {
     argv[0] = Exception::Error(String::New(fetchall_req->error));
     argv[1] = Local<Value>::New(Undefined());
   }
@@ -787,7 +787,7 @@ int Statement::EIO_AfterFetchAll(eio_req *req) {
 //          tot_alloced_p
 //         );
 
-  if (fetchall_req->rows) {
+  if (fetchall_req->pool) {
     int ret = mpool_close(fetchall_req->pool);
     if (ret != MPOOL_ERROR_NONE) {
       req->result = -1;
@@ -824,7 +824,7 @@ int Statement::EIO_FetchAll(eio_req *req) {
 
   int rc = sqlite3_step(stmt);
 
-  if (rc == SQLITE_ROW) {
+  if (rc != SQLITE_DONE) {
     /* open the pool */
     fetchall_req->pool = mpool_open(MPOOL_FLAG_USE_MAP_ANON
                                   , 0
@@ -850,7 +850,6 @@ int Statement::EIO_FetchAll(eio_req *req) {
 
   for (;; rc = sqlite3_step(stmt)) {
     if (rc != SQLITE_ROW) break;
-    // TODO: test for != SQLITE_ROW (errors)
 
     if (!sto->column_names_) {
       sto->InitializeColumns();
@@ -927,6 +926,23 @@ int Statement::EIO_FetchAll(eio_req *req) {
 
     cur->cells = cell_head;
     prev = cur;
+  }
+
+  // Test for errors
+  if (rc != SQLITE_DONE) {
+    const char *error = sqlite3_errmsg(sqlite3_db_handle(sto->stmt_));
+    if (error == NULL) {
+      error = "Unknown Error";
+    }
+    size_t errorSize = sizeof(char) * (strlen(error) + 1);
+    fetchall_req->error = (char *)mpool_alloc(fetchall_req->pool, errorSize, &ret);
+    if (fetchall_req->error != NULL) {
+      memcpy(fetchall_req->error, error, errorSize);
+    } else {
+      fetchall_req->error = (char *) mpool_strerror(ret);
+    }
+    req->result = -1;
+    return 0;
   }
 
   req->result = 0;
