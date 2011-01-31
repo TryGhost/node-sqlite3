@@ -21,7 +21,7 @@ def configure(conf):
   conf.env.append_value("CPPPATH_MPOOL", abspath("./deps/mpool-2.1.0/"))
 
   conf.env.append_value('LIBPATH_SQLITE', abspath('./deps/sqlite/'))
-  conf.env.append_value('LIB_SQLITE', abspath('sqlite'))
+  conf.env.append_value('LIB_SQLITE', 'sqlite3')
   conf.env.append_value('CPATH_SQLITE', abspath('./deps/sqlite/'))
 
 def build(bld):
@@ -35,7 +35,7 @@ def build(bld):
   obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
   obj.target = "sqlite3_bindings"
   obj.source = "src/sqlite3_bindings.cc src/database.cc src/statement.cc"
-  obj.uselib = "MPOOL"
+  obj.uselib = "SQLITE MPOOL"
 
 t = 'sqlite3_bindings.node'
 def shutdown():

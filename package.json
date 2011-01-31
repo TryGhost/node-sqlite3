@@ -16,7 +16,7 @@
     }
 , 'directories': { 'lib' : '.' }
 , 'engines': { 'node' : '>=0.2.0' }
-, 'scripts': { 'test' : './run-tests' }
+, 'scripts': { 'test' : './run-tests', preinstall: 'node-waf configure build' }
 , 'licenses':
     [ { 'type' : 'BSD' } ]
 , 'main': './sqlite'
