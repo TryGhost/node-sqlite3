@@ -1,6 +1,6 @@
 { 'name': 'sqlite'
 , 'description': 'SQLite3 bindings for Node'
-, 'version': '1.0.0'
+, 'version': '1.0.1'
 , 'homepage': 'http://github.com/orlandov/node-sqlite'
 , 'author':
     'Orlando Vazquez <ovazquez@gmail.com> (http://2wycked.net)'
