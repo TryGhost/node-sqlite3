@@ -20,7 +20,7 @@ def configure(conf):
   conf.env.append_value("LIB_MPOOL",     "mpool")
   conf.env.append_value("CPPPATH_MPOOL", abspath("./deps/mpool-2.1.0/"))
 
-  conf.env.append_value('LIBPATH_SQLITE', abspath('./deps/sqlite/'))
+  conf.env.append_value('LIBPATH_SQLITE', abspath('build/default/deps/'))
   conf.env.append_value('LIB_SQLITE', 'sqlite3')
   conf.env.append_value('CPATH_SQLITE', abspath('./deps/sqlite/'))
 
@@ -29,7 +29,7 @@ def build(bld):
   sqlite = bld.new_task_gen('cc', 'shlib')
   sqlite.ccflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
   sqlite.source = "deps/sqlite/sqlite3.c"
-  sqlite.target = "deps/sqlite/sqlite3.so"
+  sqlite.target = "deps/sqlite3"
 
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
   obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
