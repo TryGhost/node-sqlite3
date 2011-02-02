@@ -20,22 +20,25 @@ def configure(conf):
   conf.env.append_value("LIB_MPOOL",     "mpool")
   conf.env.append_value("CPPPATH_MPOOL", abspath("./deps/mpool-2.1.0/"))
 
-  conf.env.append_value('LIBPATH_SQLITE', abspath('build/default/deps/'))
-  conf.env.append_value('LIB_SQLITE', 'sqlite3')
+  conf.env.append_value('LIBPATH_SQLITE', abspath('build/default/deps/sqlite/'))
+  conf.env.append_value('STATICLIB_SQLITE', 'sqlite3-bundled')
   conf.env.append_value('CPATH_SQLITE', abspath('./deps/sqlite/'))
 
 def build(bld):
   system("cd deps/mpool-2.1.0/; make");
-  sqlite = bld.new_task_gen('cc', 'shlib')
-  sqlite.ccflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
+
+  sqlite = bld.new_task_gen('cc', 'staticlib')
+  sqlite.ccflags = ["-g", "-fPIC", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
   sqlite.source = "deps/sqlite/sqlite3.c"
-  sqlite.target = "deps/sqlite3"
+  sqlite.target = "deps/sqlite/sqlite3-bundled"
+  sqlite.name = "sqlite3"
 
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
   obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
   obj.target = "sqlite3_bindings"
   obj.source = "src/sqlite3_bindings.cc src/database.cc src/statement.cc"
-  obj.uselib = "SQLITE MPOOL"
+  obj.uselib = "MPOOL"
+  obj.uselib_local = "sqlite3"
 
 t = 'sqlite3_bindings.node'
 def shutdown():
