@@ -222,6 +222,12 @@ Handle<Value> Statement::BindObject(const Arguments& args) {
       pairs->value = value;
       pairs->value_size = text.length();
     }
+    else if (Buffer::HasInstance(val)) {
+      pairs->value_type = VALUE_BLOB;
+      Buffer* buffer = Buffer::Unwrap<Buffer>(val->ToObject());
+      pairs->value = buffer->data();
+      pairs->value_size = buffer->length();
+    }
     else if (val->IsNull() || val->IsUndefined()) {
       pairs->value_type = VALUE_NULL;
       pairs->value = NULL;
@@ -295,6 +301,12 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
       memcpy(value, *text, text.length());
       pairs->value = value;
       pairs->value_size = text.length();
+    }
+    else if (Buffer::HasInstance(val)) {
+      pairs->value_type = VALUE_BLOB;
+      Buffer* buffer = Buffer::Unwrap<Buffer>(val->ToObject());
+      pairs->value = buffer->data();
+      pairs->value_size = buffer->length();
     }
     else if (val->IsNull() || val->IsUndefined()) {
       pairs->value_type = VALUE_NULL;
