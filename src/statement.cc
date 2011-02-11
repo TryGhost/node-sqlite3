@@ -513,8 +513,11 @@ int Statement::EIO_AfterStep(eio_req *req) {
   Local<Value> argv[2];
 
   if (sto->error_) {
-    argv[0] = Exception::Error(
-        String::New(sqlite3_errmsg(db)));
+    Local<Value> e = Exception::Error(sto->error_msg_);
+    Local<Object> obj = e->ToObject();
+    obj->Set(NODE_PSYMBOL("errno"), Integer::New(sto->error_));
+    obj->Set(NODE_PSYMBOL("query"), String::NewSymbol(sqlite3_sql(sto->stmt_)));
+    argv[0] = e;
   }
   else {
     argv[0] = Local<Value>::New(Undefined());
@@ -622,6 +625,7 @@ int Statement::EIO_Step(eio_req *req) {
   sqlite3_stmt *stmt = sto->stmt_;
   assert(stmt);
   int rc;
+  const char *msg;
 
   // check if we have already taken a step immediately after prepare
   if (sto->first_rc_ != -1) {
@@ -633,10 +637,16 @@ int Statement::EIO_Step(eio_req *req) {
     sto->first_rc_ = -1;
   }
   else {
-    rc = req->result = sqlite3_step(stmt);
+    sqlite3* db = sqlite3_db_handle(stmt);
+    sqlite3_mutex* mtx = sqlite3_db_mutex(db);
+    sqlite3_mutex_enter(mtx);
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_ROW && rc != SQLITE_DONE) msg = sqlite3_errmsg(db);
+    sqlite3_mutex_leave(mtx);
+    req->result = rc;
   }
 
-  sto->error_ = false;
+  sto->error_ = SQLITE_OK;
 
   if (rc == SQLITE_ROW) {
     // If this pointer is NULL, look up and store the columns names.
@@ -713,7 +723,9 @@ int Statement::EIO_Step(eio_req *req) {
     // nothing to do in this case
   }
   else {
-    sto->error_ = true;
+    HandleScope scope;
+    sto->error_ = rc;
+    sto->error_msg_ = scope.Close(String::NewSymbol(msg));
     sto->cells = NULL;
   }
 

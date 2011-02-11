@@ -104,7 +104,8 @@ class Statement : public EventEmitter {
 
     int  column_count_;
     char **column_names_;
-    bool error_;
+    int error_;
+    Local<String> error_msg_;
 
     int first_rc_;
     int mode_;
