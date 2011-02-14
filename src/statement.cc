@@ -225,7 +225,9 @@ Handle<Value> Statement::BindObject(const Arguments& args) {
     else if (Buffer::HasInstance(val)) {
       pairs->value_type = VALUE_BLOB;
       Buffer* buffer = Buffer::Unwrap<Buffer>(val->ToObject());
-      pairs->value = buffer->data();
+      char *value = (char *) malloc(buffer->length());
+      memcpy(value, buffer->data(), buffer->length());
+      pairs->value = value;
       pairs->value_size = buffer->length();
     }
     else if (val->IsNull() || val->IsUndefined()) {
@@ -305,7 +307,9 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
     else if (Buffer::HasInstance(val)) {
       pairs->value_type = VALUE_BLOB;
       Buffer* buffer = Buffer::Unwrap<Buffer>(val->ToObject());
-      pairs->value = buffer->data();
+      char *value = (char *) malloc(buffer->length());
+      memcpy(value, buffer->data(), buffer->length());
+      pairs->value = value;
       pairs->value_size = buffer->length();
     }
     else if (val->IsNull() || val->IsUndefined()) {
@@ -407,7 +411,9 @@ Handle<Value> Statement::Bind(const Arguments& args) {
   else if (Buffer::HasInstance(args[1])) {
     pair->value_type = VALUE_BLOB;
     Buffer* buffer = Buffer::Unwrap<Buffer>(args[1]->ToObject());
-    pair->value = buffer->data();
+    char *value = (char *) malloc(buffer->length());
+    memcpy(value, buffer->data(), buffer->length());
+    pair->value = value;
     pair->value_size = buffer->length();
   }
   else if (args[1]->IsNull() || args[1]->IsUndefined()) {
