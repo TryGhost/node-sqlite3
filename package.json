@@ -17,13 +17,8 @@
         "type": "git",
         "url": "http://github.com/orlandov/node-sqlite.git"
     },
-    "main": "sqlite",
     "engines": {
         "node": ">=0.2.0"
-    },
-    "scripts": {
-        "test": "./run-tests",
-        "preinstall": "node-waf configure build"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./sqlite3"
