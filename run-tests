@@ -1,1 +1,0 @@
-NODE_PATH=`pwd` async-testing/node-async-test tests
