@@ -1,26 +1,30 @@
-{ 'name': 'sqlite'
-, 'description': 'SQLite3 bindings for Node'
-, 'version': '1.0.3'
-, 'homepage': 'http://github.com/orlandov/node-sqlite'
-, 'author':
-    'Orlando Vazquez <ovazquez@gmail.com> (http://2wycked.net)'
-, 'contributors':
-    [ 'Artem Kustikov'
-    , 'Eric Fredricksen'
-    , 'John Wright'
-    , 'Ryan Dahl'
-    , 'Will White'
-    , 'Tom MacWright'
-    , 'Konstantin Käfer'
-    ]
-, 'repository':
-    { 'type': 'git'
-    , 'url': 'http://github.com/orlandov/node-sqlite.git'
-    }
-, 'main': 'sqlite'
-, 'engines': { 'node' : '>=0.2.0' }
-, 'scripts': { 'test' : './run-tests', preinstall: 'node-waf configure build' }
-, 'licenses':
-    [ { 'type' : 'BSD' } ]
-, 'main': './sqlite'
+{
+    "name": "sqlite",
+    "description": "SQLite3 bindings for Node",
+    "version": "1.1.0",
+    "homepage": "http://github.com/developmentseed/node-sqlite3",
+    "author": "Orlando Vazquez <ovazquez@gmail.com>",
+    "contributors": [
+        "Artem Kustikov",
+        "Eric Fredricksen",
+        "John Wright",
+        "Ryan Dahl",
+        "Will White",
+        "Tom MacWright",
+        "Konstantin Käfer"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "http://github.com/orlandov/node-sqlite.git"
+    },
+    "main": "sqlite",
+    "engines": {
+        "node": ">=0.2.0"
+    },
+    "scripts": {
+        "test": "./run-tests",
+        "preinstall": "node-waf configure build"
+    },
+    "licenses": [{ "type": "BSD" }],
+    "main": "./sqlite3"
 }
