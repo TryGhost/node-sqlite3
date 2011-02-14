@@ -382,7 +382,8 @@ Handle<Value> Statement::Bind(const Arguments& args) {
     pair->key_type = KEY_INT;
     int *index = (int *) malloc(sizeof(int));
     *index = args[0]->Int32Value();
-
+    if (*index < 1) return ThrowException(Exception::TypeError(
+          String::New("Parameter position index start with 1.")));
     // don't forget to `free` this
     pair->key = index;
   }
