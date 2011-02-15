@@ -20,7 +20,7 @@ extern "C" {
 
 #include "database.h"
 #include "statement.h"
-#include "sqlite3_bindings.h"
+#include "macros.h"
 
 static Persistent<String> callback_sym;
 Persistent<FunctionTemplate> Statement::constructor_template;

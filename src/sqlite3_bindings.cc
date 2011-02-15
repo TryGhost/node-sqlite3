@@ -16,7 +16,6 @@
 #include <node.h>
 #include <node_events.h>
 
-#include "sqlite3_bindings.h"
 #include "database.h"
 #include "statement.h"
 

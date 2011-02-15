@@ -12,8 +12,8 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-#ifndef SQLITE3_BINDINGS_H
-#define SQLITE3_BINDINGS_H
+#ifndef NODE_SQLITE3_SRC_MACROS_H
+#define NODE_SQLITE3_SRC_MACROS_H
 
 #define CHECK(rc) { if ((rc) != SQLITE_OK)                              \
       return ThrowException(Exception::Error(String::New(               \
