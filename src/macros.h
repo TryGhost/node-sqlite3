@@ -15,6 +15,9 @@
 #ifndef NODE_SQLITE3_SRC_MACROS_H
 #define NODE_SQLITE3_SRC_MACROS_H
 
+const char* sqlite_code_string(int code);
+
+
 #define CHECK(rc) { if ((rc) != SQLITE_OK)                              \
       return ThrowException(Exception::Error(String::New(               \
                                              sqlite3_errmsg(*db)))); }
@@ -23,37 +26,110 @@
       return ThrowException(Exception::Error(String::New(               \
                         sqlite3_errmsg(sqlite3_db_handle(sto->stmt_))))); }
 
-#define REQ_ARGS(N)                                                     \
-  if (args.Length() < (N))                                              \
-    return ThrowException(Exception::TypeError(                         \
-                             String::New("Expected " #N "arguments")));
 
-#define REQ_STR_ARG(I, VAR)                                             \
-  if (args.Length() <= (I) || !args[I]->IsString())                     \
-    return ThrowException(Exception::TypeError(                         \
-                  String::New("Argument " #I " must be a string")));    \
-  String::Utf8Value VAR(args[I]->ToString());
+#define REQUIRE_ARGUMENTS(n)                                                   \
+    if (args.Length() < (n)) {                                                 \
+        return ThrowException(                                                 \
+            Exception::TypeError(String::New("Expected " #n "arguments"))      \
+        );                                                                     \
+    }
 
-#define REQ_FUN_ARG(I, VAR)                                             \
-  if (args.Length() <= (I) || !args[I]->IsFunction())                   \
-    return ThrowException(Exception::TypeError(                         \
-                  String::New("Argument " #I " must be a function")));  \
-  Local<Function> VAR = Local<Function>::Cast(args[I]);
 
-#define REQ_EXT_ARG(I, VAR)                                             \
-  if (args.Length() <= (I) || !args[I]->IsExternal())                   \
-    return ThrowException(Exception::TypeError(                         \
-                              String::New("Argument " #I " invalid"))); \
-  Local<External> VAR = Local<External>::Cast(args[I]);
+#define REQUIRE_ARGUMENT_EXTERNAL(i, var)                                      \
+    if (args.Length() <= (i) || !args[i]->IsExternal()) {                      \
+        return ThrowException(                                                 \
+            Exception::TypeError(String::New("Argument " #i " invalid"))       \
+        );                                                                     \
+    }                                                                          \
+    Local<External> var = Local<External>::Cast(args[i]);
 
-#define OPT_INT_ARG(I, VAR, DEFAULT)                                    \
-  int VAR;                                                              \
-  if (args.Length() <= (I)) {                                           \
-    VAR = (DEFAULT);                                                    \
-  } else if (args[I]->IsInt32()) {                                      \
-    VAR = args[I]->Int32Value();                                        \
-  } else {                                                              \
-    return ThrowException(Exception::TypeError(                         \
-              String::New("Argument " #I " must be an integer")));      \
-  }
+
+#define REQUIRE_ARGUMENT_FUNCTION(i, var)                                      \
+    if (args.Length() <= (i) || !args[i]->IsFunction()) {                      \
+        return ThrowException(Exception::TypeError(                            \
+            String::New("Argument " #i " must be a function"))                 \
+        );                                                                     \
+    }                                                                          \
+    Local<Function> var = Local<Function>::Cast(args[i]);
+
+
+#define REQUIRE_ARGUMENT_STRING(i, var)                                        \
+    if (args.Length() <= (i) || !args[i]->IsString()) {                        \
+        return ThrowException(Exception::TypeError(                            \
+            String::New("Argument " #i " must be a string"))                   \
+        );                                                                     \
+    }                                                                          \
+    String::Utf8Value var(args[i]->ToString());
+
+
+#define OPTIONAL_ARGUMENT_FUNCTION(i, var)                                     \
+    Local<Function> var;                                                       \
+    bool var ## _exists = false;                                               \
+    if (args.Length() >= i) {                                                  \
+        if (!args[i]->IsFunction()) {                                          \
+            return ThrowException(Exception::TypeError(                        \
+                String::New("Argument " #i " must be a function"))             \
+            );                                                                 \
+        }                                                                      \
+        var = Local<Function>::Cast(args[i]);                                  \
+        var ## _exists = true;                                                 \
+    }
+
+
+#define OPTIONAL_ARGUMENT_INTEGER(i, var, default)                             \
+    int var;                                                                   \
+    if (args.Length() <= (i)) {                                                \
+        var = (default);                                                       \
+    }                                                                          \
+    else if (args[i]->IsInt32()) {                                             \
+        var = args[i]->Int32Value();                                           \
+    }                                                                          \
+    else {                                                                     \
+        return ThrowException(Exception::TypeError(                            \
+            String::New("Argument " #i " must be an integer"))                 \
+        );                                                                     \
+    }
+
+
+#define DEFINE_CONSTANT_INTEGER(target, constant, name)                        \
+    (target)->Set(                                                             \
+        String::NewSymbol(#name),                                              \
+        Integer::New(constant),                                                \
+        static_cast<PropertyAttribute>(ReadOnly | DontDelete)                  \
+    );
+
+#define DEFINE_CONSTANT_STRING(target, constant, name)                         \
+    (target)->Set(                                                             \
+        String::NewSymbol(#name),                                              \
+        String::NewSymbol(constant),                                           \
+        static_cast<PropertyAttribute>(ReadOnly | DontDelete)                  \
+    );
+
+
+#define NODE_SET_GETTER(target, name, function)                                \
+    (target)->InstanceTemplate()                                               \
+        ->SetAccessor(String::NewSymbol(name), (function));
+
+#define GET_STRING(source, name, property)                                     \
+    String::Utf8Value name((source)->Get(String::NewSymbol(property)));
+
+#define GET_INTEGER(source, name, property)                                    \
+    int name = (source)->Get(String::NewSymbol(property))->Int32Value();
+
+
+#define EXCEPTION(msg, errno, name)                                            \
+    Local<Value> name = Exception::Error(                                      \
+        String::Concat(                                                        \
+            String::Concat(                                                    \
+                String::NewSymbol(sqlite_code_string(errno)),                  \
+                String::NewSymbol(": ")                                        \
+            ),                                                                 \
+            String::New(msg)                                                   \
+        )                                                                      \
+    );                                                                         \
+    Local<Object> name ## _obj = name->ToObject();                             \
+    name ## _obj->Set(NODE_PSYMBOL("errno"), Integer::New(errno));             \
+    name ## _obj->Set(NODE_PSYMBOL("code"),                                    \
+        String::NewSymbol(sqlite_code_string(errno)));
+
 #endif

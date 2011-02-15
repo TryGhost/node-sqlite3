@@ -50,7 +50,7 @@ void Statement::Init(v8::Handle<Object> target) {
 
 Handle<Value> Statement::New(const Arguments& args) {
   HandleScope scope;
-  REQ_EXT_ARG(0, stmt);
+  REQUIRE_ARGUMENT_EXTERNAL(0, stmt);
   int first_rc = args[1]->IntegerValue();
   int mode = args[2]->IntegerValue();
 
@@ -169,8 +169,8 @@ Handle<Value> Statement::BindObject(const Arguments& args) {
   HandleScope scope;
   Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
 
-  REQ_ARGS(2);
-  REQ_FUN_ARG(1, cb);
+  REQUIRE_ARGUMENTS(2);
+  REQUIRE_ARGUMENT_FUNCTION(1, cb);
 
   if (! args[0]->IsObject())
     return ThrowException(Exception::TypeError(
@@ -253,8 +253,8 @@ Handle<Value> Statement::BindArray(const Arguments& args) {
   HandleScope scope;
   Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
 
-  REQ_ARGS(2);
-  REQ_FUN_ARG(1, cb);
+  REQUIRE_ARGUMENTS(2);
+  REQUIRE_ARGUMENT_FUNCTION(1, cb);
   if (! args[0]->IsArray())
     return ThrowException(Exception::TypeError(
       String::New("First argument must be an Array.")));
@@ -349,8 +349,8 @@ Handle<Value> Statement::Bind(const Arguments& args) {
   HandleScope scope;
   Statement* sto = ObjectWrap::Unwrap<Statement>(args.This());
 
-  REQ_ARGS(2);
-  REQ_FUN_ARG(2, cb);
+  REQUIRE_ARGUMENTS(2);
+  REQUIRE_ARGUMENT_FUNCTION(2, cb);
 
   if (!(   args[0]->IsString()
         || args[0]->IsInt32()
@@ -475,7 +475,7 @@ Handle<Value> Statement::Finalize(const Arguments& args) {
       return ThrowException(Exception::Error(String::New("Already stepping")));
   }
 
-  REQ_FUN_ARG(0, cb);
+  REQUIRE_ARGUMENT_FUNCTION(0, cb);
 
   sto->SetCallback(cb);
 
@@ -740,7 +740,7 @@ Handle<Value> Statement::Step(const Arguments& args) {
     return ThrowException(Exception::Error(String::New("Already stepping")));
   }
 
-  REQ_FUN_ARG(0, cb);
+  REQUIRE_ARGUMENT_FUNCTION(0, cb);
 
   sto->SetCallback(cb);
 
@@ -1011,7 +1011,7 @@ int Statement::EIO_FetchAll(eio_req *req) {
 Handle<Value> Statement::FetchAll(const Arguments& args) {
   HandleScope scope;
 
-  REQ_FUN_ARG(0, cb);
+  REQUIRE_ARGUMENT_FUNCTION(0, cb);
 
   struct fetchall_request *fetchall_req = (struct fetchall_request *)
       calloc(1, sizeof(struct fetchall_request));

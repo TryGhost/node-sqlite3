@@ -14,10 +14,9 @@ exports['Blob overflow test'] = function(beforeExit) {
     var inserted = 0;
     var retrieved = 0;
 
+    db.openSync('');
+
     Step(
-        function() {
-            db.open('', this);
-        },
         function() {
             var next = this;
             db.prepare('CREATE TABLE elmos (image BLOB);', function(err, statement) {

@@ -1,9 +1,9 @@
 // Copyright (c) 2010, Orlando Vazquez <ovazquez@gmail.com>
-// 
+//
 // Permission to use, copy, modify, and/or distribute this software for any
 // purpose with or without fee is hereby granted, provided that the above
 // copyright notice and this permission notice appear in all copies.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 // WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -28,182 +28,202 @@ using namespace node;
 Persistent<FunctionTemplate> Database::constructor_template;
 
 void Database::Init(v8::Handle<Object> target) {
-  HandleScope scope;
+    HandleScope scope;
 
-  Local<FunctionTemplate> t = FunctionTemplate::New(New);
+    Local<FunctionTemplate> t = FunctionTemplate::New(New);
 
-  constructor_template = Persistent<FunctionTemplate>::New(t);
-  constructor_template->Inherit(EventEmitter::constructor_template);
-  constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-  constructor_template->SetClassName(String::NewSymbol("Database"));
+    constructor_template = Persistent<FunctionTemplate>::New(t);
+    constructor_template->Inherit(EventEmitter::constructor_template);
+    constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
+    constructor_template->SetClassName(String::NewSymbol("Database"));
 
-  NODE_SET_PROTOTYPE_METHOD(constructor_template, "open", Open);
-  NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
-  NODE_SET_PROTOTYPE_METHOD(constructor_template, "prepare", Prepare);
-  NODE_SET_PROTOTYPE_METHOD(constructor_template, "prepareAndStep", PrepareAndStep);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "open", Open);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "openSync", OpenSync);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "closeSync", CloseSync);
 
-  target->Set(v8::String::NewSymbol("Database"),
-          constructor_template->GetFunction());
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "prepare", Prepare);
 
-  // insert/update execution result mask
-  NODE_DEFINE_CONSTANT (target, EXEC_EMPTY);
-  NODE_DEFINE_CONSTANT (target, EXEC_LAST_INSERT_ID);
-  NODE_DEFINE_CONSTANT (target, EXEC_AFFECTED_ROWS);
+    target->Set(v8::String::NewSymbol("Database"),
+            constructor_template->GetFunction());
+
+    // insert/update execution result mask
+    NODE_DEFINE_CONSTANT(target, EXEC_EMPTY);
+    NODE_DEFINE_CONSTANT(target, EXEC_LAST_INSERT_ID);
+    NODE_DEFINE_CONSTANT(target, EXEC_AFFECTED_ROWS);
 }
 
 Handle<Value> Database::New(const Arguments& args) {
-  HandleScope scope;
-  Database* db = new Database();
-  db->Wrap(args.This());
-  return args.This();
+    HandleScope scope;
+    Database* db = new Database();
+    db->Wrap(args.This());
+    return args.This();
 }
 
-int Database::EIO_AfterOpen(eio_req *req) {
-  ev_unref(EV_DEFAULT_UC);
-  HandleScope scope;
-  struct open_request *open_req = (struct open_request *)(req->data);
-
-  Local<Value> argv[1];
-  bool err = false;
-  if (req->result) {
-    err = true;
-    argv[0] = Exception::Error(String::New("Error opening database"));
-  }
-
-  TryCatch try_catch;
-
-  open_req->db->Unref();
-  open_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
-
-  if (try_catch.HasCaught()) {
-    FatalException(try_catch);
-  }
-
-  open_req->db->Emit(String::New("ready"), 0, NULL);
-  open_req->cb.Dispose();
-
-  free(open_req);
-
-  return 0;
-}
-
-int Database::EIO_Open(eio_req *req) {
-  struct open_request *open_req = (struct open_request *)(req->data);
-
-  sqlite3 **dbptr = open_req->db->GetDBPtr();
-  int rc = sqlite3_open_v2( open_req->filename
-                          , dbptr
-                          , SQLITE_OPEN_READWRITE
-                            | SQLITE_OPEN_CREATE
-                            | SQLITE_OPEN_FULLMUTEX
-                          , NULL);
-
-  req->result = rc;
-
-  // Set the a 10s timeout valuei for retries on BUSY errors.
-  sqlite3_busy_timeout(*dbptr, 10000);
 
 
-//   sqlite3 *db = *dbptr;
-//   sqlite3_commit_hook(db, CommitHook, open_req->db);
-//   sqlite3_rollback_hook(db, RollbackHook, open_req->db);
-//   sqlite3_update_hook(db, UpdateHook, open_req->db);
+Handle<Value> Database::OpenSync(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
-  return 0;
+    if (db->readyState == CLOSED) {
+        if (!Open(db)) {
+            EXCEPTION(db->error_message.c_str(), db->error_status, exception);
+            return ThrowException(exception);
+        }
+        else {
+            args.This()->Set(String::NewSymbol("opened"), True(), ReadOnly);
+            db->Emit(String::NewSymbol("opened"), 0, NULL);
+
+            if (db->pending == 0) {
+                db->Emit(String::NewSymbol("idle"), 0, NULL);
+            }
+        }
+    }
+
+    return args.This();
 }
 
 Handle<Value> Database::Open(const Arguments& args) {
-  HandleScope scope;
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
-  REQ_STR_ARG(0, filename);
-  REQ_FUN_ARG(1, cb);
+    if (db->readyState == CLOSED) {
+        db->readyState = OPENING;
+        db->Ref();
+        eio_custom(EIO_Open, EIO_PRI_DEFAULT, EIO_AfterOpen, db);
+        ev_ref(EV_DEFAULT_UC);
+    }
 
-  Database* db = ObjectWrap::Unwrap<Database>(args.This());
-
-  struct open_request *open_req = (struct open_request *)
-      calloc(1, sizeof(struct open_request) + filename.length());
-
-  if (!open_req) {
-    V8::LowMemoryNotification();
-    return ThrowException(Exception::Error(
-      String::New("Could not allocate enough memory")));
-  }
-
-  strcpy(open_req->filename, *filename);
-  open_req->cb = Persistent<Function>::New(cb);
-  open_req->db = db;
-
-  eio_custom(EIO_Open, EIO_PRI_DEFAULT, EIO_AfterOpen, open_req);
-
-  ev_ref(EV_DEFAULT_UC);
-  db->Ref();
-
-  return Undefined();
+    return args.This();
 }
 
-int Database::EIO_AfterClose(eio_req *req) {
-  ev_unref(EV_DEFAULT_UC);
+bool Database::Open(Database* db) {
+    db->error_status = sqlite3_open_v2(
+        db->filename.c_str(),
+        &db->handle,
+        SQLITE_OPEN_FULLMUTEX | db->open_mode,
+        NULL
+    );
 
-  HandleScope scope;
-
-  struct close_request *close_req = (struct close_request *)(req->data);
-
-  Local<Value> argv[1];
-  bool err = false;
-  if (req->result) {
-    err = true;
-    argv[0] = Exception::Error(String::New("Error closing database"));
-  }
-
-  TryCatch try_catch;
-
-  close_req->db->Unref();
-  close_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
-
-  if (try_catch.HasCaught()) {
-    FatalException(try_catch);
-  }
-
-  close_req->cb.Dispose();
-
-  free(close_req);
-
-  return 0;
+    if (db->error_status != SQLITE_OK) {
+        db->error_message = std::string(sqlite3_errmsg(db->handle));
+        db->readyState = CLOSED;
+        return false;
+    }
+    else {
+        db->readyState = OPEN;
+        return true;
+    }
 }
 
-int Database::EIO_Close(eio_req *req) {
-  struct close_request *close_req = (struct close_request *)(req->data);
-  Database* db = close_req->db;
-  req->result = sqlite3_close(db->db_);
-  db->db_ = NULL;
-  return 0;
+int Database::EIO_Open(eio_req *req) {
+    Database* db = static_cast<Database*>(req->data);
+    Open(db);
+    return 0;
+}
+
+int Database::EIO_AfterOpen(eio_req *req) {
+    HandleScope scope;
+    Database* db = static_cast<Database*>(req->data);
+    ev_unref(EV_DEFAULT_UC);
+    db->Unref();
+
+    Local<Value> argv[1];
+    if (db->error_status != SQLITE_OK) {
+        EXCEPTION(db->error_message.c_str(), db->error_status, exception);
+        argv[0] = exception;
+    }
+    else {
+        argv[0] = Local<Value>::New(Null());
+        db->handle_->Set(String::NewSymbol("opened"), True(), ReadOnly);
+    }
+
+    db->Emit(String::NewSymbol("opened"), 1, argv);
+
+    if (db->pending == 0) {
+        db->Emit(String::NewSymbol("idle"), 0, NULL);
+    }
+
+    return 0;
+}
+
+
+
+Handle<Value> Database::CloseSync(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    if (db->readyState == OPEN) {
+        if (!Close(db)) {
+            EXCEPTION(db->error_message.c_str(), db->error_status, exception);
+            return ThrowException(exception);
+        }
+        else {
+            args.This()->Set(String::NewSymbol("opened"), False(), ReadOnly);
+            db->Emit(String::NewSymbol("closed"), 0, NULL);
+        }
+    }
+
+    return True();
 }
 
 Handle<Value> Database::Close(const Arguments& args) {
-  HandleScope scope;
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
-  REQ_FUN_ARG(0, cb);
+    if (db->readyState == OPEN) {
+        db->readyState = CLOSING;
+        db->Ref();
+        eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, db);
+        ev_ref(EV_DEFAULT_UC);
+    }
 
-  Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    return args.This();
+}
 
-  struct close_request *close_req = (struct close_request *)
-      calloc(1, sizeof(struct close_request));
+bool Database::Close(Database* db) {
+    assert(db->handle);
 
-  if (!close_req) {
-    V8::LowMemoryNotification();
-    return ThrowException(Exception::Error(
-      String::New("Could not allocate enough memory")));
-  }
+    db->error_status = sqlite3_close(db->handle);
 
-  close_req->cb = Persistent<Function>::New(cb);
-  close_req->db = db;
+    if (db->error_status != SQLITE_OK) {
+        db->error_message = std::string(sqlite3_errmsg(db->handle));
+        db->readyState = OPEN;
+        return false;
+    }
+    else {
+        db->readyState = CLOSED;
+        db->handle = NULL;
+        return true;
+    }
+}
 
-  eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, close_req);
+int Database::EIO_Close(eio_req *req) {
+    Database* db = static_cast<Database*>(req->data);
+    Close(db);
+    return 0;
+}
 
-  ev_ref(EV_DEFAULT_UC);
-  db->Ref();
+int Database::EIO_AfterClose(eio_req *req) {
+    HandleScope scope;
+    Database* db = static_cast<Database*>(req->data);
+    ev_unref(EV_DEFAULT_UC);
+    db->Unref();
 
-  return Undefined();
+    Local<Value> argv[1];
+    if (db->error_status != SQLITE_OK) {
+        EXCEPTION(db->error_message.c_str(), db->error_status, exception);
+        argv[0] = exception;
+    }
+    else {
+        argv[0] = Local<Value>::New(Null());
+        db->handle_->Set(String::NewSymbol("opened"), False(), ReadOnly);
+    }
+
+    db->Emit(String::NewSymbol("closed"), 1, argv);
+
+    return 0;
 }
 
 // // TODO: libeio'fy
@@ -233,279 +253,309 @@ Handle<Value> Database::Close(const Arguments& args) {
 //   }
 
 int Database::EIO_AfterPrepareAndStep(eio_req *req) {
-  ev_unref(EV_DEFAULT_UC);
-  struct prepare_request *prep_req = (struct prepare_request *)(req->data);
-  HandleScope scope;
+    ev_unref(EV_DEFAULT_UC);
+    struct prepare_request *prep_req = (struct prepare_request *)(req->data);
+    HandleScope scope;
 
-  Local<Value> argv[2];
-  int argc = 0;
+    Local<Value> argv[2];
+    int argc = 0;
 
-  // if the prepare failed
-  if (req->result != SQLITE_OK) {
-    argv[0] = Exception::Error(
-        String::New(sqlite3_errmsg(prep_req->db->db_)));
-    argc = 1;
-
-  }
-  else {
-    if (req->int1 == SQLITE_DONE) {
-
-      if (prep_req->mode != EXEC_EMPTY) {
-        argv[0] = Local<Value>::New(Undefined());   // no error
-
-        Local<Object> info = Object::New();
-
-        if (prep_req->mode & EXEC_LAST_INSERT_ID) {
-          info->Set(String::NewSymbol("last_inserted_id"),
-              Integer::NewFromUnsigned (prep_req->lastInsertId));
-        }
-        if (prep_req->mode & EXEC_AFFECTED_ROWS) {
-          info->Set(String::NewSymbol("affected_rows"),
-              Integer::New (prep_req->affectedRows));
-        }
-        argv[1] = info;
-        argc = 2;
-
-      } else {
-        argc = 0;
-      }
+    // if the prepare failed
+    if (req->result != SQLITE_OK) {
+        argv[0] = Exception::Error(
+            String::New(sqlite3_errmsg(prep_req->db->handle)));
+        argc = 1;
 
     }
     else {
-      argv[0] = External::New(prep_req->stmt);
-      argv[1] = Integer::New(req->int1);
-      Persistent<Object> statement(
-          Statement::constructor_template->GetFunction()->NewInstance(2, argv));
+        if (req->int1 == SQLITE_DONE) {
 
-      if (prep_req->tail) {
-        statement->Set(String::New("tail"), String::New(prep_req->tail));
-      }
+            if (prep_req->mode != EXEC_EMPTY) {
+                argv[0] = Local<Value>::New(Undefined());   // no error
 
-      argv[0] = Local<Value>::New(Undefined());
-      argv[1] = Local<Value>::New(statement);
-      argc = 2;
+                Local<Object> info = Object::New();
+
+                if (prep_req->mode & EXEC_LAST_INSERT_ID) {
+                    info->Set(String::NewSymbol("last_inserted_id"),
+                        Integer::NewFromUnsigned (prep_req->lastInsertId));
+                }
+                if (prep_req->mode & EXEC_AFFECTED_ROWS) {
+                    info->Set(String::NewSymbol("affected_rows"),
+                        Integer::New (prep_req->affectedRows));
+                }
+                argv[1] = info;
+                argc = 2;
+
+            } else {
+                argc = 0;
+            }
+
+        }
+        else {
+            argv[0] = External::New(prep_req->stmt);
+            argv[1] = Integer::New(req->int1);
+            Persistent<Object> statement(
+                Statement::constructor_template->GetFunction()->NewInstance(2, argv));
+
+            if (prep_req->tail) {
+                statement->Set(String::New("tail"), String::New(prep_req->tail));
+            }
+
+            argv[0] = Local<Value>::New(Undefined());
+            argv[1] = Local<Value>::New(statement);
+            argc = 2;
+        }
     }
-  }
 
-  TryCatch try_catch;
+    TryCatch try_catch;
 
-  prep_req->db->Unref();
-  prep_req->cb->Call(Context::GetCurrent()->Global(), argc, argv);
+    prep_req->db->Unref();
+    prep_req->cb->Call(Context::GetCurrent()->Global(), argc, argv);
 
-  if (try_catch.HasCaught()) {
-    FatalException(try_catch);
-  }
+    if (try_catch.HasCaught()) {
+        FatalException(try_catch);
+    }
 
-  prep_req->cb.Dispose();
-  free(prep_req);
+    prep_req->cb.Dispose();
+    free(prep_req);
 
-  return 0;
+    return 0;
 }
 
 int Database::EIO_PrepareAndStep(eio_req *req) {
-  struct prepare_request *prep_req = (struct prepare_request *)(req->data);
+    struct prepare_request *prep_req = (struct prepare_request *)(req->data);
 
-  prep_req->stmt = NULL;
-  prep_req->tail = NULL;
-  sqlite3* db = prep_req->db->db_;
+    prep_req->stmt = NULL;
+    prep_req->tail = NULL;
+    sqlite3* db = prep_req->db->handle;
 
-  int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
-              &(prep_req->stmt), &(prep_req->tail));
+    int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
+                &(prep_req->stmt), &(prep_req->tail));
 
-  req->result = rc;
-  req->int1 = -1;
+    req->result = rc;
+    req->int1 = -1;
 
-  // This might be a INSERT statement. Let's try to get the first row.
-  // This is to optimize out further calls to the thread pool. This is only
-  // possible in the case where there are no variable placeholders/bindings
-  // in the SQL.
-  if (rc == SQLITE_OK && !sqlite3_bind_parameter_count(prep_req->stmt)) {
-    rc = sqlite3_step(prep_req->stmt);
-    req->int1 = rc;
+    // This might be a INSERT statement. Let's try to get the first row.
+    // This is to optimize out further calls to the thread pool. This is only
+    // possible in the case where there are no variable placeholders/bindings
+    // in the SQL.
+    if (rc == SQLITE_OK && !sqlite3_bind_parameter_count(prep_req->stmt)) {
+        rc = sqlite3_step(prep_req->stmt);
+        req->int1 = rc;
 
-    // no more rows to return, clean up statement
-    if (rc == SQLITE_DONE) {
-      rc = sqlite3_finalize(prep_req->stmt);
-      prep_req->stmt = NULL;
-      assert(rc == SQLITE_OK);
+        // no more rows to return, clean up statement
+        if (rc == SQLITE_DONE) {
+            rc = sqlite3_finalize(prep_req->stmt);
+            prep_req->stmt = NULL;
+            assert(rc == SQLITE_OK);
+        }
     }
-  }
 
-  prep_req->lastInsertId = 0;
-  prep_req->affectedRows = 0;
+    prep_req->lastInsertId = 0;
+    prep_req->affectedRows = 0;
 
-  // load custom properties
-  if (prep_req->mode & EXEC_LAST_INSERT_ID)
-      prep_req->lastInsertId = sqlite3_last_insert_rowid(db);
-  if (prep_req->mode & EXEC_AFFECTED_ROWS)
-      prep_req->affectedRows = sqlite3_changes(db);
+    // load custom properties
+    if (prep_req->mode & EXEC_LAST_INSERT_ID)
+        prep_req->lastInsertId = sqlite3_last_insert_rowid(db);
+    if (prep_req->mode & EXEC_AFFECTED_ROWS)
+        prep_req->affectedRows = sqlite3_changes(db);
 
-  return 0;
+    return 0;
 }
 
 Handle<Value> Database::PrepareAndStep(const Arguments& args) {
-  HandleScope scope;
+    HandleScope scope;
 
-  REQ_STR_ARG(0, sql);
-  REQ_FUN_ARG(1, cb);
-  OPT_INT_ARG(2, mode, EXEC_EMPTY);
+    REQUIRE_ARGUMENT_STRING(0, sql);
+    REQUIRE_ARGUMENT_FUNCTION(1, cb);
+    OPTIONAL_ARGUMENT_INTEGER(2, mode, EXEC_EMPTY);
 
-  Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
-  struct prepare_request *prep_req = (struct prepare_request *)
-      calloc(1, sizeof(struct prepare_request) + sql.length());
+    struct prepare_request *prep_req = (struct prepare_request *)
+        calloc(1, sizeof(struct prepare_request) + sql.length());
 
-  if (!prep_req) {
-    V8::LowMemoryNotification();
-    return ThrowException(Exception::Error(
-      String::New("Could not allocate enough memory")));
-  }
+    if (!prep_req) {
+        V8::LowMemoryNotification();
+        return ThrowException(Exception::Error(
+            String::New("Could not allocate enough memory")));
+    }
 
-  strcpy(prep_req->sql, *sql);
-  prep_req->cb = Persistent<Function>::New(cb);
-  prep_req->db = db;
-  prep_req->mode = mode;
+    strcpy(prep_req->sql, *sql);
+    prep_req->cb = Persistent<Function>::New(cb);
+    prep_req->db = db;
+    prep_req->mode = mode;
 
-  eio_custom(EIO_PrepareAndStep, EIO_PRI_DEFAULT, EIO_AfterPrepareAndStep, prep_req);
+    eio_custom(EIO_PrepareAndStep, EIO_PRI_DEFAULT, EIO_AfterPrepareAndStep, prep_req);
 
-  ev_ref(EV_DEFAULT_UC);
-  db->Ref();
+    ev_ref(EV_DEFAULT_UC);
+    db->Ref();
 
-  return Undefined();
+    return Undefined();
 }
 
 int Database::EIO_AfterPrepare(eio_req *req) {
-  ev_unref(EV_DEFAULT_UC);
-  struct prepare_request *prep_req = (struct prepare_request *)(req->data);
-  HandleScope scope;
+    ev_unref(EV_DEFAULT_UC);
+    struct prepare_request *prep_req = (struct prepare_request *)(req->data);
+    HandleScope scope;
 
-  Local<Value> argv[3];
-  int argc = 0;
+    Local<Value> argv[3];
+    int argc = 0;
 
-  // if the prepare failed
-  if (req->result != SQLITE_OK) {
-    argv[0] = Exception::Error(
-                String::New(sqlite3_errmsg(prep_req->db->db_)));
-    argc = 1;
-  }
-  else {
-    argv[0] = External::New(prep_req->stmt);
-    argv[1] = Integer::New(-1);
-    argv[2] = Integer::New(prep_req->mode);
-    Persistent<Object> statement(
-      Statement::constructor_template->GetFunction()->NewInstance(3, argv));
+    // if the prepare failed
+    if (req->result != SQLITE_OK) {
+        argv[0] = Exception::Error(
+                  String::New(sqlite3_errmsg(prep_req->db->handle)));
+        argc = 1;
+    }
+    else {
+        argv[0] = External::New(prep_req->stmt);
+        argv[1] = Integer::New(-1);
+        argv[2] = Integer::New(prep_req->mode);
+        Persistent<Object> statement(
+            Statement::constructor_template->GetFunction()->NewInstance(3, argv));
 
-    if (prep_req->tail) {
-      statement->Set(String::New("tail"), String::New(prep_req->tail));
+        if (prep_req->tail) {
+            statement->Set(String::New("tail"), String::New(prep_req->tail));
+        }
+
+        argc = 2;
+        argv[0] = Local<Value>::New(Undefined());
+        argv[1] = Local<Value>::New(statement);
     }
 
-    argc = 2;
-    argv[0] = Local<Value>::New(Undefined());
-    argv[1] = Local<Value>::New(statement);
-  }
+    TryCatch try_catch;
 
-  TryCatch try_catch;
+    prep_req->db->Unref();
+    prep_req->cb->Call(Context::GetCurrent()->Global(), argc, argv);
 
-  prep_req->db->Unref();
-  prep_req->cb->Call(Context::GetCurrent()->Global(), argc, argv);
+    if (try_catch.HasCaught()) {
+        FatalException(try_catch);
+    }
 
-  if (try_catch.HasCaught()) {
-    FatalException(try_catch);
-  }
+    prep_req->cb.Dispose();
+    free(prep_req);
 
-  prep_req->cb.Dispose();
-  free(prep_req);
-
-  return 0;
+    return 0;
 }
 int Database::EIO_Prepare(eio_req *req) {
-  struct prepare_request *prep_req = (struct prepare_request *)(req->data);
+    struct prepare_request *prep_req = (struct prepare_request *)(req->data);
 
-  prep_req->stmt = NULL;
-  prep_req->tail = NULL;
-  sqlite3* db = prep_req->db->db_;
+    prep_req->stmt = NULL;
+    prep_req->tail = NULL;
+    sqlite3* db = prep_req->db->handle;
 
-  int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
-              &(prep_req->stmt), &(prep_req->tail));
+    int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
+                &(prep_req->stmt), &(prep_req->tail));
 
-  req->result = rc;
+    req->result = rc;
 
-  prep_req->lastInsertId = 0;
-  prep_req->affectedRows = 0;
+    prep_req->lastInsertId = 0;
+    prep_req->affectedRows = 0;
 
-  // load custom properties
-  if (prep_req->mode & EXEC_LAST_INSERT_ID)
-      prep_req->lastInsertId = sqlite3_last_insert_rowid(db);
-  if (prep_req->mode & EXEC_AFFECTED_ROWS)
-      prep_req->affectedRows = sqlite3_changes(db);
+    // load custom properties
+    if (prep_req->mode & EXEC_LAST_INSERT_ID)
+        prep_req->lastInsertId = sqlite3_last_insert_rowid(db);
+    if (prep_req->mode & EXEC_AFFECTED_ROWS)
+        prep_req->affectedRows = sqlite3_changes(db);
 
-  return 0;
+    return 0;
 }
 
 // Statement#prepare(sql, [ options ,] callback);
 Handle<Value> Database::Prepare(const Arguments& args) {
-  HandleScope scope;
-  Local<Object> options;
-  Local<Function> cb;
-  int mode;
+    HandleScope scope;
+    Local<Object> options;
+    Local<Function> cb;
+    int mode;
 
-  REQ_STR_ARG(0, sql);
+    REQUIRE_ARGUMENT_STRING(0, sql);
 
-  // middle argument could be options or
-  switch (args.Length()) {
-    case 2:
-      if (!args[1]->IsFunction()) {
-        return ThrowException(Exception::TypeError(
-                  String::New("Argument 1 must be a function")));
-      }
-      cb = Local<Function>::Cast(args[1]);
-      options = Object::New();
-      break;
+    // middle argument could be options or
+    switch (args.Length()) {
+        case 2:
+            if (!args[1]->IsFunction()) {
+                return ThrowException(Exception::TypeError(
+                        String::New("Argument 1 must be a function")));
+            }
+            cb = Local<Function>::Cast(args[1]);
+            options = Object::New();
+            break;
 
-    case 3:
-      if (!args[1]->IsObject()) {
-        return ThrowException(Exception::TypeError(
-                  String::New("Argument 1 must be an object")));
-      }
-      options = Local<Function>::Cast(args[1]);
+        case 3:
+            if (!args[1]->IsObject()) {
+                return ThrowException(Exception::TypeError(
+                        String::New("Argument 1 must be an object")));
+            }
+            options = Local<Function>::Cast(args[1]);
 
-      if (!args[2]->IsFunction()) {
-        return ThrowException(Exception::TypeError(
-                  String::New("Argument 2 must be a function")));
-      }
-      cb = Local<Function>::Cast(args[2]);
-      break;
-  }
+            if (!args[2]->IsFunction()) {
+                return ThrowException(Exception::TypeError(
+                        String::New("Argument 2 must be a function")));
+            }
+            cb = Local<Function>::Cast(args[2]);
+            break;
+    }
 
-  mode = EXEC_EMPTY;
+    mode = EXEC_EMPTY;
 
-  if (options->Get(String::New("lastInsertRowID"))->IsTrue()) {
-    mode |= EXEC_LAST_INSERT_ID;
-  }
-  if (options->Get(String::New("affectedRows"))->IsTrue())  {
-    mode |= EXEC_AFFECTED_ROWS;
-  }
+    if (options->Get(String::New("lastInsertRowID"))->IsTrue()) {
+        mode |= EXEC_LAST_INSERT_ID;
+    }
+    if (options->Get(String::New("affectedRows"))->IsTrue())  {
+        mode |= EXEC_AFFECTED_ROWS;
+    }
 
-  Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
-  struct prepare_request *prep_req = (struct prepare_request *)
-      calloc(1, sizeof(struct prepare_request) + sql.length());
+    struct prepare_request *prep_req = (struct prepare_request *)
+        calloc(1, sizeof(struct prepare_request) + sql.length());
 
-  if (!prep_req) {
-    V8::LowMemoryNotification();
-    return ThrowException(Exception::Error(
-      String::New("Could not allocate enough memory")));
-  }
+    if (!prep_req) {
+        V8::LowMemoryNotification();
+        return ThrowException(Exception::Error(
+            String::New("Could not allocate enough memory")));
+    }
 
-  strcpy(prep_req->sql, *sql);
-  prep_req->cb = Persistent<Function>::New(cb);
-  prep_req->db = db;
-  prep_req->mode = mode;
+    strcpy(prep_req->sql, *sql);
+    prep_req->cb = Persistent<Function>::New(cb);
+    prep_req->db = db;
+    prep_req->mode = mode;
 
-  eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, prep_req);
+    eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, prep_req);
 
-  ev_ref(EV_DEFAULT_UC);
-  db->Ref();
+    ev_ref(EV_DEFAULT_UC);
+    db->Ref();
 
-  return Undefined();
+    return Undefined();
+}
+
+/**
+ * Override this so that we can properly close the database when this object
+ * gets garbage collected.
+ */
+void Database::Wrap(Handle<Object> handle) {
+    assert(handle_.IsEmpty());
+    assert(handle->InternalFieldCount() > 0);
+    handle_ = Persistent<Object>::New(handle);
+    handle_->SetPointerInInternalField(0, this);
+    handle_.MakeWeak(this, Destruct);
+}
+
+void Database::Destruct(Persistent<Value> value, void *data) {
+    Database* db = static_cast<Database*>(data);
+    if (db->handle) {
+        eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterDestruct, db);
+        ev_ref(EV_DEFAULT_UC);
+    }
+    else {
+        delete db;
+    }
+}
+
+int Database::EIO_AfterDestruct(eio_req *req) {
+    Database* db = static_cast<Database*>(req->data);
+    ev_unref(EV_DEFAULT_UC);
+    delete db;
+    return 0;
 }
