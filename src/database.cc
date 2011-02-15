@@ -24,6 +24,9 @@
 using namespace v8;
 using namespace node;
 
+
+Persistent<FunctionTemplate> Database::constructor_template;
+
 void Database::Init(v8::Handle<Object> target) {
   HandleScope scope;
 
@@ -50,8 +53,8 @@ void Database::Init(v8::Handle<Object> target) {
 
 Handle<Value> Database::New(const Arguments& args) {
   HandleScope scope;
-  Database* dbo = new Database();
-  dbo->Wrap(args.This());
+  Database* db = new Database();
+  db->Wrap(args.This());
   return args.This();
 }
 
@@ -69,14 +72,14 @@ int Database::EIO_AfterOpen(eio_req *req) {
 
   TryCatch try_catch;
 
-  open_req->dbo->Unref();
+  open_req->db->Unref();
   open_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
 
   if (try_catch.HasCaught()) {
     FatalException(try_catch);
   }
 
-  open_req->dbo->Emit(String::New("ready"), 0, NULL);
+  open_req->db->Emit(String::New("ready"), 0, NULL);
   open_req->cb.Dispose();
 
   free(open_req);
@@ -87,7 +90,7 @@ int Database::EIO_AfterOpen(eio_req *req) {
 int Database::EIO_Open(eio_req *req) {
   struct open_request *open_req = (struct open_request *)(req->data);
 
-  sqlite3 **dbptr = open_req->dbo->GetDBPtr();
+  sqlite3 **dbptr = open_req->db->GetDBPtr();
   int rc = sqlite3_open_v2( open_req->filename
                           , dbptr
                           , SQLITE_OPEN_READWRITE
@@ -102,9 +105,9 @@ int Database::EIO_Open(eio_req *req) {
 
 
 //   sqlite3 *db = *dbptr;
-//   sqlite3_commit_hook(db, CommitHook, open_req->dbo);
-//   sqlite3_rollback_hook(db, RollbackHook, open_req->dbo);
-//   sqlite3_update_hook(db, UpdateHook, open_req->dbo);
+//   sqlite3_commit_hook(db, CommitHook, open_req->db);
+//   sqlite3_rollback_hook(db, RollbackHook, open_req->db);
+//   sqlite3_update_hook(db, UpdateHook, open_req->db);
 
   return 0;
 }
@@ -115,7 +118,7 @@ Handle<Value> Database::Open(const Arguments& args) {
   REQ_STR_ARG(0, filename);
   REQ_FUN_ARG(1, cb);
 
-  Database* dbo = ObjectWrap::Unwrap<Database>(args.This());
+  Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
   struct open_request *open_req = (struct open_request *)
       calloc(1, sizeof(struct open_request) + filename.length());
@@ -128,12 +131,12 @@ Handle<Value> Database::Open(const Arguments& args) {
 
   strcpy(open_req->filename, *filename);
   open_req->cb = Persistent<Function>::New(cb);
-  open_req->dbo = dbo;
+  open_req->db = db;
 
   eio_custom(EIO_Open, EIO_PRI_DEFAULT, EIO_AfterOpen, open_req);
 
   ev_ref(EV_DEFAULT_UC);
-  dbo->Ref();
+  db->Ref();
 
   return Undefined();
 }
@@ -154,7 +157,7 @@ int Database::EIO_AfterClose(eio_req *req) {
 
   TryCatch try_catch;
 
-  close_req->dbo->Unref();
+  close_req->db->Unref();
   close_req->cb->Call(Context::GetCurrent()->Global(), err ? 1 : 0, argv);
 
   if (try_catch.HasCaught()) {
@@ -170,9 +173,9 @@ int Database::EIO_AfterClose(eio_req *req) {
 
 int Database::EIO_Close(eio_req *req) {
   struct close_request *close_req = (struct close_request *)(req->data);
-  Database* dbo = close_req->dbo;
-  req->result = sqlite3_close(dbo->db_);
-  dbo->db_ = NULL;
+  Database* db = close_req->db;
+  req->result = sqlite3_close(db->db_);
+  db->db_ = NULL;
   return 0;
 }
 
@@ -181,7 +184,7 @@ Handle<Value> Database::Close(const Arguments& args) {
 
   REQ_FUN_ARG(0, cb);
 
-  Database* dbo = ObjectWrap::Unwrap<Database>(args.This());
+  Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
   struct close_request *close_req = (struct close_request *)
       calloc(1, sizeof(struct close_request));
@@ -193,12 +196,12 @@ Handle<Value> Database::Close(const Arguments& args) {
   }
 
   close_req->cb = Persistent<Function>::New(cb);
-  close_req->dbo = dbo;
+  close_req->db = db;
 
   eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, close_req);
 
   ev_ref(EV_DEFAULT_UC);
-  dbo->Ref();
+  db->Ref();
 
   return Undefined();
 }
@@ -240,7 +243,7 @@ int Database::EIO_AfterPrepareAndStep(eio_req *req) {
   // if the prepare failed
   if (req->result != SQLITE_OK) {
     argv[0] = Exception::Error(
-        String::New(sqlite3_errmsg(prep_req->dbo->db_)));
+        String::New(sqlite3_errmsg(prep_req->db->db_)));
     argc = 1;
 
   }
@@ -286,7 +289,7 @@ int Database::EIO_AfterPrepareAndStep(eio_req *req) {
 
   TryCatch try_catch;
 
-  prep_req->dbo->Unref();
+  prep_req->db->Unref();
   prep_req->cb->Call(Context::GetCurrent()->Global(), argc, argv);
 
   if (try_catch.HasCaught()) {
@@ -304,7 +307,7 @@ int Database::EIO_PrepareAndStep(eio_req *req) {
 
   prep_req->stmt = NULL;
   prep_req->tail = NULL;
-  sqlite3* db = prep_req->dbo->db_;
+  sqlite3* db = prep_req->db->db_;
 
   int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
               &(prep_req->stmt), &(prep_req->tail));
@@ -347,7 +350,7 @@ Handle<Value> Database::PrepareAndStep(const Arguments& args) {
   REQ_FUN_ARG(1, cb);
   OPT_INT_ARG(2, mode, EXEC_EMPTY);
 
-  Database* dbo = ObjectWrap::Unwrap<Database>(args.This());
+  Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
   struct prepare_request *prep_req = (struct prepare_request *)
       calloc(1, sizeof(struct prepare_request) + sql.length());
@@ -360,13 +363,13 @@ Handle<Value> Database::PrepareAndStep(const Arguments& args) {
 
   strcpy(prep_req->sql, *sql);
   prep_req->cb = Persistent<Function>::New(cb);
-  prep_req->dbo = dbo;
+  prep_req->db = db;
   prep_req->mode = mode;
 
   eio_custom(EIO_PrepareAndStep, EIO_PRI_DEFAULT, EIO_AfterPrepareAndStep, prep_req);
 
   ev_ref(EV_DEFAULT_UC);
-  dbo->Ref();
+  db->Ref();
 
   return Undefined();
 }
@@ -382,7 +385,7 @@ int Database::EIO_AfterPrepare(eio_req *req) {
   // if the prepare failed
   if (req->result != SQLITE_OK) {
     argv[0] = Exception::Error(
-                String::New(sqlite3_errmsg(prep_req->dbo->db_)));
+                String::New(sqlite3_errmsg(prep_req->db->db_)));
     argc = 1;
   }
   else {
@@ -403,7 +406,7 @@ int Database::EIO_AfterPrepare(eio_req *req) {
 
   TryCatch try_catch;
 
-  prep_req->dbo->Unref();
+  prep_req->db->Unref();
   prep_req->cb->Call(Context::GetCurrent()->Global(), argc, argv);
 
   if (try_catch.HasCaught()) {
@@ -420,7 +423,7 @@ int Database::EIO_Prepare(eio_req *req) {
 
   prep_req->stmt = NULL;
   prep_req->tail = NULL;
-  sqlite3* db = prep_req->dbo->db_;
+  sqlite3* db = prep_req->db->db_;
 
   int rc = sqlite3_prepare_v2(db, prep_req->sql, -1,
               &(prep_req->stmt), &(prep_req->tail));
@@ -483,7 +486,7 @@ Handle<Value> Database::Prepare(const Arguments& args) {
     mode |= EXEC_AFFECTED_ROWS;
   }
 
-  Database* dbo = ObjectWrap::Unwrap<Database>(args.This());
+  Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
   struct prepare_request *prep_req = (struct prepare_request *)
       calloc(1, sizeof(struct prepare_request) + sql.length());
@@ -496,15 +499,13 @@ Handle<Value> Database::Prepare(const Arguments& args) {
 
   strcpy(prep_req->sql, *sql);
   prep_req->cb = Persistent<Function>::New(cb);
-  prep_req->dbo = dbo;
+  prep_req->db = db;
   prep_req->mode = mode;
 
   eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, prep_req);
 
   ev_ref(EV_DEFAULT_UC);
-  dbo->Ref();
+  db->Ref();
 
   return Undefined();
 }
-
-Persistent<FunctionTemplate> Database::constructor_template;

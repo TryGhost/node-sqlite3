@@ -76,18 +76,18 @@ enum ExecMode
 
 struct open_request {
   Persistent<Function> cb;
-  Database *dbo;
+  Database *db;
   char filename[1];
 };
 
 struct close_request {
   Persistent<Function> cb;
-  Database *dbo;
+  Database *db;
 };
 
 struct prepare_request {
   Persistent<Function> cb;
-  Database *dbo;
+  Database *db;
   sqlite3_stmt* stmt;
   int mode;
   sqlite3_int64 lastInsertId;
