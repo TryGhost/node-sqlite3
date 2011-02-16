@@ -38,6 +38,7 @@ def build(bld):
   obj.source = "src/sqlite3_bindings.cc"
   obj.source += " src/database.cc"
   obj.source += " src/statement.cc"
+  obj.source += " src/demo.cc"
   obj.uselib = "SQLITE3 PROFILER MPOOL"
   start_dir = bld.path.find_dir('lib')
   # http://www.freehackers.org/~tnagy/wafbook/index.html#_installing_files

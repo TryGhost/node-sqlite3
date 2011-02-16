@@ -21,16 +21,19 @@
 #include "macros.h"
 #include "database.h"
 #include "statement.h"
+#include "demo.h"
 
 extern "C" void init (v8::Handle<Object> target) {
     Database::Init(target);
     Statement::Init(target);
+    Demo::Init(target);
 
     DEFINE_CONSTANT_INTEGER(target, SQLITE_OPEN_READONLY, OPEN_READONLY);
     DEFINE_CONSTANT_INTEGER(target, SQLITE_OPEN_READWRITE, OPEN_READWRITE);
     DEFINE_CONSTANT_INTEGER(target, SQLITE_OPEN_CREATE, OPEN_CREATE);
     DEFINE_CONSTANT_STRING(target, SQLITE_VERSION, VERSION);
     DEFINE_CONSTANT_INTEGER(target, SQLITE_VERSION_NUMBER, VERSION_NUMBER);
+
 }
 
 const char* sqlite_code_string(int code) {

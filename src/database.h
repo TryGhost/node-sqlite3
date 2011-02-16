@@ -19,30 +19,38 @@
 #include <node.h>
 #include <node_events.h>
 
+#include "deferred_call.h"
+
 #include <string>
+#include <queue>
 
 #include <sqlite3.h>
 
 using namespace v8;
 using namespace node;
 
-enum ReadyState {
-    CLOSED,
-    OPENING,
-    OPEN,
-    CLOSING
-};
-
 class Database : public EventEmitter {
   public:
     static Persistent<FunctionTemplate> constructor_template;
     static void Init(v8::Handle<Object> target);
 
+    static enum Status {
+        IsClosed     = 1 << 0,
+        IsOpening    = 1 << 1,
+        IsOpen       = 1 << 2,
+        IsClosing    = 1 << 3,
+
+        DoesntMatter = IsClosed | IsOpening | IsOpen | IsClosing
+    };
+
+    typedef Deferred::Call<Status> Call;
+
+
   protected:
     Database() : EventEmitter(),
         handle(NULL),
         pending(0),
-        readyState(CLOSED) {
+        status(IsClosed) {
 
     }
 
@@ -51,6 +59,9 @@ class Database : public EventEmitter {
     }
 
     static Handle<Value> New(const Arguments& args);
+
+    static void ProcessQueue(Database* db);
+    inline static void RunQueue(std::queue<Call*> queue);
 
     static Handle<Value> OpenSync(const Arguments& args);
     static Handle<Value> Open(const Arguments& args);
@@ -86,7 +97,17 @@ class Database : public EventEmitter {
     int error_status;
 
     int pending;
-    ReadyState readyState;
+    Status status;
+    std::queue<Call*> queue;
+  private:
+};
+
+
+struct DatabaseBaton {
+    DatabaseBaton(Database* db_, Persistent<Function> callback_) : 
+        db(db_), callback(callback_) {};
+    Database* db;
+    Persistent<Function> callback;
 };
 
 enum ExecMode {

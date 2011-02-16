@@ -5,7 +5,7 @@ build:
 clean:
 	node-waf clean
 
-test:
+test: build
 	expresso -I lib test/*.test.js
 
 .PHONY: build clean test

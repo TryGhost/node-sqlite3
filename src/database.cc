@@ -20,6 +20,7 @@
 #include "macros.h"
 #include "database.h"
 #include "statement.h"
+#include "deferred_call.h"
 
 using namespace v8;
 using namespace node;
@@ -55,44 +56,75 @@ void Database::Init(v8::Handle<Object> target) {
 
 Handle<Value> Database::New(const Arguments& args) {
     HandleScope scope;
+
+    REQUIRE_ARGUMENT_STRING(0, filename);
+    OPTIONAL_ARGUMENT_INTEGER(1, mode, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+
     Database* db = new Database();
+    db->filename = std::string(*filename);
+    db->open_mode = mode;
+
+    args.This()->Set(String::NewSymbol("filename"), args[0]->ToString(), ReadOnly);
+    args.This()->Set(String::NewSymbol("mode"), Integer::New(mode), ReadOnly);
+
     db->Wrap(args.This());
+
     return args.This();
 }
 
+inline void Database::RunQueue(std::queue<Call*> queue) {
 
+}
 
-Handle<Value> Database::OpenSync(const Arguments& args) {
-    HandleScope scope;
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+void Database::ProcessQueue(Database* db) {
+    while (!db->queue.empty()) {
+        Call* call = db->queue.front();
 
-    if (db->readyState == CLOSED) {
-        if (!Open(db)) {
-            EXCEPTION(db->error_message.c_str(), db->error_status, exception);
-            return ThrowException(exception);
+        if (!(call->Data() & db->status)) {
+            // The next task in the queue requires a different status than the
+            // one we're currently in. Wait before invoking it.
+            break;
         }
-        else {
-            args.This()->Set(String::NewSymbol("opened"), True(), ReadOnly);
-            db->Emit(String::NewSymbol("opened"), 0, NULL);
 
-            if (db->pending == 0) {
-                db->Emit(String::NewSymbol("idle"), 0, NULL);
-            }
+        if (call->Mode() == Deferred::Exclusive && db->pending > 0) {
+            // We have to wait for the pending tasks to complete before we
+            // execute the exclusive task.
+            // break;
+            break;
         }
+
+        ev_unref(EV_DEFAULT_UC);
+        db->Unref();
+
+        TryCatch try_catch;
+        call->Invoke();
+        if (try_catch.HasCaught()) {
+            FatalException(try_catch);
+        }
+        db->queue.pop();
+        delete call;
     }
-
-    return args.This();
 }
 
 Handle<Value> Database::Open(const Arguments& args) {
     HandleScope scope;
     Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
-    if (db->readyState == CLOSED) {
-        db->readyState = OPENING;
-        db->Ref();
-        eio_custom(EIO_Open, EIO_PRI_DEFAULT, EIO_AfterOpen, db);
-        ev_ref(EV_DEFAULT_UC);
+    REQUIRE_ARGUMENT_FUNCTION(0, callback);
+
+    // Make sure that node doesn't exit before all elements in the queue have
+    // been dealt with.
+    db->Ref();
+    ev_ref(EV_DEFAULT_UC);
+
+    if (db->status != IsClosed) {
+        db->queue.push(new Call(args, IsClosed, Deferred::Exclusive));
+    }
+    else {
+        db->status = IsOpening;
+        DatabaseBaton* baton =
+            new DatabaseBaton(db, Persistent<Function>::New(callback));
+        eio_custom(EIO_Open, EIO_PRI_DEFAULT, EIO_AfterOpen, baton);
     }
 
     return args.This();
@@ -108,75 +140,95 @@ bool Database::Open(Database* db) {
 
     if (db->error_status != SQLITE_OK) {
         db->error_message = std::string(sqlite3_errmsg(db->handle));
-        db->readyState = CLOSED;
         return false;
     }
     else {
-        db->readyState = OPEN;
         return true;
     }
 }
 
+Handle<Value> Database::OpenSync(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    REQUIRE_ARGUMENT_FUNCTION(0, callback);
+
+    if (db->status == IsClosed) {
+        Local<Value> argv[1];
+        if (Open(db)) {
+            db->status = IsOpen;
+            argv[0] = Local<Value>::New(Null());
+        }
+        else {
+            EXCEPTION(db->error_message.c_str(), db->error_status, exception);
+            argv[0] = exception;
+        }
+
+        TRY_CATCH_CALL(args.This(), callback, 1, argv);
+        ProcessQueue(db);
+    }
+    else {
+        return ThrowException(Exception::Error(
+            String::New("Database is already open")));
+    }
+
+    return args.This();
+}
+
 int Database::EIO_Open(eio_req *req) {
-    Database* db = static_cast<Database*>(req->data);
-    Open(db);
+    DatabaseBaton* baton = static_cast<DatabaseBaton*>(req->data);
+    Open(baton->db);
     return 0;
 }
 
 int Database::EIO_AfterOpen(eio_req *req) {
     HandleScope scope;
-    Database* db = static_cast<Database*>(req->data);
+    DatabaseBaton* baton = static_cast<DatabaseBaton*>(req->data);
+    Database* db = baton->db;
     ev_unref(EV_DEFAULT_UC);
     db->Unref();
 
     Local<Value> argv[1];
-    if (db->error_status != SQLITE_OK) {
+    if (db->error_status == SQLITE_OK) {
+        db->status = IsOpen;
+        argv[0] = Local<Value>::New(Null());
+    }
+    else {
+        db->status = IsClosed;
         EXCEPTION(db->error_message.c_str(), db->error_status, exception);
         argv[0] = exception;
     }
-    else {
-        argv[0] = Local<Value>::New(Null());
-        db->handle_->Set(String::NewSymbol("opened"), True(), ReadOnly);
-    }
 
-    db->Emit(String::NewSymbol("opened"), 1, argv);
+    TRY_CATCH_CALL(db->handle_, baton->callback, 1, argv);
+    ProcessQueue(db);
 
-    if (db->pending == 0) {
-        db->Emit(String::NewSymbol("idle"), 0, NULL);
-    }
+    baton->callback.Dispose();
+    delete baton;
 
     return 0;
 }
 
 
 
-Handle<Value> Database::CloseSync(const Arguments& args) {
-    HandleScope scope;
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
-
-    if (db->readyState == OPEN) {
-        if (!Close(db)) {
-            EXCEPTION(db->error_message.c_str(), db->error_status, exception);
-            return ThrowException(exception);
-        }
-        else {
-            args.This()->Set(String::NewSymbol("opened"), False(), ReadOnly);
-            db->Emit(String::NewSymbol("closed"), 0, NULL);
-        }
-    }
-
-    return True();
-}
-
 Handle<Value> Database::Close(const Arguments& args) {
     HandleScope scope;
     Database* db = ObjectWrap::Unwrap<Database>(args.This());
 
-    if (db->readyState == OPEN) {
-        db->readyState = CLOSING;
-        db->Ref();
-        eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, db);
-        ev_ref(EV_DEFAULT_UC);
+    REQUIRE_ARGUMENT_FUNCTION(0, callback);
+
+    // Make sure that node doesn't exit before all elements in the queue have
+    // been dealt with.
+    db->Ref();
+    ev_ref(EV_DEFAULT_UC);
+
+    if (db->status != IsOpen || db->pending > 0) {
+        db->queue.push(new Call(args, IsOpen, Deferred::Exclusive));
+    }
+    else {
+        db->status = IsClosing;
+        DatabaseBaton* baton =
+            new DatabaseBaton(db, Persistent<Function>::New(callback));
+        eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, baton);
     }
 
     return args.This();
@@ -184,44 +236,74 @@ Handle<Value> Database::Close(const Arguments& args) {
 
 bool Database::Close(Database* db) {
     assert(db->handle);
-
     db->error_status = sqlite3_close(db->handle);
 
     if (db->error_status != SQLITE_OK) {
         db->error_message = std::string(sqlite3_errmsg(db->handle));
-        db->readyState = OPEN;
         return false;
     }
     else {
-        db->readyState = CLOSED;
         db->handle = NULL;
         return true;
     }
 }
 
+
+Handle<Value> Database::CloseSync(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    REQUIRE_ARGUMENT_FUNCTION(0, callback);
+
+    if (db->status == IsOpen && db->pending == 0) {
+        Local<Value> argv[1];
+        if (Close(db)) {
+            db->status = IsClosed;
+            argv[0] = Local<Value>::New(Null());
+        }
+        else {
+            EXCEPTION(db->error_message.c_str(), db->error_status, exception);
+            argv[0] = exception;
+        }
+
+        TRY_CATCH_CALL(args.This(), callback, 1, argv);
+        ProcessQueue(db);
+    }
+    else {
+        db->queue.push(new Call(args, IsOpen, Deferred::Exclusive));
+    }
+    return args.This();
+}
+
 int Database::EIO_Close(eio_req *req) {
-    Database* db = static_cast<Database*>(req->data);
-    Close(db);
+    DatabaseBaton* baton = static_cast<DatabaseBaton*>(req->data);
+    Close(baton->db);
     return 0;
 }
 
 int Database::EIO_AfterClose(eio_req *req) {
     HandleScope scope;
-    Database* db = static_cast<Database*>(req->data);
+    DatabaseBaton* baton = static_cast<DatabaseBaton*>(req->data);
+    Database* db = baton->db;
+
     ev_unref(EV_DEFAULT_UC);
     db->Unref();
 
     Local<Value> argv[1];
     if (db->error_status != SQLITE_OK) {
+        db->status = IsOpen;
         EXCEPTION(db->error_message.c_str(), db->error_status, exception);
         argv[0] = exception;
     }
     else {
+        db->status = IsClosed;
         argv[0] = Local<Value>::New(Null());
-        db->handle_->Set(String::NewSymbol("opened"), False(), ReadOnly);
     }
 
-    db->Emit(String::NewSymbol("closed"), 1, argv);
+    TRY_CATCH_CALL(db->handle_, baton->callback, 1, argv);
+    ProcessQueue(db);
+    baton->callback.Dispose();
+    delete baton;
 
     return 0;
 }

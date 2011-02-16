@@ -64,15 +64,13 @@ const char* sqlite_code_string(int code);
 
 #define OPTIONAL_ARGUMENT_FUNCTION(i, var)                                     \
     Local<Function> var;                                                       \
-    bool var ## _exists = false;                                               \
-    if (args.Length() >= i) {                                                  \
+    if (args.Length() > i && !args[i]->IsUndefined()) {                        \
         if (!args[i]->IsFunction()) {                                          \
             return ThrowException(Exception::TypeError(                        \
                 String::New("Argument " #i " must be a function"))             \
             );                                                                 \
         }                                                                      \
         var = Local<Function>::Cast(args[i]);                                  \
-        var ## _exists = true;                                                 \
     }
 
 
@@ -116,7 +114,6 @@ const char* sqlite_code_string(int code);
 #define GET_INTEGER(source, name, property)                                    \
     int name = (source)->Get(String::NewSymbol(property))->Int32Value();
 
-
 #define EXCEPTION(msg, errno, name)                                            \
     Local<Value> name = Exception::Error(                                      \
         String::Concat(                                                        \
@@ -127,9 +124,37 @@ const char* sqlite_code_string(int code);
             String::New(msg)                                                   \
         )                                                                      \
     );                                                                         \
-    Local<Object> name ## _obj = name->ToObject();                             \
-    name ## _obj->Set(NODE_PSYMBOL("errno"), Integer::New(errno));             \
-    name ## _obj->Set(NODE_PSYMBOL("code"),                                    \
+    Local<Object> name ##_obj = name->ToObject();                              \
+    name ##_obj->Set(NODE_PSYMBOL("errno"), Integer::New(errno));              \
+    name ##_obj->Set(NODE_PSYMBOL("code"),                                     \
         String::NewSymbol(sqlite_code_string(errno)));
 
+#define EXCEPTION_STR
+
+#define EVENT_ONCE(event, callback)                                            \
+    Local<Value> argv[2] = {                                                   \
+        String::NewSymbol(event),                                              \
+        args.This()->Get(String::NewSymbol(callback))                          \
+    };                                                                         \
+    v8::Local<v8::Value> fn_val = args.This()->Get(String::NewSymbol("once")); \
+    Local<Function> fn = Local<Function>::Cast(fn_val);                        \
+    fn->Call(args.This(), 2, argv);
+
+#define SET_STRING(sym, str) \
+    Set(String::NewSymbol(#sym), String::New(str), ReadOnly)
+    
+#define SET_INTEGER(sym, i) \
+    Set(String::NewSymbol(#sym), Integer::New(i), ReadOnly)
+
+#define TRY_CATCH_CALL(context, callback, argc, argv)                          \
+{                                                                              \
+    TryCatch try_catch;                                                        \
+    (callback)->Call((context), (argc), (argv));                               \
+    if (try_catch.HasCaught()) {                                               \
+        FatalException(try_catch);                                             \
+    }                                                                          \
+}
+
+
 #endif
+
