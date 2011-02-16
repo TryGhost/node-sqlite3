@@ -83,6 +83,21 @@ void Database::ProcessQueue(Database* db) {
         if (!(call->Data() & db->status)) {
             // The next task in the queue requires a different status than the
             // one we're currently in. Wait before invoking it.
+            if (db->pending == 0) {
+                EXCEPTION("Invalid function call sequence", SQLITE_MISUSE, exception);
+                Local<Value> argv[] = { String::NewSymbol("error"), exception };
+                Local<Function> fn = Local<Function>::Cast(db->handle_->Get(String::NewSymbol("emit")));
+
+                TryCatch try_catch;
+                fn->Call(db->handle_, 2, argv);
+                if (try_catch.HasCaught()) {
+                    FatalException(try_catch);
+                }
+                ev_unref(EV_DEFAULT_UC);
+                db->Unref();
+                db->queue.pop();
+                delete call;
+            }
             break;
         }
 
@@ -122,8 +137,8 @@ Handle<Value> Database::Open(const Arguments& args) {
     }
     else {
         db->status = IsOpening;
-        DatabaseBaton* baton =
-            new DatabaseBaton(db, Persistent<Function>::New(callback));
+        db->pending++;
+        Baton* baton = new Baton(db, Persistent<Function>::New(callback));
         eio_custom(EIO_Open, EIO_PRI_DEFAULT, EIO_AfterOpen, baton);
     }
 
@@ -176,17 +191,19 @@ Handle<Value> Database::OpenSync(const Arguments& args) {
 }
 
 int Database::EIO_Open(eio_req *req) {
-    DatabaseBaton* baton = static_cast<DatabaseBaton*>(req->data);
+    Baton* baton = static_cast<Baton*>(req->data);
     Open(baton->db);
     return 0;
 }
 
 int Database::EIO_AfterOpen(eio_req *req) {
     HandleScope scope;
-    DatabaseBaton* baton = static_cast<DatabaseBaton*>(req->data);
+    Baton* baton = static_cast<Baton*>(req->data);
     Database* db = baton->db;
+
     ev_unref(EV_DEFAULT_UC);
     db->Unref();
+    db->pending--;
 
     Local<Value> argv[1];
     if (db->error_status == SQLITE_OK) {
@@ -226,8 +243,8 @@ Handle<Value> Database::Close(const Arguments& args) {
     }
     else {
         db->status = IsClosing;
-        DatabaseBaton* baton =
-            new DatabaseBaton(db, Persistent<Function>::New(callback));
+        db->pending++;
+        Baton* baton = new Baton(db, Persistent<Function>::New(callback));
         eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, baton);
     }
 
@@ -276,18 +293,19 @@ Handle<Value> Database::CloseSync(const Arguments& args) {
 }
 
 int Database::EIO_Close(eio_req *req) {
-    DatabaseBaton* baton = static_cast<DatabaseBaton*>(req->data);
+    Baton* baton = static_cast<Baton*>(req->data);
     Close(baton->db);
     return 0;
 }
 
 int Database::EIO_AfterClose(eio_req *req) {
     HandleScope scope;
-    DatabaseBaton* baton = static_cast<DatabaseBaton*>(req->data);
+    Baton* baton = static_cast<Baton*>(req->data);
     Database* db = baton->db;
 
     ev_unref(EV_DEFAULT_UC);
     db->Unref();
+    db->pending--;
 
     Local<Value> argv[1];
     if (db->error_status != SQLITE_OK) {

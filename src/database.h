@@ -45,6 +45,12 @@ class Database : public EventEmitter {
 
     typedef Deferred::Call<Status> Call;
 
+    struct Baton {
+        Baton(Database* db_, Persistent<Function> callback_) :
+            db(db_), callback(callback_) {};
+        Database* db;
+        Persistent<Function> callback;
+    };
 
   protected:
     Database() : EventEmitter(),
@@ -102,13 +108,6 @@ class Database : public EventEmitter {
   private:
 };
 
-
-struct DatabaseBaton {
-    DatabaseBaton(Database* db_, Persistent<Function> callback_) : 
-        db(db_), callback(callback_) {};
-    Database* db;
-    Persistent<Function> callback;
-};
 
 enum ExecMode {
     EXEC_EMPTY = 0,

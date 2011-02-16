@@ -129,8 +129,6 @@ const char* sqlite_code_string(int code);
     name ##_obj->Set(NODE_PSYMBOL("code"),                                     \
         String::NewSymbol(sqlite_code_string(errno)));
 
-#define EXCEPTION_STR
-
 #define EVENT_ONCE(event, callback)                                            \
     Local<Value> argv[2] = {                                                   \
         String::NewSymbol(event),                                              \
