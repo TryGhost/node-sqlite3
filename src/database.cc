@@ -72,10 +72,6 @@ Handle<Value> Database::New(const Arguments& args) {
     return args.This();
 }
 
-inline void Database::RunQueue(std::queue<Call*> queue) {
-
-}
-
 void Database::ProcessQueue(Database* db) {
     while (!db->queue.empty()) {
         Call* call = db->queue.front();

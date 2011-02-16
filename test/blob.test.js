@@ -1,4 +1,4 @@
-var sqlite = require('sqlite3'),
+var sqlite3 = require('sqlite3'),
     Step = require('step'),
     fs = require('fs'),
     assert = require('assert')
@@ -9,8 +9,8 @@ var elmo = fs.readFileSync(__dirname + '/support/elmo.png', 'binary');
 var elmo_str = elmo.toString('binary');
 
 exports['Blob overflow test'] = function(beforeExit) {
-    var db = new sqlite.Database('');
-    var total = 100;
+    var db = new sqlite3.Database('');
+    var total = 10;
     var inserted = 0;
     var retrieved = 0;
 

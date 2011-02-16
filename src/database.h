@@ -67,7 +67,6 @@ class Database : public EventEmitter {
     static Handle<Value> New(const Arguments& args);
 
     static void ProcessQueue(Database* db);
-    inline static void RunQueue(std::queue<Call*> queue);
 
     static Handle<Value> OpenSync(const Arguments& args);
     static Handle<Value> Open(const Arguments& args);
