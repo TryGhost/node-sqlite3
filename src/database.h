@@ -19,8 +19,6 @@
 #include <node.h>
 #include <node_events.h>
 
-#include "deferred_call.h"
-
 #include <string>
 #include <queue>
 
@@ -29,34 +27,52 @@
 using namespace v8;
 using namespace node;
 
+class Database;
+
+static struct Baton {
+    Database* db;
+    Persistent<Function> callback;
+    int status;
+    std::string message;
+    ~Baton() {
+        callback.Dispose();
+    }
+};
+
+static struct OpenBaton : Baton {
+    std::string filename;
+    int mode;
+};
+
 class Database : public EventEmitter {
-  public:
+public:
     static Persistent<FunctionTemplate> constructor_template;
     static void Init(v8::Handle<Object> target);
 
-    static enum Status {
-        IsClosed     = 1 << 0,
-        IsOpening    = 1 << 1,
-        IsOpen       = 1 << 2,
-        IsClosing    = 1 << 3,
+    static inline bool HasInstance(Handle<Value> val) {
+        if (!val->IsObject()) return false;
+        Local<Object> obj = val->ToObject();
+        return constructor_template->HasInstance(obj);
+    }
 
-        DoesntMatter = IsClosed | IsOpening | IsOpen | IsClosing
+    typedef void (*EIO_Callback)(Baton* baton);
+
+    struct Call {
+        Call(EIO_Callback callback_, Baton* baton_, bool exclusive_ = false) :
+            callback(callback_), exclusive(exclusive_), baton(baton_) {};
+        EIO_Callback callback;
+        bool exclusive;
+        Baton* baton;
     };
+    
+    friend class Statement;
 
-    typedef Deferred::Call<Status> Call;
-
-    struct Baton {
-        Baton(Database* db_, Persistent<Function> callback_) :
-            db(db_), callback(callback_) {};
-        Database* db;
-        Persistent<Function> callback;
-    };
-
-  protected:
+protected:
     Database() : EventEmitter(),
         handle(NULL),
-        pending(0),
-        status(IsClosed) {
+        open(false),
+        locked(false),
+        pending(0) {
 
     }
 
@@ -65,64 +81,32 @@ class Database : public EventEmitter {
     }
 
     static Handle<Value> New(const Arguments& args);
-
-    static void ProcessQueue(Database* db);
-
-    static Handle<Value> OpenSync(const Arguments& args);
-    static Handle<Value> Open(const Arguments& args);
-    static bool Open(Database* db);
+    static void EIO_BeginOpen(Baton* baton);
     static int EIO_Open(eio_req *req);
     static int EIO_AfterOpen(eio_req *req);
 
-    static Handle<Value> CloseSync(const Arguments& args);
+    static void Schedule(Database* db, EIO_Callback callback, Baton* baton,
+                         bool exclusive);
+    static void Process(Database* db);
+
     static Handle<Value> Close(const Arguments& args);
-    static bool Close(Database* db);
+    static void EIO_BeginClose(Baton* baton);
     static int EIO_Close(eio_req *req);
     static int EIO_AfterClose(eio_req *req);
-
-    static int EIO_AfterPrepareAndStep(eio_req *req);
-    static int EIO_PrepareAndStep(eio_req *req);
-    static Handle<Value> PrepareAndStep(const Arguments& args);
-
-    static int EIO_AfterPrepare(eio_req *req);
-    static int EIO_Prepare(eio_req *req);
-    static Handle<Value> Prepare(const Arguments& args);
 
     void Wrap (Handle<Object> handle);
     static void Destruct (Persistent<Value> value, void *data);
     static int EIO_Destruct(eio_req *req);
     static int EIO_AfterDestruct(eio_req *req);
 
-  protected:
+protected:
     sqlite3* handle;
-    std::string filename;
-    int open_mode;
 
-    std::string error_message;
-    int error_status;
+    bool open;
+    bool locked;
+    unsigned int pending;
 
-    int pending;
-    Status status;
     std::queue<Call*> queue;
-  private:
-};
-
-
-enum ExecMode {
-    EXEC_EMPTY = 0,
-    EXEC_LAST_INSERT_ID = 1,
-    EXEC_AFFECTED_ROWS = 2
-};
-
-struct prepare_request {
-  Persistent<Function> cb;
-  Database *db;
-  sqlite3_stmt* stmt;
-  int mode;
-  sqlite3_int64 lastInsertId;
-  int affectedRows;
-  const char* tail;
-  char sql[1];
 };
 
 #endif

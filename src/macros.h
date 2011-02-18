@@ -121,7 +121,7 @@ const char* sqlite_code_string(int code);
                 String::NewSymbol(sqlite_code_string(errno)),                  \
                 String::NewSymbol(": ")                                        \
             ),                                                                 \
-            String::New(msg)                                                   \
+            (msg)                                                              \
         )                                                                      \
     );                                                                         \
     Local<Object> name ##_obj = name->ToObject();                              \
@@ -129,30 +129,19 @@ const char* sqlite_code_string(int code);
     name ##_obj->Set(NODE_PSYMBOL("code"),                                     \
         String::NewSymbol(sqlite_code_string(errno)));
 
-#define EVENT_ONCE(event, callback)                                            \
-    Local<Value> argv[2] = {                                                   \
-        String::NewSymbol(event),                                              \
-        args.This()->Get(String::NewSymbol(callback))                          \
-    };                                                                         \
-    v8::Local<v8::Value> fn_val = args.This()->Get(String::NewSymbol("once")); \
-    Local<Function> fn = Local<Function>::Cast(fn_val);                        \
-    fn->Call(args.This(), 2, argv);
 
-#define SET_STRING(sym, str) \
-    Set(String::NewSymbol(#sym), String::New(str), ReadOnly)
-    
-#define SET_INTEGER(sym, i) \
-    Set(String::NewSymbol(#sym), Integer::New(i), ReadOnly)
+#define EMIT_EVENT(obj, argc, argv)                                            \
+    TRY_CATCH_CALL((obj),                                                      \
+        Local<Function>::Cast((obj)->Get(String::NewSymbol("emit"))),          \
+        argc, argv                                                             \
+    );
 
 #define TRY_CATCH_CALL(context, callback, argc, argv)                          \
-{                                                                              \
-    TryCatch try_catch;                                                        \
+{   TryCatch try_catch;                                                        \
     (callback)->Call((context), (argc), (argv));                               \
     if (try_catch.HasCaught()) {                                               \
         FatalException(try_catch);                                             \
-    }                                                                          \
-}
-
+    }                                                                          }
 
 #endif
 
