@@ -53,7 +53,7 @@ void Database::Process() {
         // Call all callbacks with the error object.
         while (!queue.empty()) {
             Call* call = queue.front();
-            if (!call->baton->callback.IsEmpty()) {
+            if (!call->baton->callback.IsEmpty() && call->baton->callback->IsFunction()) {
                 TRY_CATCH_CALL(handle_, call->baton->callback, 1, argv);
                 called = true;
             }
@@ -89,7 +89,7 @@ void Database::Process() {
 void Database::Schedule(EIO_Callback callback, Baton* baton, bool exclusive = false) {
     if (!open && locked) {
         EXCEPTION(String::New("Database is closed"), SQLITE_MISUSE, exception);
-        if (!baton->callback.IsEmpty()) {
+        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
             Local<Value> argv[] = { exception };
             TRY_CATCH_CALL(handle_, baton->callback, 1, argv);
         }
@@ -183,7 +183,7 @@ int Database::EIO_AfterOpen(eio_req *req) {
         argv[0] = Local<Value>::New(Null());
     }
 
-    if (!baton->callback.IsEmpty()) {
+    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
         TRY_CATCH_CALL(db->handle_, baton->callback, 1, argv);
     }
     else if (!db->open) {
@@ -253,7 +253,7 @@ int Database::EIO_AfterClose(eio_req *req) {
     }
 
     // Fire callbacks.
-    if (!baton->callback.IsEmpty()) {
+    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
         TRY_CATCH_CALL(db->handle_, baton->callback, 1, argv);
     }
     else if (db->open) {

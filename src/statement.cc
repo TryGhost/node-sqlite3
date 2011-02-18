@@ -173,11 +173,13 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
         argv[0] = Local<Value>::New(Null());
     }
 
+    fprintf(stderr, "after prepare\n");
+
     // Fire callbacks.
-    if (!baton->callback.IsEmpty()) {
+    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
         TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
     }
-    else {
+    else if (!stmt->prepared) {
         Local<Value> args[] = { String::NewSymbol("error"), argv[0] };
         EMIT_EVENT(stmt->handle_, 2, args);
     }
@@ -190,7 +192,6 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     else {
         stmt->Finalize();
     }
-
 
     delete baton;
     return 0;
@@ -213,7 +214,7 @@ void Statement::Finalize(Baton* baton) {
     baton->stmt->Finalize();
 
     // Fire callback in case there was one.
-    if (!baton->callback.IsEmpty()) {
+    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
         TRY_CATCH_CALL(baton->stmt->handle_, baton->callback, 0, NULL);
     }
 
@@ -247,7 +248,8 @@ void Statement::CleanQueue() {
             Call* call = queue.front();
             queue.pop();
 
-            if (prepared && !call->baton->callback.IsEmpty()) {
+            if (prepared && !call->baton->callback.IsEmpty() &&
+                call->baton->callback->IsFunction()) {
                 TRY_CATCH_CALL(handle_, call->baton->callback, 1, argv);
                 called = true;
             }
