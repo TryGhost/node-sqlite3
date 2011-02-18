@@ -97,9 +97,8 @@ protected:
     static int EIO_Open(eio_req *req);
     static int EIO_AfterOpen(eio_req *req);
 
-    static void Schedule(Database* db, EIO_Callback callback, Baton* baton,
-                         bool exclusive);
-    static void Process(Database* db);
+    void Schedule(EIO_Callback callback, Baton* baton, bool exclusive);
+    void Process();
 
     static Handle<Value> Close(const Arguments& args);
     static void EIO_BeginClose(Baton* baton);

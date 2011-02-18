@@ -18,7 +18,7 @@ exports['Blob overflow test'] = function(beforeExit) {
         function() {
             var next = this;
             db.prepare('CREATE TABLE elmos (image BLOB);', function(err, statement) {
-                assert.isUndefined(err);
+                assert.ok(!err);
                 statement.step(next);
             });
         },

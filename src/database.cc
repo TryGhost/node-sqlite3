@@ -44,20 +44,22 @@ void Database::Init(v8::Handle<Object> target) {
                 constructor_template->GetFunction());
 }
 
-void Database::Process(Database* db) {
-    if (!db->open && db->locked && !db->queue.empty()) {
+void Database::Process() {
+    if (!open && locked && !queue.empty()) {
         EXCEPTION(String::New("Database handle is closed"), SQLITE_MISUSE, exception);
         Local<Value> argv[] = { exception };
         bool called = false;
 
         // Call all callbacks with the error object.
-        while (!db->queue.empty()) {
-            Call* call = db->queue.front();
+        while (!queue.empty()) {
+            Call* call = queue.front();
             if (!call->baton->callback.IsEmpty()) {
-                TRY_CATCH_CALL(db->handle_, call->baton->callback, 1, argv);
+                TRY_CATCH_CALL(handle_, call->baton->callback, 1, argv);
                 called = true;
             }
-            db->queue.pop();
+            queue.pop();
+            // We don't call the actual callback, so we have to make sure that
+            // the baton gets destroyed.
             delete call->baton;
             delete call;
         }
@@ -66,41 +68,40 @@ void Database::Process(Database* db) {
         // Database object.
         if (!called) {
             Local<Value> args[] = { String::NewSymbol("error"), exception };
-            EMIT_EVENT(db->handle_, 2, args);
+            EMIT_EVENT(handle_, 2, args);
         }
         return;
     }
 
-    while (db->open && !db->locked && !db->queue.empty()) {
-        Call* call = db->queue.front();
+    while (open && !locked && !queue.empty()) {
+        Call* call = queue.front();
 
-        if (call->exclusive && db->pending > 0) {
+        if (call->exclusive && pending > 0) {
             break;
         }
 
         call->callback(call->baton);
-        db->queue.pop();
+        queue.pop();
         delete call;
     }
 }
 
-inline void Database::Schedule(Database* db, EIO_Callback callback, Baton* baton,
-                               bool exclusive = false) {
-    if (!db->open && db->locked) {
+void Database::Schedule(EIO_Callback callback, Baton* baton, bool exclusive = false) {
+    if (!open && locked) {
         EXCEPTION(String::New("Database is closed"), SQLITE_MISUSE, exception);
         if (!baton->callback.IsEmpty()) {
             Local<Value> argv[] = { exception };
-            TRY_CATCH_CALL(db->handle_, baton->callback, 1, argv);
+            TRY_CATCH_CALL(handle_, baton->callback, 1, argv);
         }
         else {
             Local<Value> argv[] = { String::NewSymbol("error"), exception };
-            EMIT_EVENT(db->handle_, 2, argv);
+            EMIT_EVENT(handle_, 2, argv);
         }
         return;
     }
 
-    if (!db->open || db->locked || (exclusive && db->pending > 0)) {
-        db->queue.push(new Call(callback, baton, exclusive));
+    if (!open || locked || (exclusive && pending > 0)) {
+        queue.push(new Call(callback, baton, exclusive));
     }
     else {
         callback(baton);
@@ -193,11 +194,10 @@ int Database::EIO_AfterOpen(eio_req *req) {
     if (db->open) {
         Local<Value> args[] = { String::NewSymbol("open") };
         EMIT_EVENT(db->handle_, 1, args);
-        Process(db);
+        db->Process();
     }
 
     delete baton;
-
     return 0;
 }
 
@@ -207,7 +207,7 @@ Handle<Value> Database::Close(const Arguments& args) {
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     Baton* baton = new Baton(db, callback);
-    Schedule(db, EIO_BeginClose, baton, true);
+    db->Schedule(EIO_BeginClose, baton, true);
 
     return args.This();
 }
@@ -264,11 +264,10 @@ int Database::EIO_AfterClose(eio_req *req) {
     if (!db->open) {
         Local<Value> args[] = { String::NewSymbol("close"), argv[0] };
         EMIT_EVENT(db->handle_, 1, args);
-        Process(db);
+        db->Process();
     }
 
     delete baton;
-
     return 0;
 }
 

@@ -34,8 +34,37 @@ void Statement::Init(v8::Handle<Object> target) {
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     constructor_template->SetClassName(String::NewSymbol("Statement"));
 
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalize", Finalize);
+
     target->Set(v8::String::NewSymbol("Statement"),
                 constructor_template->GetFunction());
+}
+
+void Statement::Process() {
+    if (finalized && !queue.empty()) {
+        return CleanQueue();
+    }
+
+    while (prepared && !locked && !queue.empty()) {
+        Call* call = queue.front();
+        queue.pop();
+
+        call->callback(call->baton);
+        delete call;
+    }
+}
+
+void Statement::Schedule(EIO_Callback callback, Baton* baton) {
+    if (finalized) {
+        queue.push(new Call(callback, baton));
+        CleanQueue();
+    }
+    else if (!prepared || locked) {
+        queue.push(new Call(callback, baton));
+    }
+    else {
+        callback(baton);
+    }
 }
 
 // { Database db, String sql, Array params, Function callback }
@@ -85,10 +114,9 @@ Handle<Value> Statement::New(const Arguments& args) {
 
     Statement* stmt = new Statement(db);
     stmt->Wrap(args.This());
-    PrepareBaton* baton = new PrepareBaton(db, Local<Function>::Cast(args[3]));
-    baton->stmt = stmt;
+    PrepareBaton* baton = new PrepareBaton(db, Local<Function>::Cast(args[3]), stmt);
     baton->sql = std::string(*String::Utf8Value(sql));
-    Database::Schedule(db, EIO_BeginPrepare, baton, false);
+    db->Schedule(EIO_BeginPrepare, baton, false);
 
     return args.This();
 }
@@ -97,8 +125,6 @@ Handle<Value> Statement::New(const Arguments& args) {
 void Statement::EIO_BeginPrepare(Database::Baton* baton) {
     assert(baton->db->open);
     assert(!baton->db->locked);
-    static_cast<PrepareBaton*>(baton)->stmt->Ref();
-    ev_ref(EV_DEFAULT_UC);
     fprintf(stderr, "Prepare started\n");
     eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, baton);
 }
@@ -108,6 +134,8 @@ int Statement::EIO_Prepare(eio_req *req) {
     Database* db = baton->db;
     Statement* stmt = baton->stmt;
 
+    // In case preparing fails, we use a mutex to make sure we get the associated
+    // error message.
     sqlite3_mutex* mtx = sqlite3_db_mutex(db->handle);
     sqlite3_mutex_enter(mtx);
 
@@ -135,94 +163,118 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     Database* db = baton->db;
     Statement* stmt = baton->stmt;
 
-    stmt->Unref();
-    ev_unref(EV_DEFAULT_UC);
-
-    // Local<Value> argv[1];
-    // if (baton->status != SQLITE_OK) {
-    //     EXCEPTION(String::New(baton->message), baton->status, exception);
-    //     argv[0] = exception;
-    // }
-    // else {
-    //     db->open = false;
-    //     // Leave db->locked to indicate that this db object has reached
-    //     // the end of its life.
-    //     argv[0] = Local<Value>::New(Null());
-    // }
-    //
-    // // Fire callbacks.
-    // if (!baton->callback.IsEmpty()) {
-    //     TRY_CATCH_CALL(db->handle_, baton->callback, 1, argv);
-    // }
-    // else if (db->open) {
-    //     Local<Value> args[] = { String::NewSymbol("error"), argv[0] };
-    //     EMIT_EVENT(db->handle_, 2, args);
-    // }
-    //
-    // if (!db->open) {
-    //     Local<Value> args[] = { String::NewSymbol("close"), argv[0] };
-    //     EMIT_EVENT(db->handle_, 1, args);
-    //     Process(db);
-    // }
-
-    fprintf(stderr, "Prepare completed\n");
-
-    // V8::AdjustAmountOfExternalAllocatedMemory(10000000);
-
-    Database::Process(db);
-
-    delete baton;
-
-    return 0;
-}
-
-/**
- * Override this so that we can properly finalize the statement when it
- * gets garbage collected.
- */
-void Statement::Wrap(Handle<Object> handle) {
-    assert(handle_.IsEmpty());
-    assert(handle->InternalFieldCount() > 0);
-    handle_ = Persistent<Object>::New(handle);
-    handle_->SetPointerInInternalField(0, this);
-    handle_.MakeWeak(this, Destruct);
-}
-
-inline void Statement::MakeWeak (void) {
-    handle_.MakeWeak(this, Destruct);
-}
-
-void Statement::Unref() {
-    assert(!handle_.IsEmpty());
-    assert(!handle_.IsWeak());
-    assert(refs_ > 0);
-    if (--refs_ == 0) { MakeWeak(); }
-}
-
-void Statement::Destruct(Persistent<Value> value, void *data) {
-    Statement* stmt = static_cast<Statement*>(data);
-    if (stmt->handle) {
-        eio_custom(EIO_Destruct, EIO_PRI_DEFAULT, EIO_AfterDestruct, stmt);
-        ev_ref(EV_DEFAULT_UC);
+    Local<Value> argv[1];
+    if (baton->status != SQLITE_OK) {
+        EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
+        argv[0] = exception;
     }
     else {
-        delete stmt;
+        stmt->prepared = true;
+        argv[0] = Local<Value>::New(Null());
+    }
+
+    // Fire callbacks.
+    if (!baton->callback.IsEmpty()) {
+        TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+    }
+    else {
+        Local<Value> args[] = { String::NewSymbol("error"), argv[0] };
+        EMIT_EVENT(stmt->handle_, 2, args);
+    }
+
+    db->Process();
+
+    if (stmt->prepared) {
+        stmt->Process();
+    }
+    else {
+        stmt->Finalize();
+    }
+
+
+    delete baton;
+    return 0;
+}
+
+
+
+Handle<Value> Statement::Finalize(const Arguments& args) {
+    HandleScope scope;
+    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
+
+    Baton* baton = new Baton(stmt, callback);
+    stmt->Schedule(Finalize, baton);
+
+    return scope.Close(stmt->db->handle_);
+}
+
+void Statement::Finalize(Baton* baton) {
+    baton->stmt->Finalize();
+
+    // Fire callback in case there was one.
+    if (!baton->callback.IsEmpty()) {
+        TRY_CATCH_CALL(baton->stmt->handle_, baton->callback, 0, NULL);
+    }
+
+    delete baton;
+}
+
+void Statement::Finalize() {
+    assert(!finalized);
+    finalized = true;
+    fprintf(stderr, "Statement destruct\n");
+    CleanQueue();
+    // Finalize returns the status code of the last operation. We already fired
+    // error events in case those failed.
+    sqlite3_finalize(handle);
+    handle = NULL;
+    db->pending--;
+    db->Process();
+    db->Unref();
+}
+
+void Statement::CleanQueue() {
+    if (prepared && !queue.empty()) {
+        // This statement has already been prepared and is now finalized.
+        // Fire error for all remaining items in the queue.
+        EXCEPTION(String::New("Statement is already finalized"), SQLITE_MISUSE, exception);
+        Local<Value> argv[] = { exception };
+        bool called = false;
+
+        // Clear out the queue so that this object can get GC'ed.
+        while (!queue.empty()) {
+            Call* call = queue.front();
+            queue.pop();
+
+            if (prepared && !call->baton->callback.IsEmpty()) {
+                TRY_CATCH_CALL(handle_, call->baton->callback, 1, argv);
+                called = true;
+            }
+
+            // We don't call the actual callback, so we have to make sure that
+            // the baton gets destroyed.
+            delete call->baton;
+            delete call;
+        }
+
+        // When we couldn't call a callback function, emit an error on the
+        // Statement object.
+        if (!called) {
+            Local<Value> args[] = { String::NewSymbol("error"), exception };
+            EMIT_EVENT(handle_, 2, args);
+        }
+    }
+    else while (!queue.empty()) {
+        // Just delete all items in the queue; we already fired an event when
+        // preparing the statement failed.
+        Call* call = queue.front();
+        queue.pop();
+
+        // We don't call the actual callback, so we have to make sure that
+        // the baton gets destroyed.
+        delete call->baton;
+        delete call;
     }
 }
 
-int Statement::EIO_Destruct(eio_req *req) {
-    Statement* stmt = static_cast<Statement*>(req->data);
-
-    fprintf(stderr, "Auto-Finalizing handle\n");
-    sqlite3_finalize(stmt->handle);
-    stmt->handle = NULL;
-
-    return 0;
-}
-
-int Statement::EIO_AfterDestruct(eio_req *req) {
-    Statement* stmt = static_cast<Statement*>(req->data);
-    ev_unref(EV_DEFAULT_UC);
-    delete stmt;
-    return 0;
-}
