@@ -13,14 +13,13 @@ exports['open and close non-existent database'] = function(beforeExit) {
     var opened, closed;
 
     helper.deleteFile('test/tmp/test_create.db');
-    var db = new sqlite3.Database('test/tmp/test_create.db');
-
-    db.open(function(err) {
+    var db = new sqlite3.Database('test/tmp/test_create.db', function(err) {
         if (err) throw err;
         assert.ok(!opened);
         assert.ok(!closed);
         opened = true;
     });
+
     db.close(function(err) {
         if (err) throw err;
         assert.ok(opened);
@@ -39,8 +38,7 @@ exports['open and close non-existent database'] = function(beforeExit) {
 exports['open inaccessible database'] = function(beforeExit) {
     var notOpened;
 
-    var db = new sqlite3.Database('/usr/bin/test.db');
-    db.open(function(err) {
+    var db = new sqlite3.Database('/usr/bin/test.db', function(err) {
         if (err && err.code === 'SQLITE_CANTOPEN') {
             notOpened = true;
         }
@@ -57,14 +55,13 @@ exports['open non-existent database without create'] = function(beforeExit) {
     var notOpened;
 
     helper.deleteFile('tmp/test_readonly.db');
-    var db = new sqlite3.Database('tmp/test_readonly.db', sqlite3.OPEN_READONLY);
-
-    db.open(function(err) {
-        if (err && err.code === 'SQLITE_CANTOPEN') {
-            notOpened = true;
-        }
-        else if (err) throw err;
-    });
+    var db = new sqlite3.Database('tmp/test_readonly.db', sqlite3.OPEN_READONLY,
+        function(err) {
+            if (err && err.code === 'SQLITE_CANTOPEN') {
+                notOpened = true;
+            }
+            else if (err) throw err;
+        });
 
     beforeExit(function() {
         assert.ok(notOpened, 'Database could be opened');
@@ -73,56 +70,29 @@ exports['open non-existent database without create'] = function(beforeExit) {
 };
 
 exports['open and close memory database queuing'] = function(beforeExit) {
-    var opened = 0, closed = 0;
+    var opened = 0, closed = 0, closeFailed = 0;
 
-    var db = new sqlite3.Database(':memory:');
-
-    function openedCallback(err) {
+    var db = new sqlite3.Database(':memory:', function openedCallback(err) {
         if (err) throw err;
         opened++;
-    }
+    });
 
     function closedCallback(err) {
-        if (err) console.warn(err);
-        if (err) throw err;
-        closed++;
+        if (closed > 0) {
+            assert.ok(err, 'No error object received on second close');
+            assert.ok(err.errno === sqlite3.MISUSE);
+            closeFailed++;
+        }
+        else if (err) throw err;
+        else closed++;
     }
 
-    db.open(openedCallback);
     db.close(closedCallback);
-    db.open(openedCallback);
     db.close(closedCallback);
-    db.open(openedCallback);
-    db.close(closedCallback);
-    db.open(openedCallback);
-    db.close(closedCallback);
-    db.open(openedCallback);
-
-    beforeExit(function() {
-        assert.equal(opened, 5, 'Database not opened');
-        assert.equal(closed, 4, 'Database not closed');
-    });
-};
-
-exports['two opens in a row'] = function(beforeExit) {
-    var opened = 0, openErrors = 0;
-
-    var db = new sqlite3.Database(':memory:');
-
-    function openedCallback(err) {
-        if (err) throw err;
-        opened++;
-    }
-
-    db.on('error', function(err) {
-        openErrors++;
-    });
-
-    db.open(openedCallback);
-    db.open(openedCallback);
 
     beforeExit(function() {
         assert.equal(opened, 1, 'Database not opened');
-        assert.equal(openErrors, 1, 'Second open succeeded');
+        assert.equal(closed, 1, 'Database not closed');
+        assert.equal(closeFailed, 1, 'Database could be closed again');
     });
 };

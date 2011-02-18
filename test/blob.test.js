@@ -14,10 +14,6 @@ exports['Blob overflow test'] = function(beforeExit) {
     var inserted = 0;
     var retrieved = 0;
 
-    db.openSync(function(err) {
-        if (err) throw err;
-    });
-
     Step(
         function() {
             var next = this;
