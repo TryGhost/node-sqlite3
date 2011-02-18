@@ -46,9 +46,27 @@ void Database::Init(v8::Handle<Object> target) {
 
 void Database::Process(Database* db) {
     if (!db->open && db->locked && !db->queue.empty()) {
-        EXCEPTION(String::New("Database is closed"), SQLITE_MISUSE, exception);
-        Local<Value> argv[] = { String::NewSymbol("error"), exception };
-        EMIT_EVENT(db->handle_, 2, argv);
+        EXCEPTION(String::New("Database handle is closed"), SQLITE_MISUSE, exception);
+        Local<Value> argv[] = { exception };
+        bool called = false;
+
+        // Call all callbacks with the error object.
+        while (!db->queue.empty()) {
+            Call* call = db->queue.front();
+            if (!call->baton->callback.IsEmpty()) {
+                TRY_CATCH_CALL(db->handle_, call->baton->callback, 1, argv);
+                called = true;
+            }
+            db->queue.pop();
+            delete call;
+        }
+
+        // When we couldn't call a callback function, emit an error on the
+        // Database object.
+        if (!called) {
+            Local<Value> args[] = { String::NewSymbol("error"), exception };
+            EMIT_EVENT(db->handle_, 2, args);
+        }
         return;
     }
 
@@ -69,9 +87,9 @@ inline void Database::Schedule(Database* db, EIO_Callback callback, Baton* baton
                                bool exclusive = false) {
     if (!db->open && db->locked) {
         EXCEPTION(String::New("Database is closed"), SQLITE_MISUSE, exception);
-        if (!(baton)->callback.IsEmpty()) {
+        if (!baton->callback.IsEmpty()) {
             Local<Value> argv[] = { exception };
-            TRY_CATCH_CALL(db->handle_, (baton)->callback, 1, argv);
+            TRY_CATCH_CALL(db->handle_, baton->callback, 1, argv);
         }
         else {
             Local<Value> argv[] = { String::NewSymbol("error"), exception };
@@ -93,7 +111,7 @@ Handle<Value> Database::New(const Arguments& args) {
 
     if (!args.IsConstructCall()) {
         return ThrowException(Exception::TypeError(
-            String::New("Use the new keyword to create new Database objects"))
+            String::New("Use the new operator to create new Database objects"))
         );
     }
 
