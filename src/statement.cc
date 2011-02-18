@@ -100,8 +100,7 @@ Handle<Value> Statement::New(const Arguments& args) {
 void Statement::EIO_BeginPrepare(Baton* baton) {
     assert(baton->db->open);
     assert(!baton->db->locked);
-    baton->db->pending++;
-    static_cast<PrepareBaton*>(baton)->stmt->Ref();
+    // static_cast<PrepareBaton*>(baton)->stmt->Ref();
     ev_ref(EV_DEFAULT_UC);
     fprintf(stderr, "Prepare started\n");
     eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, baton);
@@ -110,24 +109,26 @@ void Statement::EIO_BeginPrepare(Baton* baton) {
 int Statement::EIO_Prepare(eio_req *req) {
     PrepareBaton* baton = static_cast<PrepareBaton*>(req->data);
     Database* db = baton->db;
+    Statement* stmt = baton->stmt;
 
-    fprintf(stderr, "Prepare performed\n");
-    // baton->status = sqlite3_prepare16_v2(
-    //     db->handle,
-    //     const void *zSql,       /* SQL statement, UTF-16 encoded */
-    //     int nByte,              /* Maximum length of zSql in bytes. */
-    //     sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
-    //     const void **pzTail     /* OUT: Pointer to unused portion of zSql */
-    // );
-    //
-    // baton->status = sqlite3_close(db->handle);
-    //
-    // if (baton->status != SQLITE_OK) {
-    //     baton->message = std::string(sqlite3_errmsg(db->handle));
-    // }
-    // else {
-    //     db->handle = NULL;
-    // }
+    sqlite3_mutex* mtx = sqlite3_db_mutex(db->handle);
+    sqlite3_mutex_enter(mtx);
+
+    baton->status = sqlite3_prepare_v2(
+        db->handle,
+        baton->sql.c_str(),
+        baton->sql.size(),
+        &stmt->handle,
+        NULL
+    );
+
+    if (baton->status != SQLITE_OK) {
+        baton->message = std::string(sqlite3_errmsg(db->handle));
+        stmt->handle = NULL;
+    }
+
+    sqlite3_mutex_leave(mtx);
+
     return 0;
 }
 
@@ -139,7 +140,6 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
 
     stmt->Unref();
     ev_unref(EV_DEFAULT_UC);
-    db->pending--;
 
     // Local<Value> argv[1];
     // if (baton->status != SQLITE_OK) {
@@ -169,10 +169,53 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     // }
 
     fprintf(stderr, "Prepare completed\n");
-    
+
+    // V8::AdjustAmountOfExternalAllocatedMemory(10000000);
+
     Database::Process(db);
 
     delete baton;
 
+    return 0;
+}
+
+/**
+ * Override this so that we can properly finalize the statement when it
+ * gets garbage collected.
+ */
+void Statement::Wrap(Handle<Object> handle) {
+    assert(handle_.IsEmpty());
+    assert(handle->InternalFieldCount() > 0);
+    handle_ = Persistent<Object>::New(handle);
+    handle_->SetPointerInInternalField(0, this);
+    handle_.MakeWeak(this, Destruct);
+}
+
+void Statement::Destruct(Persistent<Value> value, void *data) {
+    Statement* stmt = static_cast<Statement*>(data);
+    fprintf(stderr, "Auto-Finalizing handle started\n");
+    if (stmt->handle) {
+        eio_custom(EIO_Destruct, EIO_PRI_DEFAULT, EIO_AfterDestruct, stmt);
+        ev_ref(EV_DEFAULT_UC);
+    }
+    else {
+        delete stmt;
+    }
+}
+
+int Statement::EIO_Destruct(eio_req *req) {
+    Statement* stmt = static_cast<Statement*>(req->data);
+
+    fprintf(stderr, "Auto-Finalizing handle\n");
+    sqlite3_finalize(stmt->handle);
+    stmt->handle = NULL;
+
+    return 0;
+}
+
+int Statement::EIO_AfterDestruct(eio_req *req) {
+    Statement* stmt = static_cast<Statement*>(req->data);
+    ev_unref(EV_DEFAULT_UC);
+    delete stmt;
     return 0;
 }

@@ -46,10 +46,14 @@ public:
 
     Statement(Database* db_) : EventEmitter() {
         db = db_;
+        db->pending++;
         db->Ref();
     }
 
     ~Statement() {
+        fprintf(stderr, "Deleted Statement\n");
+        db->pending--;
+        Database::Process(db);
         db->Unref();
     }
 
@@ -58,7 +62,12 @@ protected:
     static int EIO_Prepare(eio_req *req);
     static int EIO_AfterPrepare(eio_req *req);
 
-private:
+    void Wrap (Handle<Object> handle);
+    static void Destruct (Persistent<Value> value, void *data);
+    static int EIO_Destruct(eio_req *req);
+    static int EIO_AfterDestruct(eio_req *req);
+
+protected:
     Database* db;
 
     sqlite3_stmt* handle;

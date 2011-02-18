@@ -130,15 +130,13 @@ Handle<Value> Database::New(const Arguments& args) {
 void Database::EIO_BeginOpen(Baton* baton) {
     baton->db->Ref();
     ev_ref(EV_DEFAULT_UC);
-    fprintf(stderr, "Open started\n");
     eio_custom(EIO_Open, EIO_PRI_DEFAULT, EIO_AfterOpen, baton);
 }
 
 int Database::EIO_Open(eio_req *req) {
     OpenBaton* baton = static_cast<OpenBaton*>(req->data);
     Database* db = baton->db;
-    
-    fprintf(stderr, "Open performed\n");
+
     baton->status = sqlite3_open_v2(
         baton->filename.c_str(),
         &db->handle,
@@ -148,6 +146,7 @@ int Database::EIO_Open(eio_req *req) {
 
     if (baton->status != SQLITE_OK) {
         baton->message = std::string(sqlite3_errmsg(db->handle));
+        db->handle = NULL;
     }
 
     return 0;
@@ -182,10 +181,9 @@ int Database::EIO_AfterOpen(eio_req *req) {
     if (db->open) {
         Local<Value> args[] = { String::NewSymbol("open") };
         EMIT_EVENT(db->handle_, 1, args);
-        fprintf(stderr, "Open completed\n");
         Process(db);
     }
-    
+
     delete baton;
     return 0;
 }
@@ -210,7 +208,6 @@ void Database::EIO_BeginClose(Baton* baton) {
     assert(baton->db->open);
     assert(!baton->db->locked);
     assert(baton->db->pending == 0);
-    fprintf(stderr, "Close started\n");
     baton->db->locked = true;
     eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, baton);
 }
@@ -219,7 +216,6 @@ int Database::EIO_Close(eio_req *req) {
     Baton* baton = static_cast<Baton*>(req->data);
     Database* db = baton->db;
 
-    fprintf(stderr, "Close performed\n");
     baton->status = sqlite3_close(db->handle);
 
     if (baton->status != SQLITE_OK) {
@@ -267,8 +263,6 @@ int Database::EIO_AfterClose(eio_req *req) {
     }
 
     delete baton;
-    
-    fprintf(stderr, "Close completed\n");
 
     return 0;
 }
@@ -288,12 +282,21 @@ void Database::Wrap(Handle<Object> handle) {
 void Database::Destruct(Persistent<Value> value, void *data) {
     Database* db = static_cast<Database*>(data);
     if (db->handle) {
-        eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterDestruct, db);
+        eio_custom(EIO_Destruct, EIO_PRI_DEFAULT, EIO_AfterDestruct, db);
         ev_ref(EV_DEFAULT_UC);
     }
     else {
         delete db;
     }
+}
+
+int Database::EIO_Destruct(eio_req *req) {
+    Database* db = static_cast<Database*>(req->data);
+
+    sqlite3_close(db->handle);
+    db->handle = NULL;
+
+    return 0;
 }
 
 int Database::EIO_AfterDestruct(eio_req *req) {
