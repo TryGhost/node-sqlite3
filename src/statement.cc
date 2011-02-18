@@ -100,7 +100,7 @@ Handle<Value> Statement::New(const Arguments& args) {
 void Statement::EIO_BeginPrepare(Baton* baton) {
     assert(baton->db->open);
     assert(!baton->db->locked);
-    // static_cast<PrepareBaton*>(baton)->stmt->Ref();
+    static_cast<PrepareBaton*>(baton)->stmt->Ref();
     ev_ref(EV_DEFAULT_UC);
     fprintf(stderr, "Prepare started\n");
     eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, baton);
@@ -191,9 +191,19 @@ void Statement::Wrap(Handle<Object> handle) {
     handle_.MakeWeak(this, Destruct);
 }
 
+inline void Statement::MakeWeak (void) {
+    handle_.MakeWeak(this, Destruct);
+}
+
+void Statement::Unref() {
+    assert(!handle_.IsEmpty());
+    assert(!handle_.IsWeak());
+    assert(refs_ > 0);
+    if (--refs_ == 0) { MakeWeak(); }
+}
+
 void Statement::Destruct(Persistent<Value> value, void *data) {
     Statement* stmt = static_cast<Statement*>(data);
-    fprintf(stderr, "Auto-Finalizing handle started\n");
     if (stmt->handle) {
         eio_custom(EIO_Destruct, EIO_PRI_DEFAULT, EIO_AfterDestruct, stmt);
         ev_ref(EV_DEFAULT_UC);

@@ -77,7 +77,8 @@ protected:
     }
 
     ~Database() {
-        fprintf(stderr, "Calling destructor\n");
+        assert(handle == NULL);
+        fprintf(stderr, "Deleted Database\n");
     }
 
     static Handle<Value> New(const Arguments& args);
@@ -95,6 +96,8 @@ protected:
     static int EIO_AfterClose(eio_req *req);
 
     void Wrap (Handle<Object> handle);
+    inline void MakeWeak();
+    virtual void Unref();
     static void Destruct (Persistent<Value> value, void *data);
     static int EIO_Destruct(eio_req *req);
     static int EIO_AfterDestruct(eio_req *req);

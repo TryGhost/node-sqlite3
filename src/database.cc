@@ -279,6 +279,17 @@ void Database::Wrap(Handle<Object> handle) {
     handle_.MakeWeak(this, Destruct);
 }
 
+inline void Database::MakeWeak (void) {
+    handle_.MakeWeak(this, Destruct);
+}
+
+void Database::Unref() {
+    assert(!handle_.IsEmpty());
+    assert(!handle_.IsWeak());
+    assert(refs_ > 0);
+    if (--refs_ == 0) { MakeWeak(); }
+}
+
 void Database::Destruct(Persistent<Value> value, void *data) {
     Database* db = static_cast<Database*>(data);
     if (db->handle) {

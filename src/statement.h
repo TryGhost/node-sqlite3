@@ -52,6 +52,7 @@ public:
 
     ~Statement() {
         fprintf(stderr, "Deleted Statement\n");
+        assert(handle == NULL);
         db->pending--;
         Database::Process(db);
         db->Unref();
@@ -63,7 +64,9 @@ protected:
     static int EIO_AfterPrepare(eio_req *req);
 
     void Wrap (Handle<Object> handle);
-    static void Destruct (Persistent<Value> value, void *data);
+    inline void MakeWeak();
+    virtual void Unref();
+    static void Destruct(Persistent<Value> value, void *data);
     static int EIO_Destruct(eio_req *req);
     static int EIO_AfterDestruct(eio_req *req);
 
