@@ -207,7 +207,7 @@ Handle<Value> Statement::Finalize(const Arguments& args) {
     Baton* baton = new Baton(stmt, callback);
     stmt->Schedule(Finalize, baton);
 
-    return scope.Close(stmt->db->handle_);
+    return stmt->db->handle_;
 }
 
 void Statement::Finalize(Baton* baton) {
