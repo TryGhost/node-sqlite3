@@ -85,11 +85,8 @@ Handle<Value> Statement::New(const Arguments& args) {
 
     Statement* stmt = new Statement(db);
     stmt->Wrap(args.This());
-
-    PrepareBaton* baton = new PrepareBaton();
-    baton->db = db;
+    PrepareBaton* baton = new PrepareBaton(db, Local<Function>::Cast(args[3]));
     baton->stmt = stmt;
-    baton->callback = Persistent<Function>::New(Local<Function>::Cast(args[3]));
     baton->sql = std::string(*String::Utf8Value(sql));
     Database::Schedule(db, EIO_BeginPrepare, baton, false);
 
@@ -97,7 +94,7 @@ Handle<Value> Statement::New(const Arguments& args) {
 }
 
 
-void Statement::EIO_BeginPrepare(Baton* baton) {
+void Statement::EIO_BeginPrepare(Database::Baton* baton) {
     assert(baton->db->open);
     assert(!baton->db->locked);
     static_cast<PrepareBaton*>(baton)->stmt->Ref();

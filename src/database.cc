@@ -58,6 +58,7 @@ void Database::Process(Database* db) {
                 called = true;
             }
             db->queue.pop();
+            delete call->baton;
             delete call;
         }
 
@@ -135,9 +136,7 @@ Handle<Value> Database::New(const Arguments& args) {
     args.This()->Set(String::NewSymbol("mode"), Integer::New(mode), ReadOnly);
 
     // Start opening the database.
-    OpenBaton* baton = new OpenBaton();
-    baton->db = db;
-    baton->callback = Persistent<Function>::New(callback);
+    OpenBaton* baton = new OpenBaton(db, callback);
     baton->filename = *filename;
     baton->mode = SQLITE_OPEN_FULLMUTEX | mode;
     EIO_BeginOpen(baton);
@@ -146,8 +145,6 @@ Handle<Value> Database::New(const Arguments& args) {
 }
 
 void Database::EIO_BeginOpen(Baton* baton) {
-    baton->db->Ref();
-    ev_ref(EV_DEFAULT_UC);
     eio_custom(EIO_Open, EIO_PRI_DEFAULT, EIO_AfterOpen, baton);
 }
 
@@ -175,9 +172,6 @@ int Database::EIO_AfterOpen(eio_req *req) {
     OpenBaton* baton = static_cast<OpenBaton*>(req->data);
     Database* db = baton->db;
 
-    db->Unref();
-    ev_unref(EV_DEFAULT_UC);
-
     Local<Value> argv[1];
     if (baton->status != SQLITE_OK) {
         EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
@@ -203,6 +197,7 @@ int Database::EIO_AfterOpen(eio_req *req) {
     }
 
     delete baton;
+
     return 0;
 }
 
@@ -211,12 +206,7 @@ Handle<Value> Database::Close(const Arguments& args) {
     Database* db = ObjectWrap::Unwrap<Database>(args.This());
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
-    db->Ref();
-    ev_ref(EV_DEFAULT_UC);
-
-    Baton* baton = new Baton();
-    baton->db = db;
-    baton->callback = Persistent<Function>::New(callback);
+    Baton* baton = new Baton(db, callback);
     Schedule(db, EIO_BeginClose, baton, true);
 
     return args.This();
@@ -249,9 +239,6 @@ int Database::EIO_AfterClose(eio_req *req) {
     HandleScope scope;
     Baton* baton = static_cast<Baton*>(req->data);
     Database* db = baton->db;
-
-    ev_unref(EV_DEFAULT_UC);
-    db->Unref();
 
     Local<Value> argv[1];
     if (baton->status != SQLITE_OK) {

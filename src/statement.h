@@ -31,9 +31,11 @@ using namespace node;
 
 class Statement;
 
-static struct PrepareBaton : Baton {
+static struct PrepareBaton : Database::Baton {
     Statement* stmt;
     std::string sql;
+
+    PrepareBaton(Database* db_, Handle<Function> cb_) : Baton(db_, cb_) {}
 };
 
 
@@ -59,7 +61,7 @@ public:
     }
 
 protected:
-    static void EIO_BeginPrepare(Baton* baton);
+    static void EIO_BeginPrepare(Database::Baton* baton);
     static int EIO_Prepare(eio_req *req);
     static int EIO_AfterPrepare(eio_req *req);
 

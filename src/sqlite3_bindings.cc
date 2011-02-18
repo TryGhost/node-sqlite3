@@ -61,8 +61,6 @@ extern "C" void init (v8::Handle<Object> target) {
     DEFINE_CONSTANT_INTEGER(target, SQLITE_FORMAT, FORMAT);
     DEFINE_CONSTANT_INTEGER(target, SQLITE_RANGE, RANGE);
     DEFINE_CONSTANT_INTEGER(target, SQLITE_NOTADB, NOTADB);
-    DEFINE_CONSTANT_INTEGER(target, SQLITE_ROW, ROW);
-    DEFINE_CONSTANT_INTEGER(target, SQLITE_DONE, DONE);
 }
 
 const char* sqlite_code_string(int code) {

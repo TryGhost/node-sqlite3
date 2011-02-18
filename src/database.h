@@ -29,20 +29,6 @@ using namespace node;
 
 class Database;
 
-static struct Baton {
-    Database* db;
-    Persistent<Function> callback;
-    int status;
-    std::string message;
-    ~Baton() {
-        callback.Dispose();
-    }
-};
-
-static struct OpenBaton : Baton {
-    std::string filename;
-    int mode;
-};
 
 class Database : public EventEmitter {
 public:
@@ -55,16 +41,41 @@ public:
         return constructor_template->HasInstance(obj);
     }
 
+    static struct Baton {
+        Database* db;
+        Persistent<Function> callback;
+        int status;
+        std::string message;
+
+        Baton(Database* db_, Handle<Function> cb_) : db(db_) {
+            db->Ref();
+            ev_ref(EV_DEFAULT_UC);
+            callback = Persistent<Function>::New(cb_);
+        }
+        ~Baton() {
+            db->Unref();
+            ev_unref(EV_DEFAULT_UC);
+            callback.Dispose();
+        }
+    };
+
+    static struct OpenBaton : Baton {
+        std::string filename;
+        int mode;
+
+        OpenBaton(Database* db_, Handle<Function> cb_) : Baton(db_, cb_) {}
+    };
+
     typedef void (*EIO_Callback)(Baton* baton);
 
     struct Call {
-        Call(EIO_Callback callback_, Baton* baton_, bool exclusive_ = false) :
-            callback(callback_), exclusive(exclusive_), baton(baton_) {};
+        Call(EIO_Callback cb_, Baton* baton_, bool exclusive_ = false) :
+            callback(cb_), exclusive(exclusive_), baton(baton_) {};
         EIO_Callback callback;
         bool exclusive;
         Baton* baton;
     };
-    
+
     friend class Statement;
 
 protected:
