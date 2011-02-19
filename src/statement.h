@@ -89,11 +89,14 @@ public:
     }
 
 protected:
+    static Handle<Value> Run(const Arguments& args);
+    static void EIO_BeginRun(Baton* baton);
+    static int EIO_Run(eio_req *req);
+    static int EIO_AfterRun(eio_req *req);
+
     static void EIO_BeginPrepare(Database::Baton* baton);
     static int EIO_Prepare(eio_req *req);
     static int EIO_AfterPrepare(eio_req *req);
-
-
 
     void Schedule(EIO_Callback callback, Baton* baton);
     void Process();
@@ -101,6 +104,7 @@ protected:
 
     static Handle<Value> Finalize(const Arguments& args);
     static void Finalize(Baton* baton);
+    template <class T> static void Error(T* baton);
     void Finalize();
 protected:
     Database* db;

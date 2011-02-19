@@ -34,6 +34,7 @@ void Statement::Init(v8::Handle<Object> target) {
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     constructor_template->SetClassName(String::NewSymbol("Statement"));
 
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "run", Run);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalize", Finalize);
 
     target->Set(v8::String::NewSymbol("Statement"),
@@ -64,6 +65,19 @@ void Statement::Schedule(EIO_Callback callback, Baton* baton) {
     }
     else {
         callback(baton);
+    }
+}
+
+template <class T> void Statement::Error(T* baton) {
+    EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
+
+    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+        Local<Value> argv[] = { exception };
+        TRY_CATCH_CALL(baton->stmt->handle_, baton->callback, 1, argv);
+    }
+    else {
+        Local<Value> argv[] = { String::NewSymbol("error"), exception };
+        EMIT_EVENT(baton->stmt->handle_, 2, argv);
     }
 }
 
@@ -163,41 +177,107 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     Database* db = baton->db;
     Statement* stmt = baton->stmt;
 
-    Local<Value> argv[1];
+
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
-        argv[0] = exception;
+        Error(baton);
+        stmt->Finalize();
     }
     else {
         stmt->prepared = true;
-        argv[0] = Local<Value>::New(Null());
-    }
-
-    fprintf(stderr, "after prepare\n");
-
-    // Fire callbacks.
-    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
-        TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
-    }
-    else if (!stmt->prepared) {
-        Local<Value> args[] = { String::NewSymbol("error"), argv[0] };
-        EMIT_EVENT(stmt->handle_, 2, args);
+        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+            Local<Value> argv[] = { Local<Value>::New(Null()) };
+            TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+        }
+        stmt->Process();
     }
 
     db->Process();
-
-    if (stmt->prepared) {
-        stmt->Process();
-    }
-    else {
-        stmt->Finalize();
-    }
 
     delete baton;
     return 0;
 }
 
+Handle<Value> Statement::Run(const Arguments& args) {
+    HandleScope scope;
+    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
+    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
+
+    Baton* baton = new Baton(stmt, callback);
+    stmt->Schedule(EIO_BeginRun, baton);
+
+    return args.This();
+}
+
+void Statement::EIO_BeginRun(Baton* baton) {
+    assert(!baton->stmt->locked);
+    assert(!baton->stmt->finalized);
+    assert(baton->stmt->prepared);
+    baton->stmt->locked = true;
+    eio_custom(EIO_Run, EIO_PRI_DEFAULT, EIO_AfterRun, baton);
+}
+
+int Statement::EIO_Run(eio_req *req) {
+    Baton* baton = static_cast<Baton*>(req->data);
+    Statement* stmt = baton->stmt;
+    Database* db = stmt->db;
+
+    fprintf(stderr, "calling run\n");
+
+    // In case preparing fails, we use a mutex to make sure we get the associated
+    // error message.
+    sqlite3_mutex* mtx = sqlite3_db_mutex(db->handle);
+    sqlite3_mutex_enter(mtx);
+
+    baton->status = sqlite3_step(stmt->handle);
+
+    if (!(baton->status == SQLITE_ROW || baton->status == SQLITE_DONE)) {
+        baton->message = std::string(sqlite3_errmsg(db->handle));
+    }
+
+    sqlite3_mutex_leave(mtx);
+
+    if (baton->status == SQLITE_ROW) {
+        Locker lock;
+        HandleScope scope;
+    
+        Local<Value> argv[] = { Local<Value>::New(Null()) };
+        for (int i = 0; i < 10; i++) {
+            if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+                TryCatch try_catch;
+                baton->callback->Call(baton->stmt->handle_, 1, argv);
+                if (try_catch.HasCaught()) {
+                    FatalException(try_catch);
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+int Statement::EIO_AfterRun(eio_req *req) {
+    HandleScope scope;
+    Baton* baton = static_cast<Baton*>(req->data);
+    Statement* stmt = baton->stmt;
+
+    if (baton->status != SQLITE_ROW && baton->status != SQLITE_DONE) {
+        Error(baton);
+    }
+    else {
+        // Fire callbacks.
+        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+            Local<Value> argv[] = { Local<Value>::New(Null()) };
+            TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+        }
+    }
+
+    stmt->locked = false;
+    stmt->Process();
+
+    delete baton;
+    return 0;
+}
 
 Handle<Value> Statement::Finalize(const Arguments& args) {
     HandleScope scope;
