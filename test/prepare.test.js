@@ -23,7 +23,7 @@ exports['test simple prepared statement'] = function(beforeExit) {
     var run = false;
     var db = new sqlite3.Database(':memory:');
     db.prepare("CREATE TABLE foo (text bar)")
-        .run(function(err) {
+        .get(function(err) {
             if (err) throw err;
             run = true;
         })
@@ -46,7 +46,7 @@ exports['test inserting and retrieving rows'] = function(beforeExit) {
 
     Step(
         function() {
-            db.prepare("CREATE TABLE foo (txt text, num int, flt float, blb blob)").run(this);
+            db.prepare("CREATE TABLE foo (txt text, num int, flt float, blb blob)").get(this);
         },
         function(err) {
             if (err) throw err;
@@ -58,7 +58,7 @@ exports['test inserting and retrieving rows'] = function(beforeExit) {
                       i,
                       i * Math.PI
                       // null (SQLite sets this implicitly)
-                ).run(group());
+                ).get(group());
             }
         },
         function(err, rows) {
@@ -68,7 +68,7 @@ exports['test inserting and retrieving rows'] = function(beforeExit) {
 
             var group = this.group();
             for (var i = 0; i < count + 5; i++) {
-                stmt.run(group());
+                stmt.get(group());
             }
         },
         function(err, rows) {

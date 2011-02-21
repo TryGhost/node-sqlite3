@@ -148,10 +148,10 @@ protected:
     static int EIO_Bind(eio_req *req);
     static int EIO_AfterBind(eio_req *req);
 
-    static Handle<Value> Run(const Arguments& args);
-    static void EIO_BeginRun(Baton* baton);
-    static int EIO_Run(eio_req *req);
-    static int EIO_AfterRun(eio_req *req);
+    static Handle<Value> Get(const Arguments& args);
+    static void EIO_BeginGet(Baton* baton);
+    static int EIO_Get(eio_req *req);
+    static int EIO_AfterGet(eio_req *req);
 
     static void GetRow(Result::Row* row, sqlite3_stmt* stmt);
     static Local<Array> RowToJS(Result::Row* row);

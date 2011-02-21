@@ -35,7 +35,7 @@ void Statement::Init(v8::Handle<Object> target) {
     constructor_template->SetClassName(String::NewSymbol("Statement"));
 
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "bind", Bind);
-    NODE_SET_PROTOTYPE_METHOD(constructor_template, "run", Run);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "get", Get);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalize", Finalize);
 
     target->Set(v8::String::NewSymbol("Statement"),
@@ -299,27 +299,27 @@ int Statement::EIO_AfterBind(eio_req *req) {
 
 
 
-Handle<Value> Statement::Run(const Arguments& args) {
+Handle<Value> Statement::Get(const Arguments& args) {
     HandleScope scope;
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     RowBaton* baton = new RowBaton(stmt, callback);
-    stmt->Schedule(EIO_BeginRun, baton);
+    stmt->Schedule(EIO_BeginGet, baton);
 
     return args.This();
 }
 
-void Statement::EIO_BeginRun(Baton* baton) {
+void Statement::EIO_BeginGet(Baton* baton) {
     assert(!baton->stmt->locked);
     assert(!baton->stmt->finalized);
     assert(baton->stmt->prepared);
     baton->stmt->locked = true;
-    eio_custom(EIO_Run, EIO_PRI_DEFAULT, EIO_AfterRun, baton);
+    eio_custom(EIO_Get, EIO_PRI_DEFAULT, EIO_AfterGet, baton);
 }
 
-int Statement::EIO_Run(eio_req *req) {
+int Statement::EIO_Get(eio_req *req) {
     RowBaton* baton = static_cast<RowBaton*>(req->data);
     Statement* stmt = baton->stmt;
     Database* db = stmt->db;
@@ -347,7 +347,7 @@ int Statement::EIO_Run(eio_req *req) {
     return 0;
 }
 
-int Statement::EIO_AfterRun(eio_req *req) {
+int Statement::EIO_AfterGet(eio_req *req) {
     HandleScope scope;
     RowBaton* baton = static_cast<RowBaton*>(req->data);
     Statement* stmt = baton->stmt;
