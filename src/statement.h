@@ -95,6 +95,12 @@ public:
         }
     };
 
+    static struct BindBaton : Baton {
+        BindBaton(Statement* stmt_, Handle<Function> cb_) :
+            Baton(stmt_, cb_) {}
+        Result::Row values;
+    };
+
     static struct RowBaton : Baton {
         RowBaton(Statement* stmt_, Handle<Function> cb_) :
             Baton(stmt_, cb_) {}
@@ -137,6 +143,11 @@ public:
     }
 
 protected:
+    static Handle<Value> Bind(const Arguments& args);
+    static void EIO_BeginBind(Baton* baton);
+    static int EIO_Bind(eio_req *req);
+    static int EIO_AfterBind(eio_req *req);
+
     static Handle<Value> Run(const Arguments& args);
     static void EIO_BeginRun(Baton* baton);
     static int EIO_Run(eio_req *req);
