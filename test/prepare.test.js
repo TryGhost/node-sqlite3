@@ -53,12 +53,13 @@ exports['test inserting and retrieving rows'] = function(beforeExit) {
             var group = this.group();
             for (var i = 0; i < count; i++) {
                 db.prepare("INSERT INTO foo VALUES(?, ?, ?, ?)")
-                  .bind(
+                  .run(
                       'String ' + i,
                       i,
-                      i * Math.PI
+                      i * Math.PI,
                       // null (SQLite sets this implicitly)
-                ).run(group());
+                      group()
+                  );
             }
         },
         function(err, rows) {

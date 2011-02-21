@@ -391,9 +391,7 @@ Handle<Value> Statement::Run(const Arguments& args) {
     HandleScope scope;
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
-    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
-
-    Baton* baton = new Baton(stmt, callback);
+    Baton* baton = stmt->Bind<Baton>(args);
     stmt->Schedule(EIO_BeginRun, baton);
 
     return args.This();
@@ -410,15 +408,20 @@ void Statement::EIO_BeginRun(Baton* baton) {
 int Statement::EIO_Run(eio_req *req) {
     STATEMENT_INIT(Baton);
 
-    sqlite3_reset(stmt->handle);
-
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
     sqlite3_mutex_enter(mtx);
 
-    stmt->status = sqlite3_step(stmt->handle);
+    // Make sure that we also reset when there are no parameters.
+    if (!baton->parameters.size()) {
+        sqlite3_reset(stmt->handle);
+    }
 
-    if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
-        stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+    if (stmt->Bind(baton->parameters)) {
+        stmt->status = sqlite3_step(stmt->handle);
+
+        if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
+            stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+        }
     }
 
     sqlite3_mutex_leave(mtx);
