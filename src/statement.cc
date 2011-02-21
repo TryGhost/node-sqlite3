@@ -36,6 +36,7 @@ void Statement::Init(v8::Handle<Object> target) {
 
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "get", Get);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "reset", Reset);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalize", Finalize);
 
     target->Set(v8::String::NewSymbol("Statement"),
@@ -128,17 +129,15 @@ void Statement::EIO_BeginPrepare(Database::Baton* baton) {
 }
 
 int Statement::EIO_Prepare(eio_req *req) {
-    PrepareBaton* baton = static_cast<PrepareBaton*>(req->data);
-    Database* db = baton->db;
-    Statement* stmt = baton->stmt;
+    STATEMENT_INIT(PrepareBaton);
 
     // In case preparing fails, we use a mutex to make sure we get the associated
     // error message.
-    sqlite3_mutex* mtx = sqlite3_db_mutex(db->handle);
+    sqlite3_mutex* mtx = sqlite3_db_mutex(baton->db->handle);
     sqlite3_mutex_enter(mtx);
 
     stmt->status = sqlite3_prepare_v2(
-        db->handle,
+        baton->db->handle,
         baton->sql.c_str(),
         baton->sql.size(),
         &stmt->handle,
@@ -146,7 +145,7 @@ int Statement::EIO_Prepare(eio_req *req) {
     );
 
     if (stmt->status != SQLITE_OK) {
-        stmt->message = std::string(sqlite3_errmsg(db->handle));
+        stmt->message = std::string(sqlite3_errmsg(baton->db->handle));
         stmt->handle = NULL;
     }
 
@@ -157,10 +156,7 @@ int Statement::EIO_Prepare(eio_req *req) {
 
 int Statement::EIO_AfterPrepare(eio_req *req) {
     HandleScope scope;
-    PrepareBaton* baton = static_cast<PrepareBaton*>(req->data);
-    Database* db = baton->db;
-    Statement* stmt = baton->stmt;
-
+    STATEMENT_INIT(PrepareBaton);
 
     if (stmt->status != SQLITE_OK) {
         Error(baton);
@@ -172,12 +168,10 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
             Local<Value> argv[] = { Local<Value>::New(Null()) };
             TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
         }
-        stmt->Process();
     }
 
-    db->Process();
-
-    delete baton;
+    STATEMENT_END();
+    baton->db->Process();
     return 0;
 }
 
@@ -230,11 +224,9 @@ void Statement::EIO_BeginBind(Baton* baton) {
 }
 
 int Statement::EIO_Bind(eio_req *req) {
-    BindBaton* baton = static_cast<BindBaton*>(req->data);
-    Statement* stmt = baton->stmt;
-    Database* db = stmt->db;
+    STATEMENT_INIT(BindBaton);
 
-    sqlite3_mutex* mtx = sqlite3_db_mutex(db->handle);
+    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
     sqlite3_mutex_enter(mtx);
 
     Result::Row::iterator it = baton->values.begin();
@@ -264,7 +256,7 @@ int Statement::EIO_Bind(eio_req *req) {
         }
 
         if (stmt->status != SQLITE_OK) {
-            stmt->message = std::string(sqlite3_errmsg(db->handle));
+            stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
             break;
         }
     }
@@ -276,8 +268,7 @@ int Statement::EIO_Bind(eio_req *req) {
 
 int Statement::EIO_AfterBind(eio_req *req) {
     HandleScope scope;
-    BindBaton* baton = static_cast<BindBaton*>(req->data);
-    Statement* stmt = baton->stmt;
+    STATEMENT_INIT(BindBaton);
 
     if (stmt->status != SQLITE_OK) {
         Error(baton);
@@ -290,10 +281,7 @@ int Statement::EIO_AfterBind(eio_req *req) {
         }
     }
 
-    stmt->locked = false;
-    stmt->Process();
-
-    delete baton;
+    STATEMENT_END();
     return 0;
 }
 
@@ -320,20 +308,18 @@ void Statement::EIO_BeginGet(Baton* baton) {
 }
 
 int Statement::EIO_Get(eio_req *req) {
-    RowBaton* baton = static_cast<RowBaton*>(req->data);
-    Statement* stmt = baton->stmt;
-    Database* db = stmt->db;
+    STATEMENT_INIT(RowBaton);
 
     if (stmt->status != SQLITE_DONE) {
         // In case preparing fails, we use a mutex to make sure we get the associated
         // error message.
-        sqlite3_mutex* mtx = sqlite3_db_mutex(db->handle);
+        sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
         sqlite3_mutex_enter(mtx);
 
         stmt->status = sqlite3_step(stmt->handle);
 
         if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
-            stmt->message = std::string(sqlite3_errmsg(db->handle));
+            stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
         }
 
         sqlite3_mutex_leave(mtx);
@@ -349,8 +335,7 @@ int Statement::EIO_Get(eio_req *req) {
 
 int Statement::EIO_AfterGet(eio_req *req) {
     HandleScope scope;
-    RowBaton* baton = static_cast<RowBaton*>(req->data);
-    Statement* stmt = baton->stmt;
+    STATEMENT_INIT(RowBaton);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton);
@@ -370,10 +355,50 @@ int Statement::EIO_AfterGet(eio_req *req) {
         }
     }
 
-    stmt->locked = false;
-    stmt->Process();
+    STATEMENT_END();
+    return 0;
+}
 
-    delete baton;
+Handle<Value> Statement::Reset(const Arguments& args) {
+    HandleScope scope;
+    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+
+    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
+
+    Baton* baton = new Baton(stmt, callback);
+    stmt->Schedule(EIO_BeginReset, baton);
+
+    return args.This();
+}
+
+void Statement::EIO_BeginReset(Baton* baton) {
+    assert(!baton->stmt->locked);
+    assert(!baton->stmt->finalized);
+    assert(baton->stmt->prepared);
+    baton->stmt->locked = true;
+    eio_custom(EIO_Reset, EIO_PRI_DEFAULT, EIO_AfterReset, baton);
+}
+
+int Statement::EIO_Reset(eio_req *req) {
+    STATEMENT_INIT(Baton);
+
+    sqlite3_reset(stmt->handle);
+    stmt->status = SQLITE_OK;
+
+    return 0;
+}
+
+int Statement::EIO_AfterReset(eio_req *req) {
+    HandleScope scope;
+    STATEMENT_INIT(Baton);
+
+    // Fire callbacks.
+    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+        Local<Value> argv[] = { Local<Value>::New(Null()) };
+        TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+    }
+
+    STATEMENT_END();
     return 0;
 }
 

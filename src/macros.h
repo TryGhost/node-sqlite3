@@ -143,5 +143,20 @@ const char* sqlite_code_string(int code);
         FatalException(try_catch);                                             \
     }                                                                          }
 
+#define EIO_DEFINITION(name)                                                   \
+    static Handle<Value> name(const Arguments& args);                          \
+    static void EIO_Begin##name(Baton* baton);                                 \
+    static int EIO_##name(eio_req *req);                                       \
+    static int EIO_After##name(eio_req *req);
+
+#define STATEMENT_INIT(type)                                                   \
+    type* baton = static_cast<type*>(req->data);                               \
+    Statement* stmt = baton->stmt;
+
+#define STATEMENT_END()                                                        \
+    stmt->locked = false;                                                      \
+    stmt->Process();                                                           \
+    delete baton;
+
 #endif
 

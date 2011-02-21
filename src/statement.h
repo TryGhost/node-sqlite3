@@ -143,22 +143,16 @@ public:
     }
 
 protected:
-    static Handle<Value> Bind(const Arguments& args);
-    static void EIO_BeginBind(Baton* baton);
-    static int EIO_Bind(eio_req *req);
-    static int EIO_AfterBind(eio_req *req);
-
-    static Handle<Value> Get(const Arguments& args);
-    static void EIO_BeginGet(Baton* baton);
-    static int EIO_Get(eio_req *req);
-    static int EIO_AfterGet(eio_req *req);
-
-    static void GetRow(Result::Row* row, sqlite3_stmt* stmt);
-    static Local<Array> RowToJS(Result::Row* row);
-
     static void EIO_BeginPrepare(Database::Baton* baton);
     static int EIO_Prepare(eio_req *req);
     static int EIO_AfterPrepare(eio_req *req);
+
+    EIO_DEFINITION(Bind);
+    EIO_DEFINITION(Get);
+    EIO_DEFINITION(Reset);
+
+    static void GetRow(Result::Row* row, sqlite3_stmt* stmt);
+    static Local<Array> RowToJS(Result::Row* row);
 
     void Schedule(EIO_Callback callback, Baton* baton);
     void Process();

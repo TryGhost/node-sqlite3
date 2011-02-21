@@ -4,7 +4,7 @@ var Step = require('step');
 
 exports['test simple prepared statement with invalid SQL'] = function(beforeExit) {
     var error = false;
-    var db = new sqlite3.Database(':memory:')
+    var db = new sqlite3.Database(':memory:');
     db.prepare('CRATE TALE foo text bar)', function(err, statement) {
         if (err && err.errno == sqlite3.ERROR &&
             err.message === 'SQLITE_ERROR: near "CRATE": syntax error') {
@@ -42,7 +42,7 @@ exports['test inserting and retrieving rows'] = function(beforeExit) {
     var retrieved = 0;
 
     // We insert and retrieve that many rows.
-    var count = 5000;
+    var count = 1000;
 
     Step(
         function() {
@@ -92,5 +92,37 @@ exports['test inserting and retrieving rows'] = function(beforeExit) {
     beforeExit(function() {
         assert.equal(count, inserted, "Didn't insert all rows");
         assert.equal(count, retrieved, "Didn't retrieve all rows");
-    })
+    });
+};
+
+exports['test retrieving reset() function'] = function(beforeExit) {
+    var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
+
+    var retrieved = 0;
+
+    Step(
+        function() {
+            var stmt = db.prepare("SELECT txt, num, flt, blb FROM foo ORDER BY num");
+
+            var group = this.group();
+            for (var i = 0; i < 10; i++) {
+                stmt.reset();
+                stmt.get(group());
+            }
+        },
+        function(err, rows) {
+            if (err) throw err;
+            for (var i = 0; i < rows.length; i++) {
+                assert.equal(rows[i][0], 'String 0');
+                assert.equal(rows[i][1], 0);
+                assert.equal(rows[i][2], 0.0);
+                assert.equal(rows[i][3], null);
+                retrieved++;
+            }
+        }
+    );
+
+    beforeExit(function() {
+        assert.equal(10, retrieved, "Didn't retrieve all rows");
+    });
 };
