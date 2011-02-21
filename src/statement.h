@@ -82,8 +82,6 @@ public:
     static struct Baton {
         Statement* stmt;
         Persistent<Function> callback;
-        int status;
-        std::string message;
 
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
@@ -126,6 +124,7 @@ public:
     Statement(Database* db_) : EventEmitter(),
         db(db_),
         handle(NULL),
+        status(SQLITE_OK),
         prepared(false),
         locked(false),
         finalized(false) {
@@ -162,6 +161,8 @@ protected:
     Database* db;
 
     sqlite3_stmt* handle;
+    int status;
+    std::string message;
 
     bool prepared;
     bool locked;

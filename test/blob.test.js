@@ -17,10 +17,7 @@ exports['Blob overflow test'] = function(beforeExit) {
     Step(
         function() {
             var next = this;
-            db.prepare('CREATE TABLE elmos (image BLOB);', function(err, statement) {
-                assert.ok(!err);
-                statement.step(next);
-            });
+            db.prepare('CREATE TABLE elmos (image BLOB);').run(next);
         },
         function() {
             var group = this.group();

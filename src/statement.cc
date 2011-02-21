@@ -69,15 +69,16 @@ void Statement::Schedule(EIO_Callback callback, Baton* baton) {
 }
 
 template <class T> void Statement::Error(T* baton) {
-    EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
+    Statement* stmt = baton->stmt;
+    EXCEPTION(String::New(stmt->message.c_str()), stmt->status, exception);
 
     if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
         Local<Value> argv[] = { exception };
-        TRY_CATCH_CALL(baton->stmt->handle_, baton->callback, 1, argv);
+        TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
     }
     else {
         Local<Value> argv[] = { String::NewSymbol("error"), exception };
-        EMIT_EVENT(baton->stmt->handle_, 2, argv);
+        EMIT_EVENT(stmt->handle_, 2, argv);
     }
 }
 
@@ -139,7 +140,6 @@ Handle<Value> Statement::New(const Arguments& args) {
 void Statement::EIO_BeginPrepare(Database::Baton* baton) {
     assert(baton->db->open);
     assert(!baton->db->locked);
-    fprintf(stderr, "Prepare started\n");
     eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, baton);
 }
 
@@ -153,7 +153,7 @@ int Statement::EIO_Prepare(eio_req *req) {
     sqlite3_mutex* mtx = sqlite3_db_mutex(db->handle);
     sqlite3_mutex_enter(mtx);
 
-    baton->status = sqlite3_prepare_v2(
+    stmt->status = sqlite3_prepare_v2(
         db->handle,
         baton->sql.c_str(),
         baton->sql.size(),
@@ -161,8 +161,8 @@ int Statement::EIO_Prepare(eio_req *req) {
         NULL
     );
 
-    if (baton->status != SQLITE_OK) {
-        baton->message = std::string(sqlite3_errmsg(db->handle));
+    if (stmt->status != SQLITE_OK) {
+        stmt->message = std::string(sqlite3_errmsg(db->handle));
         stmt->handle = NULL;
     }
 
@@ -178,7 +178,7 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     Statement* stmt = baton->stmt;
 
 
-    if (baton->status != SQLITE_OK) {
+    if (stmt->status != SQLITE_OK) {
         Error(baton);
         stmt->Finalize();
     }
@@ -253,22 +253,24 @@ int Statement::EIO_Run(eio_req *req) {
     Statement* stmt = baton->stmt;
     Database* db = stmt->db;
 
-    // In case preparing fails, we use a mutex to make sure we get the associated
-    // error message.
-    sqlite3_mutex* mtx = sqlite3_db_mutex(db->handle);
-    sqlite3_mutex_enter(mtx);
+    if (stmt->status != SQLITE_DONE) {
+        // In case preparing fails, we use a mutex to make sure we get the associated
+        // error message.
+        sqlite3_mutex* mtx = sqlite3_db_mutex(db->handle);
+        sqlite3_mutex_enter(mtx);
 
-    baton->status = sqlite3_step(stmt->handle);
+        stmt->status = sqlite3_step(stmt->handle);
 
-    if (!(baton->status == SQLITE_ROW || baton->status == SQLITE_DONE)) {
-        baton->message = std::string(sqlite3_errmsg(db->handle));
-    }
+        if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
+            stmt->message = std::string(sqlite3_errmsg(db->handle));
+        }
 
-    sqlite3_mutex_leave(mtx);
+        sqlite3_mutex_leave(mtx);
 
-    if (baton->status == SQLITE_ROW) {
-        // Acquire one result row before returning.
-        GetRow(&baton->row, stmt->handle);
+        if (stmt->status == SQLITE_ROW) {
+            // Acquire one result row before returning.
+            GetRow(&baton->row, stmt->handle);
+        }
     }
 
     return 0;
@@ -307,13 +309,13 @@ int Statement::EIO_AfterRun(eio_req *req) {
     RowBaton* baton = static_cast<RowBaton*>(req->data);
     Statement* stmt = baton->stmt;
 
-    if (baton->status != SQLITE_ROW && baton->status != SQLITE_DONE) {
+    if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton);
     }
     else {
         // Fire callbacks.
         if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
-            if (baton->status == SQLITE_ROW) {
+            if (stmt->status == SQLITE_ROW) {
                 // Create the result array from the data we acquired.
                 Local<Value> argv[] = { Local<Value>::New(Null()), RowToJS(&baton->row) };
                 TRY_CATCH_CALL(stmt->handle_, baton->callback, 2, argv);
@@ -357,7 +359,6 @@ void Statement::Finalize(Baton* baton) {
 void Statement::Finalize() {
     assert(!finalized);
     finalized = true;
-    fprintf(stderr, "Statement destruct\n");
     CleanQueue();
     // Finalize returns the status code of the last operation. We already fired
     // error events in case those failed.
