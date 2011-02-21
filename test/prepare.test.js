@@ -249,3 +249,21 @@ exports['test all() parameter binding'] = function(beforeExit) {
         assert.equal(count, retrieved, "Didn't retrieve all rows");
     });
 };
+
+
+exports['test all() without results'] = function(beforeExit) {
+    var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
+
+    var empty = false;
+
+    db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num > 5000")
+      .all(function(err, rows) {
+        if (err) throw err;
+        assert.ok(rows.length === 0);
+        empty = true;
+    });
+
+    beforeExit(function() {
+        assert.ok(empty, "Didn't retrieve an empty result set");
+    });
+};
