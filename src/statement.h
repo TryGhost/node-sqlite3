@@ -105,6 +105,12 @@ public:
         Data::Row row;
     };
 
+    static struct RowsBaton : Baton {
+        RowsBaton(Statement* stmt_, Handle<Function> cb_) :
+            Baton(stmt_, cb_) {}
+        Data::Rows rows;
+    };
+
     static struct PrepareBaton : Database::Baton {
         Statement* stmt;
         std::string sql;

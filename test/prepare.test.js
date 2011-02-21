@@ -128,7 +128,7 @@ exports['test retrieving reset() function'] = function(beforeExit) {
     });
 };
 
-exports['test multiple get() function binding'] = function(beforeExit) {
+exports['test multiple get() parameter binding'] = function(beforeExit) {
     var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
 
     var retrieved = 0;
@@ -161,7 +161,7 @@ exports['test multiple get() function binding'] = function(beforeExit) {
 };
 
 
-exports['test prepare() function binding'] = function(beforeExit) {
+exports['test prepare() parameter binding'] = function(beforeExit) {
     var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
 
     var retrieved = 0;
@@ -182,7 +182,7 @@ exports['test prepare() function binding'] = function(beforeExit) {
 };
 
 
-exports['test get() function binding'] = function(beforeExit) {
+exports['test get() parameter binding'] = function(beforeExit) {
     var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
 
     var retrieved = 0;
@@ -199,5 +199,53 @@ exports['test get() function binding'] = function(beforeExit) {
 
     beforeExit(function() {
         assert.equal(1, retrieved, "Didn't retrieve all rows");
+    });
+};
+
+exports['test all()'] = function(beforeExit) {
+    var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
+
+    var retrieved = 0;
+    var count = 1000;
+
+    db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num < ? ORDER BY num", count)
+      .all(function(err, rows) {
+        if (err) throw err;
+        for (var i = 0; i < rows.length; i++) {
+            assert.equal(rows[i][0], 'String ' + i);
+            assert.equal(rows[i][1], i);
+            assert.equal(rows[i][2], i * Math.PI);
+            assert.equal(rows[i][3], null);
+            retrieved++;
+        }
+    });
+
+    beforeExit(function() {
+        assert.equal(count, retrieved, "Didn't retrieve all rows");
+    });
+};
+
+
+
+exports['test all() parameter binding'] = function(beforeExit) {
+    var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
+
+    var retrieved = 0;
+    var count = 1000;
+
+    db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num < ? ORDER BY num")
+      .all(count, function(err, rows) {
+        if (err) throw err;
+        for (var i = 0; i < rows.length; i++) {
+            assert.equal(rows[i][0], 'String ' + i);
+            assert.equal(rows[i][1], i);
+            assert.equal(rows[i][2], i * Math.PI);
+            assert.equal(rows[i][3], null);
+            retrieved++;
+        }
+    });
+
+    beforeExit(function() {
+        assert.equal(count, retrieved, "Didn't retrieve all rows");
     });
 };

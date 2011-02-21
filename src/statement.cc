@@ -39,6 +39,7 @@ void Statement::Init(v8::Handle<Object> target) {
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "get", Get);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "run", Run);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "all", All);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "reset", Reset);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalize", Finalize);
 
@@ -446,6 +447,89 @@ int Statement::EIO_AfterRun(eio_req *req) {
     return 0;
 }
 
+Handle<Value> Statement::All(const Arguments& args) {
+    HandleScope scope;
+    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+
+    Baton* baton = stmt->Bind<RowsBaton>(args);
+    stmt->Schedule(EIO_BeginAll, baton);
+
+    return args.This();
+}
+
+void Statement::EIO_BeginAll(Baton* baton) {
+    assert(!baton->stmt->locked);
+    assert(!baton->stmt->finalized);
+    assert(baton->stmt->prepared);
+    baton->stmt->locked = true;
+    eio_custom(EIO_All, EIO_PRI_DEFAULT, EIO_AfterAll, baton);
+}
+
+int Statement::EIO_All(eio_req *req) {
+    STATEMENT_INIT(RowsBaton);
+
+    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
+    sqlite3_mutex_enter(mtx);
+
+    // Make sure that we also reset when there are no parameters.
+    if (!baton->parameters.size()) {
+        sqlite3_reset(stmt->handle);
+    }
+
+    if (stmt->Bind(baton->parameters)) {
+        while ((stmt->status = sqlite3_step(stmt->handle)) == SQLITE_ROW) {
+            Data::Row* row = new Data::Row();
+            GetRow(row, stmt->handle);
+            baton->rows.push_back(row);
+        }
+
+        if (stmt->status != SQLITE_DONE) {
+            stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+        }
+    }
+
+    sqlite3_mutex_leave(mtx);
+
+    return 0;
+}
+
+int Statement::EIO_AfterAll(eio_req *req) {
+    HandleScope scope;
+    STATEMENT_INIT(RowsBaton);
+
+    if (stmt->status != SQLITE_DONE) {
+        Error(baton);
+    }
+    else {
+        // Fire callbacks.
+        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+            if (baton->rows.size()) {
+                // Create the result array from the data we acquired.
+                Local<Array> result(Array::New(baton->rows.size()));
+                Data::Rows::const_iterator it = baton->rows.begin();
+                Data::Rows::const_iterator end = baton->rows.end();
+                for (int i = 0; it < end; it++, i++) {
+                    result->Set(i, RowToJS(*it));
+                }
+
+                Local<Value> argv[] = { Local<Value>::New(Null()), result };
+                TRY_CATCH_CALL(stmt->handle_, baton->callback, 2, argv);
+            }
+            else {
+                // There were no result rows.
+                Local<Value> argv[] = {
+                    Local<Value>::New(Null()),
+                    Local<Value>::New(Array::New(0))
+                };
+                TRY_CATCH_CALL(stmt->handle_, baton->callback, 2, argv);
+            }
+        }
+    }
+
+    STATEMENT_END();
+    return 0;
+}
+
 Handle<Value> Statement::Reset(const Arguments& args) {
     HandleScope scope;
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
@@ -492,8 +576,9 @@ int Statement::EIO_AfterReset(eio_req *req) {
 Local<Array> Statement::RowToJS(Data::Row* row) {
     Local<Array> result(Array::New(row->size()));
 
-    Data::Row::iterator it = row->begin();
-    for (int i = 0; it < row->end(); it++, i++) {
+    Data::Row::const_iterator it = row->begin();
+    Data::Row::const_iterator end = row->end();
+    for (int i = 0; it < end; it++, i++) {
         Data::Field* field = *it;
         switch (field->type) {
             case SQLITE_INTEGER: {
