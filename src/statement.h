@@ -151,7 +151,7 @@ protected:
     static void Finalize(Baton* baton);
     void Finalize();
 
-    template <class T> T* Bind(const Arguments& args);
+    template <class T> T* Bind(const Arguments& args, int start = 0);
     bool Bind(const Result::Row parameters);
 
     static void GetRow(Result::Row* row, sqlite3_stmt* stmt);

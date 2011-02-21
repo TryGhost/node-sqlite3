@@ -172,17 +172,17 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     return 0;
 }
 
-template <class T> T* Statement::Bind(const Arguments& args) {
+template <class T> T* Statement::Bind(const Arguments& args, int start) {
     int last = args.Length();
     Local<Function> callback;
-    if (last > 0 && args[last - 1]->IsFunction()) {
+    if (last > start && args[last - 1]->IsFunction()) {
         callback = Local<Function>::Cast(args[last - 1]);
         last--;
     }
 
     T* baton = new T(this, callback);
 
-    for (int i = 0; i < last; i++) {
+    for (int i = start; i < last; i++) {
         if (args[i]->IsString()) {
             String::Utf8Value val(args[i]->ToString());
             baton->parameters.push_back(new Result::Text(val.length(), *val));
