@@ -21,7 +21,8 @@
 #include "macros.h"
 #include "database.h"
 #include "statement.h"
-#include "demo.h"
+
+using namespace node_sqlite3;
 
 extern "C" void init (v8::Handle<Object> target) {
     Database::Init(target);

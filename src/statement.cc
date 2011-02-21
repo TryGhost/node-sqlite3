@@ -22,6 +22,8 @@
 #include "statement.h"
 #include "deferred_call.h"
 
+using namespace node_sqlite3;
+
 Persistent<FunctionTemplate> Statement::constructor_template;
 
 void Statement::Init(v8::Handle<Object> target) {
@@ -185,19 +187,19 @@ template <class T> T* Statement::Bind(const Arguments& args, int start) {
     for (int i = start; i < last; i++) {
         if (args[i]->IsString()) {
             String::Utf8Value val(args[i]->ToString());
-            baton->parameters.push_back(new Result::Text(val.length(), *val));
+            baton->parameters.push_back(new Data::Text(val.length(), *val));
         }
         else if (args[i]->IsInt32() || args[i]->IsUint32()) {
-            baton->parameters.push_back(new Result::Integer(args[i]->Int32Value()));
+            baton->parameters.push_back(new Data::Integer(args[i]->Int32Value()));
         }
         else if (args[i]->IsNumber()) {
-            baton->parameters.push_back(new Result::Float(args[i]->NumberValue()));
+            baton->parameters.push_back(new Data::Float(args[i]->NumberValue()));
         }
         else if (args[i]->IsBoolean()) {
-            baton->parameters.push_back(new Result::Integer(args[i]->BooleanValue() ? 1 : 0));
+            baton->parameters.push_back(new Data::Integer(args[i]->BooleanValue() ? 1 : 0));
         }
         else if (args[i]->IsNull()) {
-            baton->parameters.push_back(new Result::Null());
+            baton->parameters.push_back(new Data::Null());
         }
         else if (args[i]->IsUndefined()) {
             // Skip parameter position.
@@ -212,7 +214,7 @@ template <class T> T* Statement::Bind(const Arguments& args, int start) {
     return baton;
 }
 
-bool Statement::Bind(const Result::Row parameters) {
+bool Statement::Bind(const Data::Parameters parameters) {
     if (parameters.size() == 0) {
         return true;
     }
@@ -220,27 +222,27 @@ bool Statement::Bind(const Result::Row parameters) {
     sqlite3_reset(handle);
     sqlite3_clear_bindings(handle);
 
-    Result::Row::const_iterator it = parameters.begin();
-    Result::Row::const_iterator end = parameters.end();
+    Data::Parameters::const_iterator it = parameters.begin();
+    Data::Parameters::const_iterator end = parameters.end();
 
     // Note: bind parameters start with 1.
     for (int i = 1; it < end; it++, i++) {
-        Result::Field* field = *it;
+        Data::Field* field = *it;
         if (field == NULL) {
             continue;
         }
 
         switch (field->type) {
             case SQLITE_INTEGER: {
-                status = sqlite3_bind_int(handle, i, ((Result::Integer*)field)->value);
+                status = sqlite3_bind_int(handle, i, ((Data::Integer*)field)->value);
             } break;
             case SQLITE_FLOAT: {
-                status = sqlite3_bind_double(handle, i, ((Result::Float*)field)->value);
+                status = sqlite3_bind_double(handle, i, ((Data::Float*)field)->value);
             } break;
             case SQLITE_TEXT: {
                 status = sqlite3_bind_text(
-                    handle, i, ((Result::Text*)field)->value.c_str(),
-                    ((Result::Text*)field)->value.size(), SQLITE_TRANSIENT);
+                    handle, i, ((Data::Text*)field)->value.c_str(),
+                    ((Data::Text*)field)->value.size(), SQLITE_TRANSIENT);
             } break;
             // case SQLITE_BLOB: {
             //
@@ -487,24 +489,24 @@ int Statement::EIO_AfterReset(eio_req *req) {
     return 0;
 }
 
-Local<Array> Statement::RowToJS(Result::Row* row) {
+Local<Array> Statement::RowToJS(Data::Row* row) {
     Local<Array> result(Array::New(row->size()));
 
-    Result::Row::iterator it = row->begin();
+    Data::Row::iterator it = row->begin();
     for (int i = 0; it < row->end(); it++, i++) {
-        Result::Field* field = *it;
+        Data::Field* field = *it;
         switch (field->type) {
             case SQLITE_INTEGER: {
-                result->Set(i, Local<Integer>(Integer::New(((Result::Integer*)field)->value)));
+                result->Set(i, Local<Integer>(Integer::New(((Data::Integer*)field)->value)));
             } break;
             case SQLITE_FLOAT: {
-                result->Set(i, Local<Number>(Number::New(((Result::Float*)field)->value)));
+                result->Set(i, Local<Number>(Number::New(((Data::Float*)field)->value)));
             } break;
             case SQLITE_TEXT: {
-                result->Set(i, Local<String>(String::New(((Result::Text*)field)->value.c_str(), ((Result::Text*)field)->value.size())));
+                result->Set(i, Local<String>(String::New(((Data::Text*)field)->value.c_str(), ((Data::Text*)field)->value.size())));
             } break;
             // case SQLITE_BLOB: {
-            //     result->Set(i, Local<String>(String::New(((Result::Text*)field)->value.c_str())));
+            //     result->Set(i, Local<String>(String::New(((Data::Text*)field)->value.c_str())));
             // } break;
             case SQLITE_NULL: {
                 result->Set(i, Local<Value>::New(Null()));
@@ -515,30 +517,30 @@ Local<Array> Statement::RowToJS(Result::Row* row) {
     return result;
 }
 
-void Statement::GetRow(Result::Row* row, sqlite3_stmt* stmt) {
+void Statement::GetRow(Data::Row* row, sqlite3_stmt* stmt) {
     int rows = sqlite3_column_count(stmt);
 
     for (int i = 0; i < rows; i++) {
         int type = sqlite3_column_type(stmt, i);
         switch (type) {
             case SQLITE_INTEGER: {
-                row->push_back(new Result::Integer(sqlite3_column_int(stmt, i)));
+                row->push_back(new Data::Integer(sqlite3_column_int(stmt, i)));
             }   break;
             case SQLITE_FLOAT: {
-                row->push_back(new Result::Float(sqlite3_column_double(stmt, i)));
+                row->push_back(new Data::Float(sqlite3_column_double(stmt, i)));
             }   break;
             case SQLITE_TEXT: {
                 const char* text = (const char*)sqlite3_column_text(stmt, i);
                 int length = sqlite3_column_bytes(stmt, i);
-                row->push_back(new Result::Text(length, text));
+                row->push_back(new Data::Text(length, text));
             } break;
             case SQLITE_BLOB: {
                 const void* blob = sqlite3_column_blob(stmt, i);
                 int length = sqlite3_column_bytes(stmt, i);
-                row->push_back(new Result::Blob(length, blob));
+                row->push_back(new Data::Blob(length, blob));
             }   break;
             case SQLITE_NULL: {
-                row->push_back(new Result::Null());
+                row->push_back(new Data::Null());
             }   break;
             default:
                 assert(false);

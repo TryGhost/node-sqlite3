@@ -27,6 +27,8 @@
 using namespace v8;
 using namespace node;
 
+namespace node_sqlite3 {
+
 class Database;
 
 
@@ -121,5 +123,7 @@ protected:
 
     std::queue<Call*> queue;
 };
+
+}
 
 #endif

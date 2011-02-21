@@ -22,9 +22,7 @@
 #include "statement.h"
 #include "deferred_call.h"
 
-using namespace v8;
-using namespace node;
-
+using namespace node_sqlite3;
 
 Persistent<FunctionTemplate> Database::constructor_template;
 

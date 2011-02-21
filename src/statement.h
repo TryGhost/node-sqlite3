@@ -31,8 +31,9 @@
 using namespace v8;
 using namespace node;
 
+namespace node_sqlite3 {
 
-namespace Result {
+namespace Data {
     struct Field {
         Field(unsigned short _type = SQLITE_NULL) : type(_type) {}
         unsigned short type;
@@ -67,6 +68,8 @@ namespace Result {
 
     typedef Field Null;
     typedef std::vector<Field*> Row;
+    typedef Row Parameters;
+    typedef std::vector<Row*> Rows;
 }
 
 
@@ -82,7 +85,7 @@ public:
     static struct Baton {
         Statement* stmt;
         Persistent<Function> callback;
-        Result::Row parameters;
+        Data::Parameters parameters;
 
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
@@ -99,7 +102,7 @@ public:
     static struct RowBaton : Baton {
         RowBaton(Statement* stmt_, Handle<Function> cb_) :
             Baton(stmt_, cb_) {}
-        Result::Row row;
+        Data::Row row;
     };
 
     static struct PrepareBaton : Database::Baton {
@@ -145,6 +148,7 @@ protected:
     EIO_DEFINITION(Bind);
     EIO_DEFINITION(Get);
     EIO_DEFINITION(Run);
+    EIO_DEFINITION(All);
     EIO_DEFINITION(Reset);
 
     static Handle<Value> Finalize(const Arguments& args);
@@ -152,10 +156,10 @@ protected:
     void Finalize();
 
     template <class T> T* Bind(const Arguments& args, int start = 0);
-    bool Bind(const Result::Row parameters);
+    bool Bind(const Data::Parameters parameters);
 
-    static void GetRow(Result::Row* row, sqlite3_stmt* stmt);
-    static Local<Array> RowToJS(Result::Row* row);
+    static void GetRow(Data::Row* row, sqlite3_stmt* stmt);
+    static Local<Array> RowToJS(Data::Row* row);
     void Schedule(EIO_Callback callback, Baton* baton);
     void Process();
     void CleanQueue();
@@ -173,5 +177,7 @@ protected:
     bool finalized;
     std::queue<Call*> queue;
 };
+
+}
 
 #endif
