@@ -159,3 +159,23 @@ exports['test get() function binding'] = function(beforeExit) {
         assert.equal(10, retrieved, "Didn't retrieve all rows");
     });
 };
+
+
+exports['test prepare() function binding'] = function(beforeExit) {
+    var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
+
+    var retrieved = 0;
+
+    db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?", 10, 'String 10').get(function(err, row) {
+        if (err) throw err;
+        assert.equal(row[0], 'String 10');
+        assert.equal(row[1], 10);
+        assert.equal(row[2], 10 * Math.PI);
+        assert.equal(row[3], null);
+        retrieved++;
+    });
+
+    beforeExit(function() {
+        assert.equal(1, retrieved, "Didn't retrieve all rows");
+    });
+};

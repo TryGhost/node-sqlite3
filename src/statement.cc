@@ -93,19 +93,15 @@ Handle<Value> Statement::New(const Arguments& args) {
 
     if (length <= 0 || !Database::HasInstance(args[0])) {
         return ThrowException(Exception::TypeError(
-            String::New("First argument must be a Database object")));
+            String::New("Database object expected")));
     }
     else if (length <= 1 || !args[1]->IsString()) {
         return ThrowException(Exception::TypeError(
-            String::New("Second argument must be a SQL query")));
+            String::New("SQL query expected")));
     }
-    else if (length <= 2 || !args[2]->IsObject()) {
+    else if (length > 2 && !args[2]->IsUndefined() && !args[2]->IsFunction()) {
         return ThrowException(Exception::TypeError(
-            String::New("Third argument must be an array or object of parameters")));
-    }
-    else if (length > 3 && !args[3]->IsUndefined() && !args[3]->IsFunction()) {
-        return ThrowException(Exception::TypeError(
-            String::New("Fourth argument must be a function")));
+            String::New("Callback expected")));
     }
 
     Database* db = ObjectWrap::Unwrap<Database>(args[0]->ToObject());
@@ -115,7 +111,7 @@ Handle<Value> Statement::New(const Arguments& args) {
 
     Statement* stmt = new Statement(db);
     stmt->Wrap(args.This());
-    PrepareBaton* baton = new PrepareBaton(db, Local<Function>::Cast(args[3]), stmt);
+    PrepareBaton* baton = new PrepareBaton(db, Local<Function>::Cast(args[2]), stmt);
     baton->sql = std::string(*String::Utf8Value(sql));
     db->Schedule(EIO_BeginPrepare, baton, false);
 
