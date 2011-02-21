@@ -23,7 +23,7 @@ exports['test simple prepared statement'] = function(beforeExit) {
     var run = false;
     var db = new sqlite3.Database(':memory:');
     db.prepare("CREATE TABLE foo (text bar)")
-        .get(function(err) {
+        .run(function(err) {
             if (err) throw err;
             run = true;
         })
@@ -46,7 +46,7 @@ exports['test inserting and retrieving rows'] = function(beforeExit) {
 
     Step(
         function() {
-            db.prepare("CREATE TABLE foo (txt text, num int, flt float, blb blob)").get(this);
+            db.prepare("CREATE TABLE foo (txt text, num int, flt float, blb blob)").run(this);
         },
         function(err) {
             if (err) throw err;
@@ -58,7 +58,7 @@ exports['test inserting and retrieving rows'] = function(beforeExit) {
                       i,
                       i * Math.PI
                       // null (SQLite sets this implicitly)
-                ).get(group());
+                ).run(group());
             }
         },
         function(err, rows) {
@@ -116,6 +116,38 @@ exports['test retrieving reset() function'] = function(beforeExit) {
                 assert.equal(rows[i][0], 'String 0');
                 assert.equal(rows[i][1], 0);
                 assert.equal(rows[i][2], 0.0);
+                assert.equal(rows[i][3], null);
+                retrieved++;
+            }
+        }
+    );
+
+    beforeExit(function() {
+        assert.equal(10, retrieved, "Didn't retrieve all rows");
+    });
+};
+
+exports['test get() function binding'] = function(beforeExit) {
+    var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
+
+    var retrieved = 0;
+
+    Step(
+        function() {
+            var stmt = db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num = ?");
+
+            var group = this.group();
+            for (var i = 0; i < 10; i++) {
+                stmt.get(i * 10 + 1, group());
+            }
+        },
+        function(err, rows) {
+            if (err) throw err;
+            for (var i = 0; i < rows.length; i++) {
+                var val = i * 10 + 1;
+                assert.equal(rows[i][0], 'String ' + val);
+                assert.equal(rows[i][1], val);
+                assert.equal(rows[i][2], val * Math.PI);
                 assert.equal(rows[i][3], null);
                 retrieved++;
             }

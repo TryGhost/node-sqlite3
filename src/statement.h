@@ -82,6 +82,7 @@ public:
     static struct Baton {
         Statement* stmt;
         Persistent<Function> callback;
+        Result::Row parameters;
 
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
@@ -93,12 +94,6 @@ public:
             ev_unref(EV_DEFAULT_UC);
             callback.Dispose();
         }
-    };
-
-    static struct BindBaton : Baton {
-        BindBaton(Statement* stmt_, Handle<Function> cb_) :
-            Baton(stmt_, cb_) {}
-        Result::Row values;
     };
 
     static struct RowBaton : Baton {
@@ -149,19 +144,23 @@ protected:
 
     EIO_DEFINITION(Bind);
     EIO_DEFINITION(Get);
+    EIO_DEFINITION(Run);
     EIO_DEFINITION(Reset);
-
-    static void GetRow(Result::Row* row, sqlite3_stmt* stmt);
-    static Local<Array> RowToJS(Result::Row* row);
-
-    void Schedule(EIO_Callback callback, Baton* baton);
-    void Process();
-    void CleanQueue();
 
     static Handle<Value> Finalize(const Arguments& args);
     static void Finalize(Baton* baton);
-    template <class T> static void Error(T* baton);
     void Finalize();
+
+    template <class T> T* Bind(const Arguments& args);
+    bool Bind(const Result::Row parameters);
+
+    static void GetRow(Result::Row* row, sqlite3_stmt* stmt);
+    static Local<Array> RowToJS(Result::Row* row);
+    void Schedule(EIO_Callback callback, Baton* baton);
+    void Process();
+    void CleanQueue();
+    template <class T> static void Error(T* baton);
+
 protected:
     Database* db;
 

@@ -36,6 +36,7 @@ void Statement::Init(v8::Handle<Object> target) {
 
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "get", Get);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "run", Run);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "reset", Reset);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalize", Finalize);
 
@@ -175,10 +176,7 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     return 0;
 }
 
-Handle<Value> Statement::Bind(const Arguments& args) {
-    HandleScope scope;
-    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
-
+template <class T> T* Statement::Bind(const Arguments& args) {
     int last = args.Length();
     Local<Function> callback;
     if (last > 0 && args[last - 1]->IsFunction()) {
@@ -186,33 +184,97 @@ Handle<Value> Statement::Bind(const Arguments& args) {
         last--;
     }
 
-    BindBaton* baton = new BindBaton(stmt, callback);
+    T* baton = new T(this, callback);
 
     for (int i = 0; i < last; i++) {
         if (args[i]->IsString()) {
             String::Utf8Value val(args[i]->ToString());
-            baton->values.push_back(new Result::Text(val.length(), *val));
+            baton->parameters.push_back(new Result::Text(val.length(), *val));
         }
         else if (args[i]->IsInt32() || args[i]->IsUint32()) {
-            baton->values.push_back(new Result::Integer(args[i]->Int32Value()));
+            baton->parameters.push_back(new Result::Integer(args[i]->Int32Value()));
         }
         else if (args[i]->IsNumber()) {
-            baton->values.push_back(new Result::Float(args[i]->NumberValue()));
+            baton->parameters.push_back(new Result::Float(args[i]->NumberValue()));
         }
         else if (args[i]->IsBoolean()) {
-            baton->values.push_back(new Result::Integer(args[i]->BooleanValue() ? 1 : 0));
+            baton->parameters.push_back(new Result::Integer(args[i]->BooleanValue() ? 1 : 0));
         }
-        else if (args[i]->IsNull() || args[i]->IsUndefined()) {
-            baton->values.push_back(new Result::Null());
+        else if (args[i]->IsNull()) {
+            baton->parameters.push_back(new Result::Null());
+        }
+        else if (args[i]->IsUndefined()) {
+            // Skip parameter position.
+            baton->parameters.push_back(NULL);
         }
         else {
-            return ThrowException(Exception::Error(String::New("Data type is not supported")));
+            delete baton;
+            return NULL;
         }
     }
 
-    stmt->Schedule(EIO_BeginBind, baton);
+    return baton;
+}
 
-    return args.This();
+bool Statement::Bind(const Result::Row parameters) {
+    if (parameters.size() == 0) {
+        return true;
+    }
+
+    sqlite3_reset(handle);
+    sqlite3_clear_bindings(handle);
+
+    Result::Row::const_iterator it = parameters.begin();
+    Result::Row::const_iterator end = parameters.end();
+
+    // Note: bind parameters start with 1.
+    for (int i = 1; it < end; it++, i++) {
+        Result::Field* field = *it;
+        if (field == NULL) {
+            continue;
+        }
+
+        switch (field->type) {
+            case SQLITE_INTEGER: {
+                status = sqlite3_bind_int(handle, i, ((Result::Integer*)field)->value);
+            } break;
+            case SQLITE_FLOAT: {
+                status = sqlite3_bind_double(handle, i, ((Result::Float*)field)->value);
+            } break;
+            case SQLITE_TEXT: {
+                status = sqlite3_bind_text(
+                    handle, i, ((Result::Text*)field)->value.c_str(),
+                    ((Result::Text*)field)->value.size(), SQLITE_TRANSIENT);
+            } break;
+            // case SQLITE_BLOB: {
+            //
+            // } break;
+            case SQLITE_NULL: {
+                status = sqlite3_bind_null(handle, i);
+            } break;
+        }
+
+        if (status != SQLITE_OK) {
+            message = std::string(sqlite3_errmsg(db->handle));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+Handle<Value> Statement::Bind(const Arguments& args) {
+    HandleScope scope;
+    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+
+    Baton* baton = stmt->Bind<Baton>(args);
+    if (baton == NULL) {
+        return ThrowException(Exception::Error(String::New("Data type is not supported")));
+    }
+    else {
+        stmt->Schedule(EIO_BeginBind, baton);
+        return args.This();
+    }
 }
 
 void Statement::EIO_BeginBind(Baton* baton) {
@@ -224,43 +286,11 @@ void Statement::EIO_BeginBind(Baton* baton) {
 }
 
 int Statement::EIO_Bind(eio_req *req) {
-    STATEMENT_INIT(BindBaton);
+    STATEMENT_INIT(Baton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
     sqlite3_mutex_enter(mtx);
-
-    Result::Row::iterator it = baton->values.begin();
-    // Note: bind parameters start with 1.
-    for (int i = 1; it < baton->values.end(); it++, i++) {
-        Result::Field* field = *it;
-        switch (field->type) {
-            case SQLITE_INTEGER: {
-                stmt->status = sqlite3_bind_int(stmt->handle, i,
-                    ((Result::Integer*)field)->value);
-            } break;
-            case SQLITE_FLOAT: {
-                stmt->status = sqlite3_bind_double(stmt->handle, i,
-                    ((Result::Float*)field)->value);
-            } break;
-            case SQLITE_TEXT: {
-                stmt->status = sqlite3_bind_text(
-                    stmt->handle, i, ((Result::Text*)field)->value.c_str(),
-                    ((Result::Text*)field)->value.size(), SQLITE_TRANSIENT);
-            } break;
-            // case SQLITE_BLOB: {
-            //
-            // } break;
-            case SQLITE_NULL: {
-                stmt->status = sqlite3_bind_null(stmt->handle, i);
-            } break;
-        }
-
-        if (stmt->status != SQLITE_OK) {
-            stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
-            break;
-        }
-    }
-
+    stmt->Bind(baton->parameters);
     sqlite3_mutex_leave(mtx);
 
     return 0;
@@ -268,7 +298,7 @@ int Statement::EIO_Bind(eio_req *req) {
 
 int Statement::EIO_AfterBind(eio_req *req) {
     HandleScope scope;
-    STATEMENT_INIT(BindBaton);
+    STATEMENT_INIT(Baton);
 
     if (stmt->status != SQLITE_OK) {
         Error(baton);
@@ -291,9 +321,7 @@ Handle<Value> Statement::Get(const Arguments& args) {
     HandleScope scope;
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
-    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
-
-    RowBaton* baton = new RowBaton(stmt, callback);
+    Baton* baton = stmt->Bind<RowBaton>(args);
     stmt->Schedule(EIO_BeginGet, baton);
 
     return args.This();
@@ -311,15 +339,15 @@ int Statement::EIO_Get(eio_req *req) {
     STATEMENT_INIT(RowBaton);
 
     if (stmt->status != SQLITE_DONE) {
-        // In case preparing fails, we use a mutex to make sure we get the associated
-        // error message.
         sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
         sqlite3_mutex_enter(mtx);
 
-        stmt->status = sqlite3_step(stmt->handle);
+        if (stmt->Bind(baton->parameters)) {
+            stmt->status = sqlite3_step(stmt->handle);
 
-        if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
-            stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+            if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
+                stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+            }
         }
 
         sqlite3_mutex_leave(mtx);
@@ -352,6 +380,64 @@ int Statement::EIO_AfterGet(eio_req *req) {
                 Local<Value> argv[] = { Local<Value>::New(Null()) };
                 TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
             }
+        }
+    }
+
+    STATEMENT_END();
+    return 0;
+}
+
+Handle<Value> Statement::Run(const Arguments& args) {
+    HandleScope scope;
+    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+
+    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
+
+    Baton* baton = new Baton(stmt, callback);
+    stmt->Schedule(EIO_BeginRun, baton);
+
+    return args.This();
+}
+
+void Statement::EIO_BeginRun(Baton* baton) {
+    assert(!baton->stmt->locked);
+    assert(!baton->stmt->finalized);
+    assert(baton->stmt->prepared);
+    baton->stmt->locked = true;
+    eio_custom(EIO_Run, EIO_PRI_DEFAULT, EIO_AfterRun, baton);
+}
+
+int Statement::EIO_Run(eio_req *req) {
+    STATEMENT_INIT(Baton);
+
+    sqlite3_reset(stmt->handle);
+
+    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
+    sqlite3_mutex_enter(mtx);
+
+    stmt->status = sqlite3_step(stmt->handle);
+
+    if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
+        stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+    }
+
+    sqlite3_mutex_leave(mtx);
+
+    return 0;
+}
+
+int Statement::EIO_AfterRun(eio_req *req) {
+    HandleScope scope;
+    STATEMENT_INIT(Baton);
+
+    if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
+        Error(baton);
+    }
+    else {
+        // Fire callbacks.
+        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+            Local<Value> argv[] = { Local<Value>::New(Null()) };
+            TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
         }
     }
 
