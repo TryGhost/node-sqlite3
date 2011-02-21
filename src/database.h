@@ -91,7 +91,6 @@ protected:
 
     ~Database() {
         assert(handle == NULL);
-        fprintf(stderr, "Deleted Database\n");
     }
 
     static Handle<Value> New(const Arguments& args);

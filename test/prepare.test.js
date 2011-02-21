@@ -250,7 +250,6 @@ exports['test all() parameter binding'] = function(beforeExit) {
     });
 };
 
-
 exports['test all() without results'] = function(beforeExit) {
     var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
 
@@ -265,5 +264,138 @@ exports['test all() without results'] = function(beforeExit) {
 
     beforeExit(function() {
         assert.ok(empty, "Didn't retrieve an empty result set");
+    });
+};
+
+exports['test high concurrency'] = function(beforeExit) {
+    var db = new sqlite3.Database(':memory:');
+
+    function randomString() {
+        var str = '';
+        for (var i = Math.random() * 300; i > 0; i--) {
+            str += String.fromCharCode(Math.floor(Math.random() * 256));
+        }
+        return str;
+    };
+
+    // Generate random data.
+    var data = [];
+    var length = Math.floor(Math.random() * 1000) + 200;
+    for (var i = 0; i < length; i++) {
+        data.push([ randomString(), i, i * Math.random(), null ]);
+    }
+
+    var inserted = false;
+    var retrieved = 0;
+
+    Step(
+        function() {
+            db.prepare("CREATE TABLE foo (txt text, num int, flt float, blb blob)").run(this);
+        },
+        function(err) {
+            if (err) throw err;
+            var group = this.group();
+            for (var i = 0; i < data.length; i++) {
+                var stmt = db.prepare("INSERT INTO foo VALUES(?, ?, ?, ?)");
+                stmt.run(data[i][0], data[i][1], data[i][2], data[i][3], group());
+            }
+        },
+        function(err, result) {
+            if (err) throw err;
+            assert.ok(result.length === length, 'Invalid length');
+            inserted = true;
+
+            db.prepare("SELECT txt, num, flt, blb FROM foo")
+              .all(function(err, rows) {
+                 if (err) throw err;
+
+                 for (var i = 0; i < rows.length; i++) {
+                     assert.ok(data[rows[i][1]] !== true);
+
+                     assert.equal(rows[i][0], data[rows[i][1]][0]);
+                     assert.equal(rows[i][1], data[rows[i][1]][1]);
+                     assert.equal(rows[i][2], data[rows[i][1]][2]);
+                     assert.equal(rows[i][3], data[rows[i][1]][3]);
+
+                     // Mark the data row as already retrieved.
+                     data[rows[i][1]] = true;
+                     retrieved++;
+                 }
+            });
+        }
+    );
+
+    beforeExit(function() {
+        assert.ok(inserted);
+    });
+};
+
+exports['test Database#get()'] = function(beforeExit) {
+    var db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY);
+
+    var retrieved = 0;
+
+    db.get("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?", 10, 'String 10', function(err, row) {
+        if (err) throw err;
+        assert.equal(row[0], 'String 10');
+        assert.equal(row[1], 10);
+        assert.equal(row[2], 10 * Math.PI);
+        assert.equal(row[3], null);
+        retrieved++;
+    });
+
+    beforeExit(function() {
+        assert.equal(1, retrieved, "Didn't retrieve all rows");
+    });
+};
+
+exports['test Database#run() and Database#all()'] = function(beforeExit) {
+    var db = new sqlite3.Database(':memory:');
+
+    var inserted = 0;
+    var retrieved = 0;
+
+    // We insert and retrieve that many rows.
+    var count = 1000;
+
+    Step(
+        function() {
+            db.run("CREATE TABLE foo (txt text, num int, flt float, blb blob)", this);
+        },
+        function(err) {
+            if (err) throw err;
+            var group = this.group();
+            for (var i = 0; i < count; i++) {
+                db.run("INSERT INTO foo VALUES(?, ?, ?, ?)",
+                    'String ' + i,
+                    i,
+                    i * Math.PI,
+                    // null (SQLite sets this implicitly)
+                    group()
+                 );
+            }
+        },
+        function(err, rows) {
+            if (err) throw err;
+            inserted += rows.length;
+            db.all("SELECT txt, num, flt, blb FROM foo ORDER BY num", this)
+        },
+        function(err, rows) {
+            if (err) throw err;
+            assert.equal(count, rows.length, "Couldn't retrieve all rows");
+
+            for (var i = 0; i < count; i++) {
+                assert.equal(rows[i][0], 'String ' + i);
+                assert.equal(rows[i][1], i);
+                assert.equal(rows[i][2], i * Math.PI);
+                assert.equal(rows[i][3], null);
+                retrieved++;
+            }
+        }
+    );
+
+    beforeExit(function() {
+        assert.equal(count, inserted, "Didn't insert all rows");
+        assert.equal(count, retrieved, "Didn't retrieve all rows");
     });
 };
