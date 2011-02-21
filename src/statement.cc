@@ -203,7 +203,7 @@ Handle<Value> Statement::Run(const Arguments& args) {
 
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
-    Baton* baton = new Baton(stmt, callback);
+    RowBaton* baton = new RowBaton(stmt, callback);
     stmt->Schedule(EIO_BeginRun, baton);
 
     return args.This();
@@ -217,12 +217,41 @@ void Statement::EIO_BeginRun(Baton* baton) {
     eio_custom(EIO_Run, EIO_PRI_DEFAULT, EIO_AfterRun, baton);
 }
 
+void Statement::GetRow(Result::Row* row, sqlite3_stmt* stmt) {
+    int rows = sqlite3_column_count(stmt);
+
+    for (int i = 0; i < rows; i++) {
+        int type = sqlite3_column_type(stmt, i);
+        switch (type) {
+            case SQLITE_INTEGER: {
+                row->push_back(new Result::Integer(sqlite3_column_int(stmt, i)));
+            }   break;
+            case SQLITE_FLOAT: {
+                row->push_back(new Result::Float(sqlite3_column_double(stmt, i)));
+            }   break;
+            case SQLITE_TEXT: {
+                const char* text = (const char*)sqlite3_column_text(stmt, i);
+                int length = sqlite3_column_bytes(stmt, i);
+                row->push_back(new Result::Text(length, text));
+            } break;
+            case SQLITE_BLOB: {
+                const void* blob = sqlite3_column_blob(stmt, i);
+                int length = sqlite3_column_bytes(stmt, i);
+                row->push_back(new Result::Blob(length, blob));
+            }   break;
+            case SQLITE_NULL: {
+                row->push_back(new Result::Null());
+            }   break;
+            default:
+                assert(false);
+        }
+    }
+}
+
 int Statement::EIO_Run(eio_req *req) {
-    Baton* baton = static_cast<Baton*>(req->data);
+    RowBaton* baton = static_cast<RowBaton*>(req->data);
     Statement* stmt = baton->stmt;
     Database* db = stmt->db;
-
-    fprintf(stderr, "calling run\n");
 
     // In case preparing fails, we use a mutex to make sure we get the associated
     // error message.
@@ -238,27 +267,44 @@ int Statement::EIO_Run(eio_req *req) {
     sqlite3_mutex_leave(mtx);
 
     if (baton->status == SQLITE_ROW) {
-        Locker lock;
-        HandleScope scope;
-    
-        Local<Value> argv[] = { Local<Value>::New(Null()) };
-        for (int i = 0; i < 10; i++) {
-            if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
-                TryCatch try_catch;
-                baton->callback->Call(baton->stmt->handle_, 1, argv);
-                if (try_catch.HasCaught()) {
-                    FatalException(try_catch);
-                }
-            }
-        }
+        // Acquire one result row before returning.
+        GetRow(&baton->row, stmt->handle);
     }
 
     return 0;
 }
 
+Local<Array> Statement::RowToJS(Result::Row* row) {
+    Local<Array> result(Array::New(row->size()));
+
+    Result::Row::iterator it = row->begin();
+    for (int i = 0; it < row->end(); it++, i++) {
+        Result::Field* field = *it;
+        switch (field->type) {
+            case SQLITE_INTEGER: {
+                result->Set(i, Local<Integer>(Integer::New(((Result::Integer*)field)->value)));
+            } break;
+            case SQLITE_FLOAT: {
+                result->Set(i, Local<Number>(Number::New(((Result::Float*)field)->value)));
+            } break;
+            case SQLITE_TEXT: {
+                result->Set(i, Local<String>(String::New(((Result::Text*)field)->value.c_str(), ((Result::Text*)field)->value.size())));
+            } break;
+            // case SQLITE_BLOB: {
+            //     result->Set(i, Local<String>(String::New(((Result::Text*)field)->value.c_str())));
+            // } break;
+            case SQLITE_NULL: {
+                result->Set(i, Local<Value>::New(Null()));
+            } break;
+        }
+    }
+
+    return result;
+}
+
 int Statement::EIO_AfterRun(eio_req *req) {
     HandleScope scope;
-    Baton* baton = static_cast<Baton*>(req->data);
+    RowBaton* baton = static_cast<RowBaton*>(req->data);
     Statement* stmt = baton->stmt;
 
     if (baton->status != SQLITE_ROW && baton->status != SQLITE_DONE) {
@@ -267,8 +313,15 @@ int Statement::EIO_AfterRun(eio_req *req) {
     else {
         // Fire callbacks.
         if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
-            Local<Value> argv[] = { Local<Value>::New(Null()) };
-            TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+            if (baton->status == SQLITE_ROW) {
+                // Create the result array from the data we acquired.
+                Local<Value> argv[] = { Local<Value>::New(Null()), RowToJS(&baton->row) };
+                TRY_CATCH_CALL(stmt->handle_, baton->callback, 2, argv);
+            }
+            else {
+                Local<Value> argv[] = { Local<Value>::New(Null()) };
+                TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+            }
         }
     }
 

@@ -21,13 +21,56 @@
 
 #include "database.h"
 
+#include <typeinfo>
 #include <string>
 #include <queue>
+#include <vector>
 
 #include <sqlite3.h>
 
 using namespace v8;
 using namespace node;
+
+
+namespace Result {
+    struct Field {
+        Field(unsigned short _type = SQLITE_NULL) : type(_type) {}
+        unsigned short type;
+    };
+
+    struct Integer : Field {
+        Integer(int val) : Field(SQLITE_INTEGER), value(val) {}
+        int value;
+    };
+
+    struct Float : Field {
+        Float(double val) : Field(SQLITE_FLOAT), value(val) {}
+        double value;
+    };
+
+    struct Text : Field {
+        Text(size_t len, const char* val) : Field(SQLITE_TEXT), value(val, len) {}
+        std::string value;
+    };
+
+    struct Blob : Field {
+        Blob(size_t len, const void* val) : Field(SQLITE_BLOB), length(len) {
+            value = malloc(len);
+            memcpy(value, val, len);
+        }
+        ~Blob() {
+            free(value);
+        }
+        int length;
+        void* value;
+    };
+
+    typedef Field Null;
+    typedef std::vector<Field*> Row;
+}
+
+
+
 
 class Statement : public EventEmitter {
 public:
@@ -52,6 +95,12 @@ public:
             ev_unref(EV_DEFAULT_UC);
             callback.Dispose();
         }
+    };
+
+    static struct RowBaton : Baton {
+        RowBaton(Statement* stmt_, Handle<Function> cb_) :
+            Baton(stmt_, cb_) {}
+        Result::Row row;
     };
 
     static struct PrepareBaton : Database::Baton {
@@ -93,6 +142,9 @@ protected:
     static void EIO_BeginRun(Baton* baton);
     static int EIO_Run(eio_req *req);
     static int EIO_AfterRun(eio_req *req);
+
+    static void GetRow(Result::Row* row, sqlite3_stmt* stmt);
+    static Local<Array> RowToJS(Result::Row* row);
 
     static void EIO_BeginPrepare(Database::Baton* baton);
     static int EIO_Prepare(eio_req *req);
