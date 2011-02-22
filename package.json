@@ -1,25 +1,25 @@
 {
-    "name": "sqlite",
-    "description": "SQLite3 bindings for Node",
+    "name": "sqlite3",
+    "description": "Asynchronous, non-blocking SQLite3 bindings",
     "version": "1.1.0",
     "homepage": "http://github.com/developmentseed/node-sqlite3",
-    "author": "Orlando Vazquez <ovazquez@gmail.com>",
+    "author": "Konstantin Käfer <kkaefer@gmail.com>",
     "contributors": [
+        "Orlando Vazquez <ovazquez@gmail.com>"
         "Artem Kustikov",
         "Eric Fredricksen",
         "John Wright",
         "Ryan Dahl",
         "Will White",
-        "Tom MacWright",
-        "Konstantin Käfer"
+        "Tom MacWright"
     ],
     "repository": {
         "type": "git",
-        "url": "http://github.com/orlandov/node-sqlite.git"
+        "url": "git://github.com/developmentseed/node-sqlite3.git"
     },
     "engines": {
-        "node": ">=0.2.0"
+        "node": ">=0.4.0"
     },
     "licenses": [{ "type": "BSD" }],
-    "main": "./sqlite3"
+    "main": "./lib/sqlite3"
 }
