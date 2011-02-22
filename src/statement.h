@@ -21,31 +21,31 @@ namespace node_sqlite3 {
 
 namespace Data {
     struct Field {
-        Field(unsigned short _type = SQLITE_NULL) : type(_type) {}
+        inline Field(unsigned short _type = SQLITE_NULL) : type(_type) {}
         unsigned short type;
     };
 
     struct Integer : Field {
-        Integer(int val) : Field(SQLITE_INTEGER), value(val) {}
+        inline Integer(int val) : Field(SQLITE_INTEGER), value(val) {}
         int value;
     };
 
     struct Float : Field {
-        Float(double val) : Field(SQLITE_FLOAT), value(val) {}
+        inline Float(double val) : Field(SQLITE_FLOAT), value(val) {}
         double value;
     };
 
     struct Text : Field {
-        Text(size_t len, const char* val) : Field(SQLITE_TEXT), value(val, len) {}
+        inline Text(size_t len, const char* val) : Field(SQLITE_TEXT), value(val, len) {}
         std::string value;
     };
 
     struct Blob : Field {
-        Blob(size_t len, const void* val) : Field(SQLITE_BLOB), length(len) {
+        inline Blob(size_t len, const void* val) : Field(SQLITE_BLOB), length(len) {
             value = (char*)malloc(len);
             memcpy(value, val, len);
         }
-        ~Blob() {
+        inline ~Blob() {
             free(value);
         }
         int length;
@@ -54,8 +54,24 @@ namespace Data {
 
     typedef Field Null;
     typedef std::vector<Field*> Row;
-    typedef Row Parameters;
     typedef std::vector<Row*> Rows;
+
+
+    struct Parameter {
+        unsigned short position;
+        std::string name;
+        Field* field;
+
+        inline Parameter(unsigned short pos_, Field* field_) : position(pos_), field(field_) {}
+        inline Parameter(const char* name_, Field* field_) : position(0), name(name_), field(field_) {}
+        inline ~Parameter() {
+            if (field) {
+                delete field;
+            }
+        }
+    };
+
+    typedef std::vector<Parameter*> Parameters;
 }
 
 
@@ -74,6 +90,10 @@ public:
         Data::Parameters parameters;
 
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
+            Data::Parameters::const_iterator it = parameters.begin();
+            Data::Parameters::const_iterator end = parameters.end();
+            for (; it < end; it++) delete *it;
+
             stmt->Ref();
             ev_ref(EV_DEFAULT_UC);
             callback = Persistent<Function>::New(cb_);
@@ -177,6 +197,7 @@ protected:
     static void Finalize(Baton* baton);
     void Finalize();
 
+    Data::Field* BindParameter(const Handle<Value> source);
     template <class T> T* Bind(const Arguments& args, int start = 0);
     bool Bind(const Data::Parameters parameters);
 

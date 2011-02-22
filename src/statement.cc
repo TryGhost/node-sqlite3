@@ -162,6 +162,38 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     return 0;
 }
 
+inline Data::Field* Statement::BindParameter(const Handle<Value> source) {
+    if (source->IsString() || source->IsRegExp()) {
+        String::Utf8Value val(source->ToString());
+        return new Data::Text(val.length(), *val);
+    }
+    else if (source->IsInt32()) {
+        return new Data::Integer(source->Int32Value());
+    }
+    else if (source->IsNumber()) {
+        return new Data::Float(source->NumberValue());
+    }
+    else if (source->IsBoolean()) {
+        return new Data::Integer(source->BooleanValue() ? 1 : 0);
+    }
+    else if (source->IsNull()) {
+        return new Data::Null();
+    }
+    else if (Buffer::HasInstance(source)) {
+        Local<Object> buffer = source->ToObject();
+        return new Data::Blob(Buffer::Length(buffer), Buffer::Data(buffer));
+    }
+    else if (source->IsDate()) {
+        return new Data::Float(source->NumberValue());
+    }
+    else if (source->IsUndefined()) {
+        return NULL;
+    }
+    else {
+        return NULL;
+    }
+}
+
 template <class T> T* Statement::Bind(const Arguments& args, int start) {
     int last = args.Length();
     Local<Function> callback;
@@ -172,33 +204,46 @@ template <class T> T* Statement::Bind(const Arguments& args, int start) {
 
     T* baton = new T(this, callback);
 
-    for (int i = start; i < last; i++) {
-        if (args[i]->IsString() || args[i]->IsRegExp()) {
-            String::Utf8Value val(args[i]->ToString());
-            baton->parameters.push_back(new Data::Text(val.length(), *val));
+    if (start < last) {
+        if (args[start]->IsArray()) {
+            Local<Array> array = Local<Array>::Cast(args[start]);
+            int length = array->Length();
+            // Note: bind parameters start with 1.
+            for (int i = 0, pos = 1; i < length; i++, pos++) {
+                baton->parameters.push_back(
+                    new Data::Parameter(pos, BindParameter(array->Get(i))));
+            }
         }
-        else if (args[i]->IsInt32()) {
-            baton->parameters.push_back(new Data::Integer(args[i]->Int32Value()));
+        else if (!args[start]->IsObject() || args[start]->IsRegExp() || args[start]->IsDate()) {
+            // Parameters directly in array.
+            // Note: bind parameters start with 1.
+            for (int i = start, pos = 1; i < last; i++, pos++) {
+                baton->parameters.push_back(
+                    new Data::Parameter(pos, BindParameter(args[i])));
+            }
         }
-        else if (args[i]->IsNumber() || args[i]->IsDate()) {
-            baton->parameters.push_back(new Data::Float(args[i]->NumberValue()));
-        }
-        else if (args[i]->IsBoolean()) {
-            baton->parameters.push_back(new Data::Integer(args[i]->BooleanValue() ? 1 : 0));
-        }
-        else if (args[i]->IsNull()) {
-            baton->parameters.push_back(new Data::Null());
-        }
-        else if (Buffer::HasInstance(args[i])) {
-            Local<Object> buffer = args[i]->ToObject();
-            baton->parameters.push_back(new Data::Blob(Buffer::Length(buffer), Buffer::Data(buffer)));
-        }
-        else if (args[i]->IsUndefined()) {
-            // Skip parameter position.
-            baton->parameters.push_back(NULL);
+        else if (args[start]->IsObject()) {
+            Local<Object> object = Local<Object>::Cast(args[start]);
+            Local<Array> array = object->GetPropertyNames();
+            int length = array->Length();
+            for (int i = 0; i < length; i++) {
+                Local<Value> name = array->Get(i);
+
+                if (name->IsInt32()) {
+                    baton->parameters.push_back(new Data::Parameter(
+                        name->Int32Value(),
+                        BindParameter(object->Get(name))
+                    ));
+                }
+                else {
+                    baton->parameters.push_back(new Data::Parameter(
+                        *String::Utf8Value(Local<String>::Cast(name)),
+                        BindParameter(object->Get(name))
+                    ));
+                }
+            }
         }
         else {
-            delete baton;
             return NULL;
         }
     }
@@ -217,35 +262,41 @@ bool Statement::Bind(const Data::Parameters parameters) {
     Data::Parameters::const_iterator it = parameters.begin();
     Data::Parameters::const_iterator end = parameters.end();
 
-    // Note: bind parameters start with 1.
-    for (int i = 1; it < end; it++, i++) {
-        Data::Field* field = *it;
-        if (field == NULL) {
-            continue;
+    for (; it < end; it++) {
+        Data::Parameter* param = *it;
+
+        int pos;
+        if (param->position > 0) {
+            pos = param->position;
+        }
+        else {
+            pos = sqlite3_bind_parameter_index(handle, param->name.c_str());
         }
 
-        switch (field->type) {
-            case SQLITE_INTEGER: {
-                status = sqlite3_bind_int(handle, i,
-                    ((Data::Integer*)field)->value);
-            } break;
-            case SQLITE_FLOAT: {
-                status = sqlite3_bind_double(handle, i,
-                    ((Data::Float*)field)->value);
-            } break;
-            case SQLITE_TEXT: {
-                status = sqlite3_bind_text(handle, i,
-                    ((Data::Text*)field)->value.c_str(),
-                    ((Data::Text*)field)->value.size(), SQLITE_TRANSIENT);
-            } break;
-            case SQLITE_BLOB: {
-                status = sqlite3_bind_blob(handle, i,
-                    ((Data::Blob*)field)->value,
-                    ((Data::Blob*)field)->length, SQLITE_TRANSIENT);
-            } break;
-            case SQLITE_NULL: {
-                status = sqlite3_bind_null(handle, i);
-            } break;
+        if (param->field != NULL) {
+            switch (param->field->type) {
+                case SQLITE_INTEGER: {
+                    status = sqlite3_bind_int(handle, pos,
+                        ((Data::Integer*)param->field)->value);
+                } break;
+                case SQLITE_FLOAT: {
+                    status = sqlite3_bind_double(handle, pos,
+                        ((Data::Float*)param->field)->value);
+                } break;
+                case SQLITE_TEXT: {
+                    status = sqlite3_bind_text(handle, pos,
+                        ((Data::Text*)param->field)->value.c_str(),
+                        ((Data::Text*)param->field)->value.size(), SQLITE_TRANSIENT);
+                } break;
+                case SQLITE_BLOB: {
+                    status = sqlite3_bind_blob(handle, pos,
+                        ((Data::Blob*)param->field)->value,
+                        ((Data::Blob*)param->field)->length, SQLITE_TRANSIENT);
+                } break;
+                case SQLITE_NULL: {
+                    status = sqlite3_bind_null(handle, pos);
+                } break;
+            }
         }
 
         if (status != SQLITE_OK) {
