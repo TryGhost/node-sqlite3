@@ -18,7 +18,7 @@
         "url": "git://github.com/developmentseed/node-sqlite3.git"
     },
     "engines": {
-        "node": ">=0.4.0"
+        "node": ">=0.2.6"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"

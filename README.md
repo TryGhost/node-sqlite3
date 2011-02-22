@@ -4,7 +4,7 @@ node-sqlite3 - Asynchronous, non-blocking SQLite3 bindings for node.js
 
 # COMPATIBILITY
 
-The SQLite bindings are compatible with node.js 0.4.*
+The SQLite bindings are compatible with node.js 0.2 and 0.4
 
 # SYNOPSIS
 
