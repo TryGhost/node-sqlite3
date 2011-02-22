@@ -6,7 +6,6 @@
 #include "macros.h"
 #include "database.h"
 #include "statement.h"
-#include "deferred_call.h"
 
 using namespace node_sqlite3;
 
