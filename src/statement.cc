@@ -302,9 +302,13 @@ Handle<Value> Statement::Get(const Arguments& args) {
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<RowBaton>(args);
-    stmt->Schedule(EIO_BeginGet, baton);
-
-    return args.This();
+    if (baton == NULL) {
+        return ThrowException(Exception::Error(String::New("Data type is not supported")));
+    }
+    else {
+        stmt->Schedule(EIO_BeginGet, baton);
+        return args.This();
+    }
 }
 
 void Statement::EIO_BeginGet(Baton* baton) {
@@ -368,9 +372,13 @@ Handle<Value> Statement::Run(const Arguments& args) {
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<Baton>(args);
-    stmt->Schedule(EIO_BeginRun, baton);
-
-    return args.This();
+    if (baton == NULL) {
+        return ThrowException(Exception::Error(String::New("Data type is not supported")));
+    }
+    else {
+        stmt->Schedule(EIO_BeginRun, baton);
+        return args.This();
+    }
 }
 
 void Statement::EIO_BeginRun(Baton* baton) {
@@ -425,9 +433,13 @@ Handle<Value> Statement::All(const Arguments& args) {
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<RowsBaton>(args);
-    stmt->Schedule(EIO_BeginAll, baton);
-
-    return args.This();
+    if (baton == NULL) {
+        return ThrowException(Exception::Error(String::New("Data type is not supported")));
+    }
+    else {
+        stmt->Schedule(EIO_BeginAll, baton);
+        return args.This();
+    }
 }
 
 void Statement::EIO_BeginAll(Baton* baton) {

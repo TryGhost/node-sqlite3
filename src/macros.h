@@ -136,6 +136,8 @@ const char* sqlite_code_string(int code);
     static int EIO_After##name(eio_req *req);
 
 #define STATEMENT_BEGIN(type)                                                  \
+    assert(baton);                                                             \
+    assert(baton->stmt);                                                       \
     assert(!baton->stmt->locked);                                              \
     assert(!baton->stmt->finalized);                                           \
     assert(baton->stmt->prepared);                                             \
