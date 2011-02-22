@@ -2,6 +2,8 @@
 #include <v8.h>
 #include <node.h>
 #include <node_events.h>
+#include <node_buffer.h>
+#include <node_version.h>
 
 #include "macros.h"
 #include "database.h"
@@ -186,6 +188,10 @@ template <class T> T* Statement::Bind(const Arguments& args, int start) {
         else if (args[i]->IsNull()) {
             baton->parameters.push_back(new Data::Null());
         }
+        else if (Buffer::HasInstance(args[i])) {
+            Local<Object> buffer = args[i]->ToObject();
+            baton->parameters.push_back(new Data::Blob(Buffer::Length(buffer), Buffer::Data(buffer)));
+        }
         else if (args[i]->IsUndefined()) {
             // Skip parameter position.
             baton->parameters.push_back(NULL);
@@ -219,19 +225,23 @@ bool Statement::Bind(const Data::Parameters parameters) {
 
         switch (field->type) {
             case SQLITE_INTEGER: {
-                status = sqlite3_bind_int(handle, i, ((Data::Integer*)field)->value);
+                status = sqlite3_bind_int(handle, i,
+                    ((Data::Integer*)field)->value);
             } break;
             case SQLITE_FLOAT: {
-                status = sqlite3_bind_double(handle, i, ((Data::Float*)field)->value);
+                status = sqlite3_bind_double(handle, i,
+                    ((Data::Float*)field)->value);
             } break;
             case SQLITE_TEXT: {
-                status = sqlite3_bind_text(
-                    handle, i, ((Data::Text*)field)->value.c_str(),
+                status = sqlite3_bind_text(handle, i,
+                    ((Data::Text*)field)->value.c_str(),
                     ((Data::Text*)field)->value.size(), SQLITE_TRANSIENT);
             } break;
-            // case SQLITE_BLOB: {
-            //
-            // } break;
+            case SQLITE_BLOB: {
+                status = sqlite3_bind_blob(handle, i,
+                    ((Data::Blob*)field)->value,
+                    ((Data::Blob*)field)->length, SQLITE_TRANSIENT);
+            } break;
             case SQLITE_NULL: {
                 status = sqlite3_bind_null(handle, i);
             } break;
@@ -566,9 +576,10 @@ Local<Array> Statement::RowToJS(Data::Row* row) {
             case SQLITE_TEXT: {
                 result->Set(i, Local<String>(String::New(((Data::Text*)field)->value.c_str(), ((Data::Text*)field)->value.size())));
             } break;
-            // case SQLITE_BLOB: {
-            //     result->Set(i, Local<String>(String::New(((Data::Text*)field)->value.c_str())));
-            // } break;
+            case SQLITE_BLOB: {
+                Buffer *buffer = Buffer::New(((Data::Blob*)field)->value, ((Data::Blob*)field)->length);
+                result->Set(i, buffer->handle_);
+            } break;
             case SQLITE_NULL: {
                 result->Set(i, Local<Value>::New(Null()));
             } break;

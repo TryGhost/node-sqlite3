@@ -5,71 +5,44 @@ var sqlite3 = require('sqlite3'),
     Buffer = require('buffer').Buffer;
 
 // lots of elmo
-var elmo = fs.readFileSync(__dirname + '/support/elmo.png', 'binary');
-var elmo_str = elmo.toString('binary');
+var elmo = fs.readFileSync(__dirname + '/support/elmo.png');
 
-exports['Blob overflow test'] = function(beforeExit) {
-    var db = new sqlite3.Database('');
+exports['blob test'] = function(beforeExit) {
+    var db = new sqlite3.Database(':memory:');
     var total = 10;
     var inserted = 0;
     var retrieved = 0;
 
-    Step(
-        function() {
-            var next = this;
-            db.prepare('CREATE TABLE elmos (image BLOB);').run(next);
-        },
-        function() {
-            var group = this.group();
-            for (var i = 0; i < total; i++) {
-                var next = group();
-                db.prepare('INSERT INTO elmos (image) VALUES (?)', function(err, statement) {
-                    assert.isUndefined(err);
-                    statement.bind(1, elmo, function() {
-                        statement.step(function(err) {
-                            assert.isUndefined(err);
-                            inserted++;
-                            next();
-                        });
-                    });
-                });
-            }
-        },
-        function() {
-            var next = this;
-            db.execute('SELECT COUNT(*) as amount FROM elmos', function(err, rows) {
-                assert.isUndefined(err);
-                assert.eql(rows[0].amount, total);
-                next();
-            });
-        },
-        function() {
-            var next = this;
-            db.prepare('SELECT image FROM elmos;', function(err, statement) {
-                assert.isUndefined(err);
-                fetch();
+    db.serialize(function() {
+        db.run('CREATE TABLE elmos (id INT, image BLOB)');
 
-                function fetch() {
-                    statement.step(function(err, row) {
-                        assert.isUndefined(err);
-                        if (row) {
-                            // Not using assert.equal here because it's image data
-                            // and we don't want that in the command line.
-                            assert.ok(elmo_str === row.image);
-                            retrieved++;
-                            fetch();
-                        }
-                        else {
-                            next();
-                        }
-                    });
-                }
+        for (var i = 0; i < total; i++) {
+            db.run('INSERT INTO elmos (id, image) VALUES (?, ?)', i, elmo, function(err) {
+                if (err) throw err;
+                inserted++;
             });
         }
-    );
+
+        db.all('SELECT id, image FROM elmos ORDER BY id', function(err, rows) {
+            if (err) throw err;
+            for (var i = 0; i < rows.length; i++) {
+                assert.ok(Buffer.isBuffer(rows[i][1]));
+                assert.ok(elmo.length, rows[i][1]);
+
+                for (var j = 0; j < elmo.length; j++) {
+                    if (elmo[j] !== rows[i][1][j]) {
+                        assert.ok(false, "Wrong byte");
+                    }
+                }
+
+                retrieved++;
+            }
+        });
+
+    });
 
     beforeExit(function() {
-        assert.eql(inserted, total);
-        assert.eql(retrieved, total);
+        assert.equal(inserted, total);
+        assert.equal(retrieved, total);
     })
 }

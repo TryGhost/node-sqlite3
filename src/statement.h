@@ -42,14 +42,14 @@ namespace Data {
 
     struct Blob : Field {
         Blob(size_t len, const void* val) : Field(SQLITE_BLOB), length(len) {
-            value = malloc(len);
+            value = (char*)malloc(len);
             memcpy(value, val, len);
         }
         ~Blob() {
             free(value);
         }
         int length;
-        void* value;
+        char* value;
     };
 
     typedef Field Null;
