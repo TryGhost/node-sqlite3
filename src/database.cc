@@ -12,7 +12,7 @@ using namespace node_sqlite3;
 
 Persistent<FunctionTemplate> Database::constructor_template;
 
-void Database::Init(v8::Handle<Object> target) {
+void Database::Init(Handle<Object> target) {
     HandleScope scope;
 
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
@@ -23,9 +23,11 @@ void Database::Init(v8::Handle<Object> target) {
     constructor_template->SetClassName(String::NewSymbol("Database"));
 
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "serialize", Serialize);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "parallelize", Parallelize);
 
-    target->Set(v8::String::NewSymbol("Database"),
-                constructor_template->GetFunction());
+    target->Set(String::NewSymbol("Database"),
+        constructor_template->GetFunction());
 }
 
 void Database::Process() {
@@ -57,20 +59,22 @@ void Database::Process() {
         return;
     }
 
-    while (open && !locked && !queue.empty()) {
+
+    while (open && (!locked || pending == 0) && !queue.empty()) {
         Call* call = queue.front();
 
         if (call->exclusive && pending > 0) {
             break;
         }
 
+        locked = call->exclusive;
         call->callback(call->baton);
         queue.pop();
         delete call;
     }
 }
 
-void Database::Schedule(EIO_Callback callback, Baton* baton, bool exclusive = false) {
+void Database::Schedule(EIO_Callback callback, Baton* baton, bool exclusive) {
     if (!open && locked) {
         EXCEPTION(String::New("Database is closed"), SQLITE_MISUSE, exception);
         if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
@@ -84,10 +88,11 @@ void Database::Schedule(EIO_Callback callback, Baton* baton, bool exclusive = fa
         return;
     }
 
-    if (!open || locked || (exclusive && pending > 0)) {
-        queue.push(new Call(callback, baton, exclusive));
+    if (!open || ((locked || exclusive || serialize) && pending > 0)) {
+        queue.push(new Call(callback, baton, exclusive || serialize));
     }
     else {
+        locked = exclusive;
         callback(baton);
     }
 }
@@ -198,9 +203,7 @@ Handle<Value> Database::Close(const Arguments& args) {
 
 void Database::EIO_BeginClose(Baton* baton) {
     assert(baton->db->open);
-    assert(!baton->db->locked);
     assert(baton->db->pending == 0);
-    baton->db->locked = true;
     eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, baton);
 }
 
@@ -253,6 +256,42 @@ int Database::EIO_AfterClose(eio_req *req) {
 
     delete baton;
     return 0;
+}
+
+Handle<Value> Database::Serialize(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
+
+    bool before = db->serialize;
+    db->serialize = true;
+
+    if (!callback.IsEmpty() && callback->IsFunction()) {
+        TRY_CATCH_CALL(args.This(), callback, 0, NULL);
+        db->serialize = before;
+    }
+
+    db->Process();
+
+    return args.This();
+}
+
+Handle<Value> Database::Parallelize(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
+
+    bool before = db->serialize;
+    db->serialize = false;
+
+    if (!callback.IsEmpty() && callback->IsFunction()) {
+        TRY_CATCH_CALL(args.This(), callback, 0, NULL);
+        db->serialize = before;
+    }
+
+    db->Process();
+
+    return args.This();
 }
 
 /**

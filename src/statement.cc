@@ -12,7 +12,7 @@ using namespace node_sqlite3;
 
 Persistent<FunctionTemplate> Statement::constructor_template;
 
-void Statement::Init(v8::Handle<Object> target) {
+void Statement::Init(Handle<Object> target) {
     HandleScope scope;
 
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
@@ -29,8 +29,8 @@ void Statement::Init(v8::Handle<Object> target) {
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "reset", Reset);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalize", Finalize);
 
-    target->Set(v8::String::NewSymbol("Statement"),
-                constructor_template->GetFunction());
+    target->Set(String::NewSymbol("Statement"),
+        constructor_template->GetFunction());
 }
 
 void Statement::Process() {
@@ -102,7 +102,7 @@ Handle<Value> Statement::New(const Arguments& args) {
     stmt->Wrap(args.This());
     PrepareBaton* baton = new PrepareBaton(db, Local<Function>::Cast(args[2]), stmt);
     baton->sql = std::string(*String::Utf8Value(sql));
-    db->Schedule(EIO_BeginPrepare, baton, false);
+    db->Schedule(EIO_BeginPrepare, baton);
 
     return args.This();
 }
@@ -110,7 +110,7 @@ Handle<Value> Statement::New(const Arguments& args) {
 
 void Statement::EIO_BeginPrepare(Database::Baton* baton) {
     assert(baton->db->open);
-    assert(!baton->db->locked);
+    baton->db->pending++;
     eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, baton);
 }
 
@@ -157,7 +157,6 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     }
 
     STATEMENT_END();
-    baton->db->Process();
     return 0;
 }
 
@@ -263,11 +262,7 @@ Handle<Value> Statement::Bind(const Arguments& args) {
 }
 
 void Statement::EIO_BeginBind(Baton* baton) {
-    assert(!baton->stmt->locked);
-    assert(!baton->stmt->finalized);
-    assert(baton->stmt->prepared);
-    baton->stmt->locked = true;
-    eio_custom(EIO_Bind, EIO_PRI_DEFAULT, EIO_AfterBind, baton);
+    STATEMENT_BEGIN(Bind);
 }
 
 int Statement::EIO_Bind(eio_req *req) {
@@ -313,11 +308,7 @@ Handle<Value> Statement::Get(const Arguments& args) {
 }
 
 void Statement::EIO_BeginGet(Baton* baton) {
-    assert(!baton->stmt->locked);
-    assert(!baton->stmt->finalized);
-    assert(baton->stmt->prepared);
-    baton->stmt->locked = true;
-    eio_custom(EIO_Get, EIO_PRI_DEFAULT, EIO_AfterGet, baton);
+    STATEMENT_BEGIN(Get);
 }
 
 int Statement::EIO_Get(eio_req *req) {
@@ -383,11 +374,7 @@ Handle<Value> Statement::Run(const Arguments& args) {
 }
 
 void Statement::EIO_BeginRun(Baton* baton) {
-    assert(!baton->stmt->locked);
-    assert(!baton->stmt->finalized);
-    assert(baton->stmt->prepared);
-    baton->stmt->locked = true;
-    eio_custom(EIO_Run, EIO_PRI_DEFAULT, EIO_AfterRun, baton);
+    STATEMENT_BEGIN(Run);
 }
 
 int Statement::EIO_Run(eio_req *req) {
@@ -444,11 +431,7 @@ Handle<Value> Statement::All(const Arguments& args) {
 }
 
 void Statement::EIO_BeginAll(Baton* baton) {
-    assert(!baton->stmt->locked);
-    assert(!baton->stmt->finalized);
-    assert(baton->stmt->prepared);
-    baton->stmt->locked = true;
-    eio_custom(EIO_All, EIO_PRI_DEFAULT, EIO_AfterAll, baton);
+    STATEMENT_BEGIN(All);
 }
 
 int Statement::EIO_All(eio_req *req) {
@@ -529,11 +512,7 @@ Handle<Value> Statement::Reset(const Arguments& args) {
 }
 
 void Statement::EIO_BeginReset(Baton* baton) {
-    assert(!baton->stmt->locked);
-    assert(!baton->stmt->finalized);
-    assert(baton->stmt->prepared);
-    baton->stmt->locked = true;
-    eio_custom(EIO_Reset, EIO_PRI_DEFAULT, EIO_AfterReset, baton);
+    STATEMENT_BEGIN(Reset);
 }
 
 int Statement::EIO_Reset(eio_req *req) {
@@ -649,8 +628,6 @@ void Statement::Finalize() {
     // error events in case those failed.
     sqlite3_finalize(handle);
     handle = NULL;
-    db->pending--;
-    db->Process();
     db->Unref();
 }
 

@@ -135,13 +135,23 @@ const char* sqlite_code_string(int code);
     static int EIO_##name(eio_req *req);                                       \
     static int EIO_After##name(eio_req *req);
 
+#define STATEMENT_BEGIN(type)                                                  \
+    assert(!baton->stmt->locked);                                              \
+    assert(!baton->stmt->finalized);                                           \
+    assert(baton->stmt->prepared);                                             \
+    baton->stmt->locked = true;                                                \
+    baton->stmt->db->pending++;                                                \
+    eio_custom(EIO_##type, EIO_PRI_DEFAULT, EIO_After##type, baton);
+
 #define STATEMENT_INIT(type)                                                   \
     type* baton = static_cast<type*>(req->data);                               \
     Statement* stmt = baton->stmt;
 
 #define STATEMENT_END()                                                        \
     stmt->locked = false;                                                      \
+    stmt->db->pending--;                                                       \
     stmt->Process();                                                           \
+    stmt->db->Process();                                                       \
     delete baton;
 
 #endif

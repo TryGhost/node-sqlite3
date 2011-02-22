@@ -124,7 +124,6 @@ public:
         prepared(false),
         locked(false),
         finalized(false) {
-        db->pending++;
         db->Ref();
     }
 
