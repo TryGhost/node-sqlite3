@@ -58,7 +58,6 @@ void Database::Process() {
         return;
     }
 
-
     while (open && (!locked || pending == 0) && !queue.empty()) {
         Call* call = queue.front();
 
@@ -66,10 +65,12 @@ void Database::Process() {
             break;
         }
 
+        queue.pop();
         locked = call->exclusive;
         call->callback(call->baton);
-        queue.pop();
         delete call;
+
+        if (locked) break;
     }
 }
 
@@ -201,7 +202,9 @@ Handle<Value> Database::Close(const Arguments& args) {
 }
 
 void Database::EIO_BeginClose(Baton* baton) {
+    assert(baton->db->locked);
     assert(baton->db->open);
+    assert(baton->db->handle);
     assert(baton->db->pending == 0);
     eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, baton);
 }
@@ -246,6 +249,11 @@ int Database::EIO_AfterClose(eio_req *req) {
         Local<Value> args[] = { String::NewSymbol("error"), argv[0] };
         EMIT_EVENT(db->handle_, 2, args);
     }
+
+    assert(baton->db->locked);
+    assert(!baton->db->open);
+    assert(!baton->db->handle);
+    assert(baton->db->pending == 0);
 
     if (!db->open) {
         Local<Value> args[] = { String::NewSymbol("close"), argv[0] };
