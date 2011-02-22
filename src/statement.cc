@@ -675,4 +675,3 @@ void Statement::CleanQueue() {
         delete call;
     }
 }
-
