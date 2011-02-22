@@ -180,8 +180,13 @@ inline Data::Field* Statement::BindParameter(const Handle<Value> source) {
         return new Data::Null();
     }
     else if (Buffer::HasInstance(source)) {
+#if NODE_VERSION_AT_LEAST(0,3,0)
         Local<Object> buffer = source->ToObject();
         return new Data::Blob(Buffer::Length(buffer), Buffer::Data(buffer));
+#else
+        Buffer* buffer = ObjectWrap::Unwrap<Buffer>(source->ToObject());
+        return new Data::Blob(buffer->length(), buffer->data());
+#endif
     }
     else if (source->IsDate()) {
         return new Data::Float(source->NumberValue());
@@ -740,7 +745,12 @@ Local<Array> Statement::RowToJS(Data::Row* row) {
                 result->Set(i, Local<String>(String::New(((Data::Text*)field)->value.c_str(), ((Data::Text*)field)->value.size())));
             } break;
             case SQLITE_BLOB: {
+#if NODE_VERSION_AT_LEAST(0,3,0)
                 Buffer *buffer = Buffer::New(((Data::Blob*)field)->value, ((Data::Blob*)field)->length);
+#else
+                Buffer *buffer = Buffer::New(((Data::Blob*)field)->length);
+                memcpy(buffer->data(), ((Data::Blob*)field)->value, buffer->length());
+#endif
                 result->Set(i, buffer->handle_);
             } break;
             case SQLITE_NULL: {
