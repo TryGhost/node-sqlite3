@@ -27,6 +27,7 @@ void Statement::Init(Handle<Object> target) {
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "get", Get);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "run", Run);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "all", All);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "each", Each);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "reset", Reset);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalize", Finalize);
 
@@ -101,13 +102,13 @@ Handle<Value> Statement::New(const Arguments& args) {
 
     Statement* stmt = new Statement(db);
     stmt->Wrap(args.This());
+
     PrepareBaton* baton = new PrepareBaton(db, Local<Function>::Cast(args[2]), stmt);
     baton->sql = std::string(*String::Utf8Value(sql));
     db->Schedule(EIO_BeginPrepare, baton);
 
     return args.This();
 }
-
 
 void Statement::EIO_BeginPrepare(Database::Baton* baton) {
     assert(baton->db->open);
@@ -514,6 +515,117 @@ int Statement::EIO_AfterAll(eio_req *req) {
                 TRY_CATCH_CALL(stmt->handle_, baton->callback, 2, argv);
             }
         }
+    }
+
+    STATEMENT_END();
+    return 0;
+}
+
+Handle<Value> Statement::Each(const Arguments& args) {
+    HandleScope scope;
+    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+
+    Baton* baton = stmt->Bind<Baton>(args);
+    if (baton == NULL) {
+        return ThrowException(Exception::Error(String::New("Data type is not supported")));
+    }
+    else {
+        stmt->Schedule(EIO_BeginEach, baton);
+        return args.This();
+    }
+}
+
+void Statement::EIO_BeginEach(Baton* baton) {
+    STATEMENT_BEGIN(Each);
+}
+
+int Statement::EIO_Each(eio_req *req) {
+    STATEMENT_INIT(Baton);
+
+    Async* async = new Async(stmt, baton->callback, AsyncEach);
+
+    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
+
+    int retrieved = 0;
+
+    // Make sure that we also reset when there are no parameters.
+    if (!baton->parameters.size()) {
+        sqlite3_reset(stmt->handle);
+    }
+
+    if (stmt->Bind(baton->parameters)) {
+        while (true) {
+            sqlite3_mutex_enter(mtx);
+            stmt->status = sqlite3_step(stmt->handle);
+            if (stmt->status == SQLITE_ROW) {
+                sqlite3_mutex_leave(mtx);
+                Data::Row* row = new Data::Row();
+                GetRow(row, stmt->handle);
+
+                pthread_mutex_lock(&async->mutex);
+                async->data.push_back(row);
+                retrieved++;
+                pthread_mutex_unlock(&async->mutex);
+
+                ev_async_send(EV_DEFAULT_ &async->watcher);
+            }
+            else {
+                if (stmt->status != SQLITE_DONE) {
+                    stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+                }
+                sqlite3_mutex_leave(mtx);
+                break;
+            }
+        }
+    }
+
+    async->completed = true;
+    ev_async_send(EV_DEFAULT_ &async->watcher);
+
+    return 0;
+}
+
+void Statement::AsyncEach(EV_P_ ev_async *w, int revents) {
+    HandleScope scope;
+    Async* async = static_cast<Async*>(w->data);
+
+    while (true) {
+        // Get the contents out of the data cache for us to process in the JS callback.
+        Data::Rows rows;
+        pthread_mutex_lock(&async->mutex);
+        rows.swap(async->data);
+        pthread_mutex_unlock(&async->mutex);
+
+        if (rows.empty()) {
+            break;
+        }
+
+        if (!async->callback.IsEmpty() && async->callback->IsFunction()) {
+            Local<Value> argv[2];
+            argv[0] = Local<Value>::New(Null());
+
+            Data::Rows::const_iterator it = rows.begin();
+            Data::Rows::const_iterator end = rows.end();
+            for (int i = 0; it < end; it++, i++) {
+                argv[1] = RowToJS(*it);
+                TRY_CATCH_CALL(async->stmt->handle_, async->callback, 2, argv);
+                delete *it;
+            }
+        }
+    }
+
+    if (async->completed) {
+        delete async;
+        w->data = NULL;
+    }
+}
+
+int Statement::EIO_AfterEach(eio_req *req) {
+    HandleScope scope;
+    STATEMENT_INIT(Baton);
+
+    if (stmt->status != SQLITE_DONE) {
+        Error(baton);
     }
 
     STATEMENT_END();

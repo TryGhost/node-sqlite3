@@ -1,16 +1,16 @@
 var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
+function randomString() {
+    var str = '';
+    for (var i = Math.random() * 300; i > 0; i--) {
+        str += String.fromCharCode(Math.floor(Math.random() * 65536));
+    }
+    return str;
+};
+
 exports['test unicode characters'] = function(beforeExit) {
     var db = new sqlite3.Database(':memory:');
-
-    function randomString() {
-        var str = '';
-        for (var i = Math.random() * 300; i > 0; i--) {
-            str += String.fromCharCode(Math.floor(Math.random() * 65536));
-        }
-        return str;
-    };
 
     // Generate random data.
     var data = [];

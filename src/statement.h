@@ -117,13 +117,41 @@ public:
         Baton* baton;
     };
 
+    typedef void (*Async_Callback)(EV_P_ ev_async *w, int revents);
+
+    struct Async {
+        ev_async watcher;
+        Statement* stmt;
+        Data::Rows data;
+        pthread_mutex_t mutex;
+        Persistent<Function> callback;
+        bool completed;
+
+        Async(Statement* st, Handle<Function> cb, Async_Callback async_cb) :
+                stmt(st), completed(false) {
+            watcher.data = this;
+            ev_async_init(&watcher, async_cb);
+            ev_async_start(EV_DEFAULT_UC_ &watcher);
+            callback = Persistent<Function>::New(cb);
+            stmt->Ref();
+            pthread_mutex_init(&mutex, NULL);
+        }
+
+        ~Async() {
+            callback.Dispose();
+            stmt->Unref();
+            pthread_mutex_destroy(&mutex);
+            ev_async_stop(EV_DEFAULT_UC_ &watcher);
+        }
+    };
+
     Statement(Database* db_) : EventEmitter(),
-        db(db_),
-        handle(NULL),
-        status(SQLITE_OK),
-        prepared(false),
-        locked(false),
-        finalized(false) {
+            db(db_),
+            handle(NULL),
+            status(SQLITE_OK),
+            prepared(false),
+            locked(false),
+            finalized(false) {
         db->Ref();
     }
 
@@ -140,7 +168,10 @@ protected:
     EIO_DEFINITION(Get);
     EIO_DEFINITION(Run);
     EIO_DEFINITION(All);
+    EIO_DEFINITION(Each);
     EIO_DEFINITION(Reset);
+
+    static void AsyncEach(EV_P_ ev_async *w, int revents);
 
     static Handle<Value> Finalize(const Arguments& args);
     static void Finalize(Baton* baton);
