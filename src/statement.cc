@@ -173,14 +173,14 @@ template <class T> T* Statement::Bind(const Arguments& args, int start) {
     T* baton = new T(this, callback);
 
     for (int i = start; i < last; i++) {
-        if (args[i]->IsString()) {
+        if (args[i]->IsString() || args[i]->IsRegExp()) {
             String::Utf8Value val(args[i]->ToString());
             baton->parameters.push_back(new Data::Text(val.length(), *val));
         }
-        else if (args[i]->IsInt32() || args[i]->IsUint32()) {
+        else if (args[i]->IsInt32()) {
             baton->parameters.push_back(new Data::Integer(args[i]->Int32Value()));
         }
-        else if (args[i]->IsNumber()) {
+        else if (args[i]->IsNumber() || args[i]->IsDate()) {
             baton->parameters.push_back(new Data::Float(args[i]->NumberValue()));
         }
         else if (args[i]->IsBoolean()) {
