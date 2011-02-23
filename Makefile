@@ -13,9 +13,11 @@ db:
 
 ifndef only
 test: build db
+	@rm -rf ./test/tmp && mkdir -p ./test/tmp
 	@expresso -I lib test/*.test.js
 else
 test: build db
+	@rm -rf ./test/tmp && mkdir -p ./test/tmp
 	@expresso -I lib test/${only}.test.js
 endif
 

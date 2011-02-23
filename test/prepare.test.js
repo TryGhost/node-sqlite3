@@ -2,6 +2,8 @@ var sqlite3 = require('sqlite3');
 var assert = require('assert');
 var Step = require('step');
 
+if (process.setMaxListeners) process.setMaxListeners(0);
+
 exports['test simple prepared statement with invalid SQL'] = function(beforeExit) {
     var error = false;
     var db = new sqlite3.Database(':memory:');
