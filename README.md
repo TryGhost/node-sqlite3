@@ -54,18 +54,49 @@ Runs the SQL query with the specified parameters and calls the callback afterwar
           $name: "bar"
       });
 
-  Named parameters can be prefixed with `:name`, `@name` and `$name`. We recommend using `$name` since JavaScript allows using the dollar sign as a variable name without escaping it. You can also specify a numeric index after a `?` placeholder. These correspond to the position in the array. Note that placeholder indexes start at 1 in SQLite. `node-sqlite3` maps arrays to start with one so that you don't have to specify an empty value as the first array element (with index 0). You can also use numeric object keys to bind values. Note that in this case, the first index is 1:
+  Named parameters can be prefixed with `:name`, `@name` and `$name`. We recommend using `$name` since JavaScript allows using the dollar sign as a variable name without having to escape it. You can also specify a numeric index after a `?` placeholder. These correspond to the position in the array. Note that placeholder indexes start at 1 in SQLite. `node-sqlite3` maps arrays to start with one so that you don't have to specify an empty value as the first array element (with index 0). You can also use numeric object keys to bind values. Note that in this case, the first index is 1:
 
-      db.run("SELECT * FROM tbl WHERE id = $id AND name = $name", {
+      db.run("SELECT * FROM tbl WHERE id = $id AND name = ?5", {
           1: 2,
-          $name: "bar"
+          5: "bar"
       });
 
-  This binds the first placeholder (`$id`) to `2` and the placeholder named `$name` to `"bar"`. While this is valid in SQLite and `node-sqlite3`, it is not recommended to mix different placeholder types.
+  This binds the first placeholder (`$id`) to `2` and the placeholder with index `5` to `"bar"`. While this is valid in SQLite and `node-sqlite3`, it is not recommended to mix different placeholder types.
 
 * `callback` *(optional)*: If given, it will be called when an error occurs during any step of the statement preparation or execution, *and* after the query was run. If an error occured, the first (and only) parameter will be an error object containing the error message. If execution was successful, the first parameter is `null`. The context of the function (the `this` object inside the function) is the statement object. Note that it is not possible to run the statement again because it is automatically finalized after running for the first time. Any subsequent attempts to run the statement again will fail.
 
   If execution was successful, it contains two properties named `lastID` and `changes` which contain the value of the last inserted row ID and the number of rows affected by this query respectively. Note that `lastID` **only** contains valid information when the query was a successfully completed `INSERT` statement and `changes` **only** contains valid information when the query was a successfully completed `UPDATE` or `DELETE` statement. In all other cases, the content of these properties is inaccurate and should not be used. The `.run()` function is the only query method that sets these two values; all other query methods such as `.all()` or `.get()` don't retrieve these values.
+
+
+
+## Database#get(sql, [param, ...], [callback])
+
+Runs the SQL query with the specified parameters and calls the callback with the first result row afterwards. The function returns the Database object to allow for function chaining. The parameters are the same as the `Database#run` function, with the following differences:
+
+The signature of the callback is `function(err, row) {}`. If the result set is empty, the second parameter is `undefined`, otherwise it is an object containing the values for the first row. The property names correspond to the column names of the result set. It is impossible to access them by column index; the only supported way is by column name.
+
+
+
+## Database#all(sql, [param, ...], [callback])
+
+Runs the SQL query with the specified parameters and calls the callback with all result rows afterwards. The function returns the Database object to allow for function chaining. The parameters are the same as the `Database#run` function, with the following differences:
+
+The signature of the callback is `function(err, rows) {}`. If the result set is empty, the second parameter is an empty array, otherwise it contains an object for each result row which in turn contains the values of that row, like the `Database#get` function.
+
+Note that it first retrieves all result rows and stores them in memory. For queries that have potentially large result sets, use the `Database#each` function to retrieve all rows or `Database#prepare` followed by multiple `Statement#get` calls to retrieve a previously unknown amount of rows.
+
+
+
+## Database#each(sql, [param, ...], [callback])
+
+Runs the SQL query with the specified parameters and calls the callback with for each result row. The function returns the Database object to allow for function chaining. The parameters are the same as the `Database#run` function, with the following differences:
+
+The signature of the callback is `function(err, row) {}`. If the result set succeeds but is empty, the callback is never called (this will change in the future). In all other cases, the callback is called once for every retrieved row. The order of calls correspond exactly to the order of rows in the result set.
+
+If you know that a query only returns a very limited number of rows, it might be more convenient to use `Database#all` to retrieve all rows at once.
+
+There is currently no way to abort execution.
+
 
 
 ## more to come
