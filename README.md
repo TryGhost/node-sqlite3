@@ -42,24 +42,24 @@ Runs the SQL query with the specified parameters and calls the callback afterwar
 
 * `param, ...` *(optional)*: When the SQL statement contains placeholders, you can pass them in here. They will be bound to the statement before it is executed. There are three ways of passing bind parameters: directly in the function's arguments, as an array and as an object for named parameters.
 
-        // Directly in the function arguments.
-        db.run("SELECT * FROM tbl WHERE id = ? AND name = ?", 2, "bar");
+      // Directly in the function arguments.
+      db.run("SELECT * FROM tbl WHERE id = ? AND name = ?", 2, "bar");
 
-        // As an array.
-        db.run("SELECT * FROM tbl WHERE id = ? AND name = ?", [ 2, "bar" ]);
+      // As an array.
+      db.run("SELECT * FROM tbl WHERE id = ? AND name = ?", [ 2, "bar" ]);
 
-        // As an object with named parameters.
-        db.run("SELECT * FROM tbl WHERE id = $id AND name = $name", {
-            $id: 2,
-            $name: "bar"
-        });
+      // As an object with named parameters.
+      db.run("SELECT * FROM tbl WHERE id = $id AND name = $name", {
+          $id: 2,
+          $name: "bar"
+      });
 
   Named parameters can be prefixed with `:name`, `@name` and `$name`. We recommend using `$name` since JavaScript allows using the dollar sign as a variable name without escaping it. You can also specify a numeric index after a `?` placeholder. These correspond to the position in the array. Note that placeholder indexes start at 1 in SQLite. `node-sqlite3` maps arrays to start with one so that you don't have to specify an empty value as the first array element (with index 0). You can also use numeric object keys to bind values. Note that in this case, the first index is 1:
 
-        db.run("SELECT * FROM tbl WHERE id = $id AND name = $name", {
-            1: 2,
-            $name: "bar"
-        });
+      db.run("SELECT * FROM tbl WHERE id = $id AND name = $name", {
+          1: 2,
+          $name: "bar"
+      });
 
   This binds the first placeholder (`$id`) to `2` and the placeholder named `$name` to `"bar"`. While this is valid in SQLite and `node-sqlite3`, it is not recommended to mix different placeholder types.
 
