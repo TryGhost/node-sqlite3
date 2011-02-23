@@ -552,6 +552,7 @@ int Statement::EIO_AfterAll(eio_req *req) {
                 Data::Rows::const_iterator end = baton->rows.end();
                 for (int i = 0; it < end; it++, i++) {
                     result->Set(i, RowToJS(*it));
+                    delete *it;
                 }
 
                 Local<Value> argv[] = { Local<Value>::New(Null()), result };
@@ -758,6 +759,8 @@ Local<Array> Statement::RowToJS(Data::Row* row) {
 
         result->Set(i, value);
         result->Set(String::NewSymbol(field->name.c_str()), value);
+
+        DELETE_FIELD(field);
     }
 
     return result;

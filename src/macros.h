@@ -156,5 +156,14 @@ const char* sqlite_code_string(int code);
     stmt->db->Process();                                                       \
     delete baton;
 
+#define DELETE_FIELD(field)                                                    \
+    switch ((field)->type) {                                                   \
+        case SQLITE_INTEGER: delete (Data::Integer*)(field); break;            \
+        case SQLITE_FLOAT:   delete (Data::Float*)(field); break;              \
+        case SQLITE_TEXT:    delete (Data::Text*)(field); break;               \
+        case SQLITE_BLOB:    delete (Data::Blob*)(field); break;               \
+        case SQLITE_NULL:    delete (Data::Null*)(field); break;               \
+    }
+
 #endif
 
