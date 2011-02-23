@@ -29,13 +29,14 @@ public:
         return constructor_template->HasInstance(obj);
     }
 
-    struct Baton {
+    static struct Baton {
         Database* db;
         Persistent<Function> callback;
         int status;
         std::string message;
 
-        Baton(Database* db_, Handle<Function> cb_) : db(db_) {
+        Baton(Database* db_, Handle<Function> cb_) :
+                db(db_), status(SQLITE_OK) {
             db->Ref();
             ev_ref(EV_DEFAULT_UC);
             callback = Persistent<Function>::New(cb_);
@@ -47,16 +48,22 @@ public:
         }
     };
 
-    struct OpenBaton : Baton {
+    static struct OpenBaton : Baton {
         std::string filename;
         int mode;
+        OpenBaton(Database* db_, Handle<Function> cb_, const char* filename_, int mode_) :
+            Baton(db_, cb_), filename(filename_), mode(mode_) {}
+    };
 
-        OpenBaton(Database* db_, Handle<Function> cb_) : Baton(db_, cb_) {}
+    static struct ExecBaton : Baton {
+        std::string sql;
+        ExecBaton(Database* db_, Handle<Function> cb_, const char* sql_) :
+            Baton(db_, cb_), sql(sql_) {}
     };
 
     typedef void (*EIO_Callback)(Baton* baton);
 
-    struct Call {
+    static struct Call {
         Call(EIO_Callback cb_, Baton* baton_, bool exclusive_ = false) :
             callback(cb_), exclusive(exclusive_), baton(baton_) {};
         EIO_Callback callback;
@@ -87,6 +94,11 @@ protected:
 
     void Schedule(EIO_Callback callback, Baton* baton, bool exclusive = false);
     void Process();
+
+    static Handle<Value> Exec(const Arguments& args);
+    static void EIO_BeginExec(Baton* baton);
+    static int EIO_Exec(eio_req *req);
+    static int EIO_AfterExec(eio_req *req);
 
     static Handle<Value> Close(const Arguments& args);
     static void EIO_BeginClose(Baton* baton);
