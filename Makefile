@@ -5,12 +5,18 @@ build:
 clean:
 	node-waf clean
 
+db:
+	@if ! [ -f test/support/big.db ]; then                                     \
+		echo "Creating test database... This may take several minutes." ;      \
+		node test/support/createdb.js ;                                        \
+	fi
+
 ifndef only
-test: build
-	expresso -I lib test/*.test.js
+test: build db
+	@expresso -I lib test/*.test.js
 else
-test: build
-	expresso -I lib test/${only}.test.js
+test: build db
+	@expresso -I lib test/${only}.test.js
 endif
 
 .PHONY: build clean test
