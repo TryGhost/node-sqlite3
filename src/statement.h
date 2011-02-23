@@ -21,27 +21,37 @@ namespace node_sqlite3 {
 
 namespace Data {
     struct Field {
-        inline Field(unsigned short _type = SQLITE_NULL) : type(_type) {}
+        inline Field(unsigned short _index, unsigned short _type = SQLITE_NULL) :
+            type(_type), index(_index) {}
+        inline Field(const char* _name, unsigned short _type = SQLITE_NULL) :
+            type(_type), index(0), name(_name) {}
+
         unsigned short type;
+        unsigned short index;
+        std::string name;
     };
 
     struct Integer : Field {
-        inline Integer(int val) : Field(SQLITE_INTEGER), value(val) {}
+        template <class T> inline Integer(T _name, int val) :
+            Field(_name, SQLITE_INTEGER), value(val) {}
         int value;
     };
 
     struct Float : Field {
-        inline Float(double val) : Field(SQLITE_FLOAT), value(val) {}
+        template <class T> inline Float(T _name, double val) :
+            Field(_name, SQLITE_FLOAT), value(val) {}
         double value;
     };
 
     struct Text : Field {
-        inline Text(size_t len, const char* val) : Field(SQLITE_TEXT), value(val, len) {}
+        template <class T> inline Text(T _name, size_t len, const char* val) :
+            Field(_name, SQLITE_TEXT), value(val, len) {}
         std::string value;
     };
 
     struct Blob : Field {
-        inline Blob(size_t len, const void* val) : Field(SQLITE_BLOB), length(len) {
+        template <class T> inline Blob(T _name, size_t len, const void* val) :
+                Field(_name, SQLITE_BLOB), length(len) {
             value = (char*)malloc(len);
             memcpy(value, val, len);
         }
@@ -55,23 +65,7 @@ namespace Data {
     typedef Field Null;
     typedef std::vector<Field*> Row;
     typedef std::vector<Row*> Rows;
-
-
-    struct Parameter {
-        unsigned short position;
-        std::string name;
-        Field* field;
-
-        inline Parameter(unsigned short pos_, Field* field_) : position(pos_), field(field_) {}
-        inline Parameter(const char* name_, Field* field_) : position(0), name(name_), field(field_) {}
-        inline ~Parameter() {
-            if (field) {
-                delete field;
-            }
-        }
-    };
-
-    typedef std::vector<Parameter*> Parameters;
+    typedef Row Parameters;
 }
 
 
@@ -197,7 +191,7 @@ protected:
     static void Finalize(Baton* baton);
     void Finalize();
 
-    Data::Field* BindParameter(const Handle<Value> source);
+    template <class T> inline Data::Field* BindParameter(const Handle<Value> source, T pos);
     template <class T> T* Bind(const Arguments& args, int start = 0);
     bool Bind(const Data::Parameters parameters);
 

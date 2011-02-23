@@ -162,34 +162,35 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     return 0;
 }
 
-inline Data::Field* Statement::BindParameter(const Handle<Value> source) {
+template <class T> Data::Field*
+                   Statement::BindParameter(const Handle<Value> source, T pos) {
     if (source->IsString() || source->IsRegExp()) {
         String::Utf8Value val(source->ToString());
-        return new Data::Text(val.length(), *val);
+        return new Data::Text(pos, val.length(), *val);
     }
     else if (source->IsInt32()) {
-        return new Data::Integer(source->Int32Value());
+        return new Data::Integer(pos, source->Int32Value());
     }
     else if (source->IsNumber()) {
-        return new Data::Float(source->NumberValue());
+        return new Data::Float(pos, source->NumberValue());
     }
     else if (source->IsBoolean()) {
-        return new Data::Integer(source->BooleanValue() ? 1 : 0);
+        return new Data::Integer(pos, source->BooleanValue() ? 1 : 0);
     }
     else if (source->IsNull()) {
-        return new Data::Null();
+        return new Data::Null(pos);
     }
     else if (Buffer::HasInstance(source)) {
 #if NODE_VERSION_AT_LEAST(0,3,0)
         Local<Object> buffer = source->ToObject();
-        return new Data::Blob(Buffer::Length(buffer), Buffer::Data(buffer));
+        return new Data::Blob(pos, Buffer::Length(buffer), Buffer::Data(buffer));
 #else
         Buffer* buffer = ObjectWrap::Unwrap<Buffer>(source->ToObject());
-        return new Data::Blob(buffer->length(), buffer->data());
+        return new Data::Blob(pos, buffer->length(), buffer->data());
 #endif
     }
     else if (source->IsDate()) {
-        return new Data::Float(source->NumberValue());
+        return new Data::Float(pos, source->NumberValue());
     }
     else if (source->IsUndefined()) {
         return NULL;
@@ -215,16 +216,14 @@ template <class T> T* Statement::Bind(const Arguments& args, int start) {
             int length = array->Length();
             // Note: bind parameters start with 1.
             for (int i = 0, pos = 1; i < length; i++, pos++) {
-                baton->parameters.push_back(
-                    new Data::Parameter(pos, BindParameter(array->Get(i))));
+                baton->parameters.push_back(BindParameter(array->Get(i), pos));
             }
         }
         else if (!args[start]->IsObject() || args[start]->IsRegExp() || args[start]->IsDate()) {
             // Parameters directly in array.
             // Note: bind parameters start with 1.
             for (int i = start, pos = 1; i < last; i++, pos++) {
-                baton->parameters.push_back(
-                    new Data::Parameter(pos, BindParameter(args[i])));
+                baton->parameters.push_back(BindParameter(args[i], pos));
             }
         }
         else if (args[start]->IsObject()) {
@@ -235,16 +234,12 @@ template <class T> T* Statement::Bind(const Arguments& args, int start) {
                 Local<Value> name = array->Get(i);
 
                 if (name->IsInt32()) {
-                    baton->parameters.push_back(new Data::Parameter(
-                        name->Int32Value(),
-                        BindParameter(object->Get(name))
-                    ));
+                    baton->parameters.push_back(
+                        BindParameter(object->Get(name), name->Int32Value()));
                 }
                 else {
-                    baton->parameters.push_back(new Data::Parameter(
-                        *String::Utf8Value(Local<String>::Cast(name)),
-                        BindParameter(object->Get(name))
-                    ));
+                    baton->parameters.push_back(BindParameter(object->Get(name),
+                        *String::Utf8Value(Local<String>::Cast(name))));
                 }
             }
         }
@@ -268,35 +263,35 @@ bool Statement::Bind(const Data::Parameters parameters) {
     Data::Parameters::const_iterator end = parameters.end();
 
     for (; it < end; it++) {
-        Data::Parameter* param = *it;
+        Data::Field* field = *it;
 
-        int pos;
-        if (param->position > 0) {
-            pos = param->position;
-        }
-        else {
-            pos = sqlite3_bind_parameter_index(handle, param->name.c_str());
-        }
+        if (field != NULL) {
+            int pos;
+            if (field->index > 0) {
+                pos = field->index;
+            }
+            else {
+                pos = sqlite3_bind_parameter_index(handle, field->name.c_str());
+            }
 
-        if (param->field != NULL) {
-            switch (param->field->type) {
+            switch (field->type) {
                 case SQLITE_INTEGER: {
                     status = sqlite3_bind_int(handle, pos,
-                        ((Data::Integer*)param->field)->value);
+                        ((Data::Integer*)field)->value);
                 } break;
                 case SQLITE_FLOAT: {
                     status = sqlite3_bind_double(handle, pos,
-                        ((Data::Float*)param->field)->value);
+                        ((Data::Float*)field)->value);
                 } break;
                 case SQLITE_TEXT: {
                     status = sqlite3_bind_text(handle, pos,
-                        ((Data::Text*)param->field)->value.c_str(),
-                        ((Data::Text*)param->field)->value.size(), SQLITE_TRANSIENT);
+                        ((Data::Text*)field)->value.c_str(),
+                        ((Data::Text*)field)->value.size(), SQLITE_TRANSIENT);
                 } break;
                 case SQLITE_BLOB: {
                     status = sqlite3_bind_blob(handle, pos,
-                        ((Data::Blob*)param->field)->value,
-                        ((Data::Blob*)param->field)->length, SQLITE_TRANSIENT);
+                        ((Data::Blob*)field)->value,
+                        ((Data::Blob*)field)->length, SQLITE_TRANSIENT);
                 } break;
                 case SQLITE_NULL: {
                     status = sqlite3_bind_null(handle, pos);
@@ -769,23 +764,23 @@ void Statement::GetRow(Data::Row* row, sqlite3_stmt* stmt) {
         int type = sqlite3_column_type(stmt, i);
         switch (type) {
             case SQLITE_INTEGER: {
-                row->push_back(new Data::Integer(sqlite3_column_int(stmt, i)));
+                row->push_back(new Data::Integer(i, sqlite3_column_int(stmt, i)));
             }   break;
             case SQLITE_FLOAT: {
-                row->push_back(new Data::Float(sqlite3_column_double(stmt, i)));
+                row->push_back(new Data::Float(i, sqlite3_column_double(stmt, i)));
             }   break;
             case SQLITE_TEXT: {
                 const char* text = (const char*)sqlite3_column_text(stmt, i);
                 int length = sqlite3_column_bytes(stmt, i);
-                row->push_back(new Data::Text(length, text));
+                row->push_back(new Data::Text(i, length, text));
             } break;
             case SQLITE_BLOB: {
                 const void* blob = sqlite3_column_blob(stmt, i);
                 int length = sqlite3_column_bytes(stmt, i);
-                row->push_back(new Data::Blob(length, blob));
+                row->push_back(new Data::Blob(i, length, blob));
             }   break;
             case SQLITE_NULL: {
-                row->push_back(new Data::Null());
+                row->push_back(new Data::Null(i));
             }   break;
             default:
                 assert(false);
