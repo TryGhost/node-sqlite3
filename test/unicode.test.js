@@ -38,7 +38,7 @@ exports['test unicode characters'] = function(beforeExit) {
            if (err) throw err;
 
            for (var i = 0; i < rows.length; i++) {
-               assert.equal(rows[i][0], data[i]);
+               assert.equal(rows[i].txt, data[i]);
                retrieved++;
            }
        });

@@ -12,8 +12,8 @@ exports['test Date() and RegExp() serialization'] = function(beforeExit) {
         db.run("INSERT INTO foo VALUES(?, ?)", (/^f\noo/), date);
         db.get("SELECT txt, num FROM foo", function(err, row) {
             if (err) throw err;
-            assert.equal(row[0], '/^f\\noo/');
-            assert.equal(row[1], +date);
+            assert.equal(row.txt, '/^f\\noo/');
+            assert.equal(row.num, +date);
             retrieved = true;
         })
     });
@@ -54,7 +54,7 @@ exports['test large floats'] = function(beforeExit) {
             if (err) throw err;
 
             for (var i = 0; i < rows.length; i++) {
-                assert.equal(numbers[i], rows[i][0]);
+                assert.equal(numbers[i], rows[i].num);
             }
 
             retrieved = true;

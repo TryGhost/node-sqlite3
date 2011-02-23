@@ -197,7 +197,7 @@ protected:
     bool Bind(const Data::Parameters parameters);
 
     static void GetRow(Data::Row* row, sqlite3_stmt* stmt);
-    static Local<Array> RowToJS(Data::Row* row);
+    static Local<Object> RowToJS(Data::Row* row);
     void Schedule(EIO_Callback callback, Baton* baton);
     void Process();
     void CleanQueue();

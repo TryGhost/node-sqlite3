@@ -35,18 +35,18 @@ exports['test named parameters'] = function(beforeExit) {
         db.all("SELECT txt, num FROM foo ORDER BY num", function(err, rows) {
             if (err) throw err;
 
-            assert.equal(rows[0][0], "Lorem Ipsum");
-            assert.equal(rows[0][1], 1);
-            assert.equal(rows[1][0], "Dolor Sit Amet");
-            assert.equal(rows[1][1], 2);
-            assert.equal(rows[2][0], "Consectetur Adipiscing Elit");
-            assert.equal(rows[2][1], 3);
-            assert.equal(rows[3][0], "Sed Do Eiusmod");
-            assert.equal(rows[3][1], 4);
-            assert.equal(rows[4][0], "Tempor Incididunt");
-            assert.equal(rows[4][1], 5);
-            assert.equal(rows[5][0], "Ut Labore Et Dolore");
-            assert.equal(rows[5][1], 6);
+            assert.equal(rows[0].txt, "Lorem Ipsum");
+            assert.equal(rows[0].num, 1);
+            assert.equal(rows[1].txt, "Dolor Sit Amet");
+            assert.equal(rows[1].num, 2);
+            assert.equal(rows[2].txt, "Consectetur Adipiscing Elit");
+            assert.equal(rows[2].num, 3);
+            assert.equal(rows[3].txt, "Sed Do Eiusmod");
+            assert.equal(rows[3].num, 4);
+            assert.equal(rows[4].txt, "Tempor Incididunt");
+            assert.equal(rows[4].num, 5);
+            assert.equal(rows[5].txt, "Ut Labore Et Dolore");
+            assert.equal(rows[5].num, 6);
 
             finished = true;
         });

@@ -26,11 +26,11 @@ exports['blob test'] = function(beforeExit) {
         db.all('SELECT id, image FROM elmos ORDER BY id', function(err, rows) {
             if (err) throw err;
             for (var i = 0; i < rows.length; i++) {
-                assert.ok(Buffer.isBuffer(rows[i][1]));
-                assert.ok(elmo.length, rows[i][1]);
+                assert.ok(Buffer.isBuffer(rows[i].image));
+                assert.ok(elmo.length, rows[i].image);
 
                 for (var j = 0; j < elmo.length; j++) {
-                    if (elmo[j] !== rows[i][1][j]) {
+                    if (elmo[j] !== rows[i].image[j]) {
                         assert.ok(false, "Wrong byte");
                     }
                 }

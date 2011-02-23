@@ -77,10 +77,10 @@ exports['test inserting and retrieving rows'] = function(beforeExit) {
             assert.equal(count + 5, rows.length, "Didn't run all queries");
 
             for (var i = 0; i < count; i++) {
-                assert.equal(rows[i][0], 'String ' + i);
-                assert.equal(rows[i][1], i);
-                assert.equal(rows[i][2], i * Math.PI);
-                assert.equal(rows[i][3], null);
+                assert.equal(rows[i].txt, 'String ' + i);
+                assert.equal(rows[i].num, i);
+                assert.equal(rows[i].flt, i * Math.PI);
+                assert.equal(rows[i].blb, null);
                 retrieved++;
             }
 
@@ -114,10 +114,10 @@ exports['test retrieving reset() function'] = function(beforeExit) {
         function(err, rows) {
             if (err) throw err;
             for (var i = 0; i < rows.length; i++) {
-                assert.equal(rows[i][0], 'String 0');
-                assert.equal(rows[i][1], 0);
-                assert.equal(rows[i][2], 0.0);
-                assert.equal(rows[i][3], null);
+                assert.equal(rows[i].txt, 'String 0');
+                assert.equal(rows[i].num, 0);
+                assert.equal(rows[i].flt, 0.0);
+                assert.equal(rows[i].blb, null);
                 retrieved++;
             }
         }
@@ -146,10 +146,10 @@ exports['test multiple get() parameter binding'] = function(beforeExit) {
             if (err) throw err;
             for (var i = 0; i < rows.length; i++) {
                 var val = i * 10 + 1;
-                assert.equal(rows[i][0], 'String ' + val);
-                assert.equal(rows[i][1], val);
-                assert.equal(rows[i][2], val * Math.PI);
-                assert.equal(rows[i][3], null);
+                assert.equal(rows[i].txt, 'String ' + val);
+                assert.equal(rows[i].num, val);
+                assert.equal(rows[i].flt, val * Math.PI);
+                assert.equal(rows[i].blb, null);
                 retrieved++;
             }
         }
@@ -169,10 +169,10 @@ exports['test prepare() parameter binding'] = function(beforeExit) {
     db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?", 10, 'String 10')
       .get(function(err, row) {
         if (err) throw err;
-        assert.equal(row[0], 'String 10');
-        assert.equal(row[1], 10);
-        assert.equal(row[2], 10 * Math.PI);
-        assert.equal(row[3], null);
+        assert.equal(row.txt, 'String 10');
+        assert.equal(row.num, 10);
+        assert.equal(row.flt, 10 * Math.PI);
+        assert.equal(row.blb, null);
         retrieved++;
     });
 
@@ -190,10 +190,10 @@ exports['test get() parameter binding'] = function(beforeExit) {
     db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?")
       .get(10, 'String 10', function(err, row) {
         if (err) throw err;
-        assert.equal(row[0], 'String 10');
-        assert.equal(row[1], 10);
-        assert.equal(row[2], 10 * Math.PI);
-        assert.equal(row[3], null);
+        assert.equal(row.txt, 'String 10');
+        assert.equal(row.num, 10);
+        assert.equal(row.flt, 10 * Math.PI);
+        assert.equal(row.blb, null);
         retrieved++;
     });
 
@@ -212,10 +212,10 @@ exports['test all()'] = function(beforeExit) {
       .all(function(err, rows) {
         if (err) throw err;
         for (var i = 0; i < rows.length; i++) {
-            assert.equal(rows[i][0], 'String ' + i);
-            assert.equal(rows[i][1], i);
-            assert.equal(rows[i][2], i * Math.PI);
-            assert.equal(rows[i][3], null);
+            assert.equal(rows[i].txt, 'String ' + i);
+            assert.equal(rows[i].num, i);
+            assert.equal(rows[i].flt, i * Math.PI);
+            assert.equal(rows[i].blb, null);
             retrieved++;
         }
     });
@@ -237,10 +237,10 @@ exports['test all() parameter binding'] = function(beforeExit) {
       .all(count, function(err, rows) {
         if (err) throw err;
         for (var i = 0; i < rows.length; i++) {
-            assert.equal(rows[i][0], 'String ' + i);
-            assert.equal(rows[i][1], i);
-            assert.equal(rows[i][2], i * Math.PI);
-            assert.equal(rows[i][3], null);
+            assert.equal(rows[i].txt, 'String ' + i);
+            assert.equal(rows[i].num, i);
+            assert.equal(rows[i].flt, i * Math.PI);
+            assert.equal(rows[i].blb, null);
             retrieved++;
         }
     });
@@ -310,15 +310,15 @@ exports['test high concurrency'] = function(beforeExit) {
                  if (err) throw err;
 
                  for (var i = 0; i < rows.length; i++) {
-                     assert.ok(data[rows[i][1]] !== true);
+                     assert.ok(data[rows[i].num] !== true);
 
-                     assert.equal(rows[i][0], data[rows[i][1]][0]);
-                     assert.equal(rows[i][1], data[rows[i][1]][1]);
-                     assert.equal(rows[i][2], data[rows[i][1]][2]);
-                     assert.equal(rows[i][3], data[rows[i][1]][3]);
+                     assert.equal(rows[i].txt, data[rows[i].num][0]);
+                     assert.equal(rows[i].num, data[rows[i].num][1]);
+                     assert.equal(rows[i].flt, data[rows[i].num][2]);
+                     assert.equal(rows[i].blb, data[rows[i].num][3]);
 
                      // Mark the data row as already retrieved.
-                     data[rows[i][1]] = true;
+                     data[rows[i].num] = true;
                      retrieved++;
                  }
             });
@@ -337,10 +337,10 @@ exports['test Database#get()'] = function(beforeExit) {
 
     db.get("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?", 10, 'String 10', function(err, row) {
         if (err) throw err;
-        assert.equal(row[0], 'String 10');
-        assert.equal(row[1], 10);
-        assert.equal(row[2], 10 * Math.PI);
-        assert.equal(row[3], null);
+        assert.equal(row.txt, 'String 10');
+        assert.equal(row.num, 10);
+        assert.equal(row.flt, 10 * Math.PI);
+        assert.equal(row.blb, null);
         retrieved++;
     });
 
@@ -385,10 +385,10 @@ exports['test Database#run() and Database#all()'] = function(beforeExit) {
             assert.equal(count, rows.length, "Couldn't retrieve all rows");
 
             for (var i = 0; i < count; i++) {
-                assert.equal(rows[i][0], 'String ' + i);
-                assert.equal(rows[i][1], i);
-                assert.equal(rows[i][2], i * Math.PI);
-                assert.equal(rows[i][3], null);
+                assert.equal(rows[i].txt, 'String ' + i);
+                assert.equal(rows[i].num, i);
+                assert.equal(rows[i].flt, i * Math.PI);
+                assert.equal(rows[i].blb, null);
                 retrieved++;
             }
         }

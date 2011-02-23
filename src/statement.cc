@@ -723,8 +723,8 @@ int Statement::EIO_AfterReset(eio_req *req) {
     return 0;
 }
 
-Local<Array> Statement::RowToJS(Data::Row* row) {
-    Local<Array> result(Array::New(row->size()));
+Local<Object> Statement::RowToJS(Data::Row* row) {
+    Local<Object> result(Object::New());
 
     Data::Row::const_iterator it = row->begin();
     Data::Row::const_iterator end = row->end();
@@ -757,7 +757,6 @@ Local<Array> Statement::RowToJS(Data::Row* row) {
             } break;
         }
 
-        result->Set(i, value);
         result->Set(String::NewSymbol(field->name.c_str()), value);
 
         DELETE_FIELD(field);

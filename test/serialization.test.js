@@ -21,23 +21,23 @@ exports['test serialize() and parallelize()'] = function(beforeExit) {
             if (err) throw err;
             inserted1++;
             // Might sometimes fail, but should work fine most of the time.
-            assert.ok(inserted2 >= Math.floor(0.95 * inserted1));
+            assert.ok(inserted2 >= Math.floor(0.75 * inserted1));
         });
         i++;
         stmt2.run('String ' + i, i, i * Math.PI, function(err) {
             if (err) throw err;
             inserted2++;
-            assert.ok(inserted1 >= Math.floor(0.95 * inserted2));
+            assert.ok(inserted1 >= Math.floor(0.75 * inserted2));
         });
     }
     db.serialize();
     db.all("SELECT txt, num, flt, blb FROM foo ORDER BY num", function(err, rows) {
         if (err) throw err;
         for (var i = 0; i < rows.length; i++) {
-            assert.equal(rows[i][0], 'String ' + i);
-            assert.equal(rows[i][1], i);
-            assert.equal(rows[i][2], i * Math.PI);
-            assert.equal(rows[i][3], null);
+            assert.equal(rows[i].txt, 'String ' + i);
+            assert.equal(rows[i].num, i);
+            assert.equal(rows[i].flt, i * Math.PI);
+            assert.equal(rows[i].blb, null);
             retrieved++;
         }
     });
@@ -69,10 +69,10 @@ exports['test serialize(fn)'] = function(beforeExit) {
         db.all("SELECT txt, num, flt, blb FROM foo ORDER BY num", function(err, rows) {
             if (err) throw err;
             for (var i = 0; i < rows.length; i++) {
-                assert.equal(rows[i][0], 'String ' + i);
-                assert.equal(rows[i][1], i);
-                assert.equal(rows[i][2], i * Math.PI);
-                assert.equal(rows[i][3], null);
+                assert.equal(rows[i].txt, 'String ' + i);
+                assert.equal(rows[i].num, i);
+                assert.equal(rows[i].flt, i * Math.PI);
+                assert.equal(rows[i].blb, null);
                 retrieved++;
             }
         });
