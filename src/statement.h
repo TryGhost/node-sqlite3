@@ -89,11 +89,6 @@ public:
             callback = Persistent<Function>::New(cb_);
         }
         ~Baton() {
-            Data::Parameters::const_iterator it = parameters.begin();
-            Data::Parameters::const_iterator end = parameters.end();
-            for (; it < end; it++) {
-                DELETE_FIELD(*it);
-            }
             stmt->Unref();
             ev_unref(EV_DEFAULT_UC);
             callback.Dispose();
