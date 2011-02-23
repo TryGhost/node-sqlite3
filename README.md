@@ -1,16 +1,78 @@
 # NAME
 
-node-sqlite3 - Asynchronous, non-blocking SQLite3 bindings for node.js
+node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [node.js](https://github.com/ry/node) 0.2.* and 0.4.*.
 
-# COMPATIBILITY
 
-The SQLite bindings are compatible with node.js 0.2 and 0.4
 
-# SYNOPSIS
+# USAGE
 
-TODO
+    var db = new sqlite3.Database(':memory:');
+    db.serialize(function() {
+      db.run("CREATE TABLE lorem (info TEXT)");
+
+      var stmt = db.prepare("INSERT INTO lorem VALUES(?)");
+      for (var i = 0; i < 10; i++) {
+          stmt.run("Ipsum " + i);
+      }
+
+      db.each("SELECT rowid AS id, info FROM lorem", function(err, row) {
+          console.log(row.id + ": " + row.info);
+      });
+    });
+
+
+
+# API
+
+## new sqlite3.Database(filename, [mode], [callback])
+
+Returns a new Database object and automatically opens the database. There is no separate method to open the database.
+
+* `filename`: Valid values are filenames, `":memory:"` for an anonymous in-memory database and and empty string for an anonymous disk-based database. Anonymous databases are not persisted and when closing the database handle, their contents are lost.
+
+* `mode` *(optional)*: One or more of `sqlite3.OPEN_READONLY`, `sqlite3.OPEN_READWRITE` and `sqlite3.OPEN_CREATE`. The default value is `OPEN_READWRITE | OPEN_CREATE`.
+
+* `callback` *(optional)*: If provided, this function will be called when the database was opened successfully or when an error occured. The first argument is an error object. When it is `null`, opening succeeded. If no callback is provided and an error occured, an `error` event with the error object as only parameter will be emitted on the database object. If opening succeeded, an `open` event with no parameters is emitted, regardless of whether a callback was provided or not.
+
+## Database#run(sql, [param, ...], [callback])
+
+Runs the SQL query with the specified parameters and calls the callback afterwards. It does not retrieve any result data. The function returns the Database object for which it was called to allow for function chaining.
+
+* `sql`: The SQL query to run. If the SQL query is invalid and a callback was passed to the function, it is called with an error object containing the error message from SQLite. If no callback was passed and preparing fails, an `error` event will be emitted on the underlying Statement object.
+
+* `param, ...` *(optional)*: When the SQL statement contains placeholders, you can pass them in here. They will be bound to the statement before it is executed. There are three ways of passing bind parameters: directly in the function's arguments, as an array and as an object for named parameters.
+
+        // Directly in the function arguments.
+        db.run("SELECT * FROM tbl WHERE id = ? AND name = ?", 2, "bar");
+
+        // As an array.
+        db.run("SELECT * FROM tbl WHERE id = ? AND name = ?", [ 2, "bar" ]);
+
+        // As an object with named parameters.
+        db.run("SELECT * FROM tbl WHERE id = $id AND name = $name", {
+            $id: 2,
+            $name: "bar"
+        });
+
+  Named parameters can be prefixed with `:name`, `@name` and `$name`. We recommend using `$name` since JavaScript allows using the dollar sign as a variable name without escaping it. You can also specify a numeric index after a `?` placeholder. These correspond to the position in the array. Note that placeholder indexes start at 1 in SQLite. `node-sqlite3` maps arrays to start with one so that you don't have to specify an empty value as the first array element (with index 0). You can also use numeric object keys to bind values. Note that in this case, the first index is 1:
+
+        db.run("SELECT * FROM tbl WHERE id = $id AND name = $name", {
+            1: 2,
+            $name: "bar"
+        });
+
+  This binds the first placeholder (`$id`) to `2` and the placeholder named `$name` to `"bar"`. While this is valid in SQLite and `node-sqlite3`, it is not recommended to mix different placeholder types.
+
+* `callback` *(optional)*: If given, it will be called when an error occurs during any step of the statement preparation or execution, *and* after the query was run. If an error occured, the first (and only) parameter will be an error object containing the error message. If execution was successful, the first parameter is `null`. The context of the function (the `this` object inside the function) is the statement object. Note that it is not possible to run the statement again because it is automatically finalized after running for the first time. Any subsequent attempts to run the statement again will fail.
+If execution was successful, it contains two properties named `lastID` and `changes` which contain the value of the last inserted row ID and the number of rows affected by this query respectively. Note that `lastID` **only** contains valid information when the query was a successfully completed `INSERT` statement and `changes` **only** contains valid information when the query was a successfully completed `UPDATE` or `DELETE` statement. In all other cases, the content of these properties is inaccurate and should not be used. The `.run()` function is the only query method that sets these two values; all other query methods such as `.all()` or `.get()` don't retrieve these values.
+
+
+## more to come
+
 
 # BUILDING
+
+Make sure you have the sources for `sqlite3` installed. Mac OS X ships with these by default. If you don't have them installed, install the `-dev` package with your package manager, e.g. `apt-get install libsqlite3-dev` for Debian/Ubuntu.
 
 To obtain and build the bindings:
 
@@ -19,32 +81,35 @@ To obtain and build the bindings:
     ./configure
     make
 
+You can also use [`npm`](https://github.com/isaacs/npm) to download and install them:
+
+    npm install https://github.com/developmentseed/node-sqlite3/tarball/master
+
+
+
 # TESTS
 
-[expresso](https://github.com/visionmedia/expresso) is required to run unit tests. 
+[expresso](https://github.com/visionmedia/expresso) is required to run unit tests.
 
     npm install expresso
     make test
 
-# SEE ALSO
 
-* http://sqlite.org/docs.html
-* http://github.com/developmentseed/node-sqlite3/
 
-# AUTHORS
+# CONTRIBUTORS
 
 * [Konstantin Käfer](https://github.com/kkaefer)
-* [Orlando Vazquez](https://github.com/orlandov)
+
+
 
 # ACKNOWLEDGEMENTS
 
 Thanks to [Orlando Vazquez](https://github.com/orlandov),
 [Eric Fredricksen](https://github.com/grumdrig) and
-[Ryan Dahl](https://github.com/ry) for their SQLite drivers.
+[Ryan Dahl](https://github.com/ry) for their SQLite bindings for node, and to mraleph on Freenode's #v8 for answering questions.
+
 
 
 # LICENSE
 
-node-sqlite3 is BSD licensed.
-
-(c) 2011 Development Seed
+`node-sqlite3` is [BSD licensed](https://github.com/developmentseed/node-sqlite3/raw/master/LICENSE).
