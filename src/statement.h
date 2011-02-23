@@ -19,7 +19,7 @@ using namespace node;
 
 namespace node_sqlite3 {
 
-namespace Data {
+namespace Values {
     struct Field {
         inline Field(unsigned short _index, unsigned short _type = SQLITE_NULL) :
             type(_type), index(_index) {}
@@ -63,11 +63,11 @@ namespace Data {
     };
 
     typedef Field Null;
-    typedef std::vector<Field*> Row;
-    typedef std::vector<Row*> Rows;
-    typedef Row Parameters;
 }
 
+typedef std::vector<Values::Field*> Row;
+typedef std::vector<Row*> Rows;
+typedef Row Parameters;
 
 
 
@@ -78,10 +78,10 @@ public:
     static void Init(Handle<Object> target);
     static Handle<Value> New(const Arguments& args);
 
-    static struct Baton {
+    struct Baton {
         Statement* stmt;
         Persistent<Function> callback;
-        Data::Parameters parameters;
+        Parameters parameters;
 
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
@@ -95,26 +95,26 @@ public:
         }
     };
 
-    static struct RowBaton : Baton {
+    struct RowBaton : Baton {
         RowBaton(Statement* stmt_, Handle<Function> cb_) :
             Baton(stmt_, cb_) {}
-        Data::Row row;
+        Row row;
     };
 
-    static struct RunBaton : Baton {
+    struct RunBaton : Baton {
         RunBaton(Statement* stmt_, Handle<Function> cb_) :
             Baton(stmt_, cb_), inserted_id(0), changes(0) {}
         sqlite3_int64 inserted_id;
         int changes;
     };
 
-    static struct RowsBaton : Baton {
+    struct RowsBaton : Baton {
         RowsBaton(Statement* stmt_, Handle<Function> cb_) :
             Baton(stmt_, cb_) {}
-        Data::Rows rows;
+        Rows rows;
     };
 
-    static struct PrepareBaton : Database::Baton {
+    struct PrepareBaton : Database::Baton {
         Statement* stmt;
         std::string sql;
         PrepareBaton(Database* db_, Handle<Function> cb_, Statement* stmt_) :
@@ -139,7 +139,7 @@ public:
     struct Async {
         ev_async watcher;
         Statement* stmt;
-        Data::Rows data;
+        Rows data;
         pthread_mutex_t mutex;
         Persistent<Function> callback;
         bool completed;
@@ -194,12 +194,12 @@ protected:
     static void Finalize(Baton* baton);
     void Finalize();
 
-    template <class T> inline Data::Field* BindParameter(const Handle<Value> source, T pos);
+    template <class T> inline Values::Field* BindParameter(const Handle<Value> source, T pos);
     template <class T> T* Bind(const Arguments& args, int start = 0);
-    bool Bind(const Data::Parameters parameters);
+    bool Bind(const Parameters parameters);
 
-    static void GetRow(Data::Row* row, sqlite3_stmt* stmt);
-    static Local<Object> RowToJS(Data::Row* row);
+    static void GetRow(Row* row, sqlite3_stmt* stmt);
+    static Local<Object> RowToJS(Row* row);
     void Schedule(EIO_Callback callback, Baton* baton);
     void Process();
     void CleanQueue();

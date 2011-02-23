@@ -158,11 +158,11 @@ const char* sqlite_code_string(int code);
 
 #define DELETE_FIELD(field)                                                    \
     switch ((field)->type) {                                                   \
-        case SQLITE_INTEGER: delete (Data::Integer*)(field); break;            \
-        case SQLITE_FLOAT:   delete (Data::Float*)(field); break;              \
-        case SQLITE_TEXT:    delete (Data::Text*)(field); break;               \
-        case SQLITE_BLOB:    delete (Data::Blob*)(field); break;               \
-        case SQLITE_NULL:    delete (Data::Null*)(field); break;               \
+        case SQLITE_INTEGER: delete (Values::Integer*)(field); break;          \
+        case SQLITE_FLOAT:   delete (Values::Float*)(field); break;            \
+        case SQLITE_TEXT:    delete (Values::Text*)(field); break;             \
+        case SQLITE_BLOB:    delete (Values::Blob*)(field); break;             \
+        case SQLITE_NULL:    delete (Values::Null*)(field); break;             \
     }
 
 #endif

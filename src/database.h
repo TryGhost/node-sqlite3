@@ -29,7 +29,7 @@ public:
         return constructor_template->HasInstance(obj);
     }
 
-    static struct Baton {
+    struct Baton {
         Database* db;
         Persistent<Function> callback;
         int status;
@@ -47,7 +47,7 @@ public:
         }
     };
 
-    static struct OpenBaton : Baton {
+    struct OpenBaton : Baton {
         std::string filename;
         int mode;
 

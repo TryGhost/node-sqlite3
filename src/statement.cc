@@ -162,35 +162,35 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     return 0;
 }
 
-template <class T> Data::Field*
+template <class T> Values::Field*
                    Statement::BindParameter(const Handle<Value> source, T pos) {
     if (source->IsString() || source->IsRegExp()) {
         String::Utf8Value val(source->ToString());
-        return new Data::Text(pos, val.length(), *val);
+        return new Values::Text(pos, val.length(), *val);
     }
     else if (source->IsInt32()) {
-        return new Data::Integer(pos, source->Int32Value());
+        return new Values::Integer(pos, source->Int32Value());
     }
     else if (source->IsNumber()) {
-        return new Data::Float(pos, source->NumberValue());
+        return new Values::Float(pos, source->NumberValue());
     }
     else if (source->IsBoolean()) {
-        return new Data::Integer(pos, source->BooleanValue() ? 1 : 0);
+        return new Values::Integer(pos, source->BooleanValue() ? 1 : 0);
     }
     else if (source->IsNull()) {
-        return new Data::Null(pos);
+        return new Values::Null(pos);
     }
     else if (Buffer::HasInstance(source)) {
 #if NODE_VERSION_AT_LEAST(0,3,0)
         Local<Object> buffer = source->ToObject();
-        return new Data::Blob(pos, Buffer::Length(buffer), Buffer::Data(buffer));
+        return new Values::Blob(pos, Buffer::Length(buffer), Buffer::Data(buffer));
 #else
         Buffer* buffer = ObjectWrap::Unwrap<Buffer>(source->ToObject());
-        return new Data::Blob(pos, buffer->length(), buffer->data());
+        return new Values::Blob(pos, buffer->length(), buffer->data());
 #endif
     }
     else if (source->IsDate()) {
-        return new Data::Float(pos, source->NumberValue());
+        return new Values::Float(pos, source->NumberValue());
     }
     else if (source->IsUndefined()) {
         return NULL;
@@ -251,7 +251,7 @@ template <class T> T* Statement::Bind(const Arguments& args, int start) {
     return baton;
 }
 
-bool Statement::Bind(const Data::Parameters parameters) {
+bool Statement::Bind(const Parameters parameters) {
     if (parameters.size() == 0) {
         return true;
     }
@@ -259,11 +259,11 @@ bool Statement::Bind(const Data::Parameters parameters) {
     sqlite3_reset(handle);
     sqlite3_clear_bindings(handle);
 
-    Data::Parameters::const_iterator it = parameters.begin();
-    Data::Parameters::const_iterator end = parameters.end();
+    Parameters::const_iterator it = parameters.begin();
+    Parameters::const_iterator end = parameters.end();
 
     for (; it < end; it++) {
-        Data::Field* field = *it;
+        Values::Field* field = *it;
 
         if (field != NULL) {
             int pos;
@@ -277,21 +277,21 @@ bool Statement::Bind(const Data::Parameters parameters) {
             switch (field->type) {
                 case SQLITE_INTEGER: {
                     status = sqlite3_bind_int(handle, pos,
-                        ((Data::Integer*)field)->value);
+                        ((Values::Integer*)field)->value);
                 } break;
                 case SQLITE_FLOAT: {
                     status = sqlite3_bind_double(handle, pos,
-                        ((Data::Float*)field)->value);
+                        ((Values::Float*)field)->value);
                 } break;
                 case SQLITE_TEXT: {
                     status = sqlite3_bind_text(handle, pos,
-                        ((Data::Text*)field)->value.c_str(),
-                        ((Data::Text*)field)->value.size(), SQLITE_TRANSIENT);
+                        ((Values::Text*)field)->value.c_str(),
+                        ((Values::Text*)field)->value.size(), SQLITE_TRANSIENT);
                 } break;
                 case SQLITE_BLOB: {
                     status = sqlite3_bind_blob(handle, pos,
-                        ((Data::Blob*)field)->value,
-                        ((Data::Blob*)field)->length, SQLITE_TRANSIENT);
+                        ((Values::Blob*)field)->value,
+                        ((Values::Blob*)field)->length, SQLITE_TRANSIENT);
                 } break;
                 case SQLITE_NULL: {
                     status = sqlite3_bind_null(handle, pos);
@@ -529,7 +529,7 @@ int Statement::EIO_All(eio_req *req) {
 
     if (stmt->Bind(baton->parameters)) {
         while ((stmt->status = sqlite3_step(stmt->handle)) == SQLITE_ROW) {
-            Data::Row* row = new Data::Row();
+            Row* row = new Row();
             GetRow(row, stmt->handle);
             baton->rows.push_back(row);
         }
@@ -557,8 +557,8 @@ int Statement::EIO_AfterAll(eio_req *req) {
             if (baton->rows.size()) {
                 // Create the result array from the data we acquired.
                 Local<Array> result(Array::New(baton->rows.size()));
-                Data::Rows::const_iterator it = baton->rows.begin();
-                Data::Rows::const_iterator end = baton->rows.end();
+                Rows::const_iterator it = baton->rows.begin();
+                Rows::const_iterator end = baton->rows.end();
                 for (int i = 0; it < end; it++, i++) {
                     result->Set(i, RowToJS(*it));
                     delete *it;
@@ -620,7 +620,7 @@ int Statement::EIO_Each(eio_req *req) {
             stmt->status = sqlite3_step(stmt->handle);
             if (stmt->status == SQLITE_ROW) {
                 sqlite3_mutex_leave(mtx);
-                Data::Row* row = new Data::Row();
+                Row* row = new Row();
                 GetRow(row, stmt->handle);
 
                 pthread_mutex_lock(&async->mutex);
@@ -652,7 +652,7 @@ void Statement::AsyncEach(EV_P_ ev_async *w, int revents) {
 
     while (true) {
         // Get the contents out of the data cache for us to process in the JS callback.
-        Data::Rows rows;
+        Rows rows;
         pthread_mutex_lock(&async->mutex);
         rows.swap(async->data);
         pthread_mutex_unlock(&async->mutex);
@@ -665,8 +665,8 @@ void Statement::AsyncEach(EV_P_ ev_async *w, int revents) {
             Local<Value> argv[2];
             argv[0] = Local<Value>::New(Null());
 
-            Data::Rows::const_iterator it = rows.begin();
-            Data::Rows::const_iterator end = rows.end();
+            Rows::const_iterator it = rows.begin();
+            Rows::const_iterator end = rows.end();
             for (int i = 0; it < end; it++, i++) {
                 argv[1] = RowToJS(*it);
                 TRY_CATCH_CALL(async->stmt->handle_, async->callback, 2, argv);
@@ -732,32 +732,32 @@ int Statement::EIO_AfterReset(eio_req *req) {
     return 0;
 }
 
-Local<Object> Statement::RowToJS(Data::Row* row) {
+Local<Object> Statement::RowToJS(Row* row) {
     Local<Object> result(Object::New());
 
-    Data::Row::const_iterator it = row->begin();
-    Data::Row::const_iterator end = row->end();
+    Row::const_iterator it = row->begin();
+    Row::const_iterator end = row->end();
     for (int i = 0; it < end; it++, i++) {
-        Data::Field* field = *it;
+        Values::Field* field = *it;
 
         Local<Value> value;
 
         switch (field->type) {
             case SQLITE_INTEGER: {
-                value = Local<Value>(Integer::New(((Data::Integer*)field)->value));
+                value = Local<Value>(Integer::New(((Values::Integer*)field)->value));
             } break;
             case SQLITE_FLOAT: {
-                value = Local<Value>(Number::New(((Data::Float*)field)->value));
+                value = Local<Value>(Number::New(((Values::Float*)field)->value));
             } break;
             case SQLITE_TEXT: {
-                value = Local<Value>(String::New(((Data::Text*)field)->value.c_str(), ((Data::Text*)field)->value.size()));
+                value = Local<Value>(String::New(((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size()));
             } break;
             case SQLITE_BLOB: {
 #if NODE_VERSION_AT_LEAST(0,3,0)
-                Buffer *buffer = Buffer::New(((Data::Blob*)field)->value, ((Data::Blob*)field)->length);
+                Buffer *buffer = Buffer::New(((Values::Blob*)field)->value, ((Values::Blob*)field)->length);
 #else
-                Buffer *buffer = Buffer::New(((Data::Blob*)field)->length);
-                memcpy(buffer->data(), ((Data::Blob*)field)->value, buffer->length());
+                Buffer *buffer = Buffer::New(((Values::Blob*)field)->length);
+                memcpy(buffer->data(), ((Values::Blob*)field)->value, buffer->length());
 #endif
                 value = Local<Value>::New(buffer->handle_);
             } break;
@@ -774,7 +774,7 @@ Local<Object> Statement::RowToJS(Data::Row* row) {
     return result;
 }
 
-void Statement::GetRow(Data::Row* row, sqlite3_stmt* stmt) {
+void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
     int rows = sqlite3_column_count(stmt);
 
     for (int i = 0; i < rows; i++) {
@@ -782,23 +782,23 @@ void Statement::GetRow(Data::Row* row, sqlite3_stmt* stmt) {
         const char* name = sqlite3_column_name(stmt, i);
         switch (type) {
             case SQLITE_INTEGER: {
-                row->push_back(new Data::Integer(name, sqlite3_column_int(stmt, i)));
+                row->push_back(new Values::Integer(name, sqlite3_column_int(stmt, i)));
             }   break;
             case SQLITE_FLOAT: {
-                row->push_back(new Data::Float(name, sqlite3_column_double(stmt, i)));
+                row->push_back(new Values::Float(name, sqlite3_column_double(stmt, i)));
             }   break;
             case SQLITE_TEXT: {
                 const char* text = (const char*)sqlite3_column_text(stmt, i);
                 int length = sqlite3_column_bytes(stmt, i);
-                row->push_back(new Data::Text(name, length, text));
+                row->push_back(new Values::Text(name, length, text));
             } break;
             case SQLITE_BLOB: {
                 const void* blob = sqlite3_column_blob(stmt, i);
                 int length = sqlite3_column_bytes(stmt, i);
-                row->push_back(new Data::Blob(name, length, blob));
+                row->push_back(new Values::Blob(name, length, blob));
             }   break;
             case SQLITE_NULL: {
-                row->push_back(new Data::Null(name));
+                row->push_back(new Values::Null(name));
             }   break;
             default:
                 assert(false);
