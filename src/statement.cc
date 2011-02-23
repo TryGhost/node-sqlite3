@@ -434,7 +434,7 @@ Handle<Value> Statement::Run(const Arguments& args) {
     HandleScope scope;
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
-    Baton* baton = stmt->Bind<Baton>(args);
+    Baton* baton = stmt->Bind<RunBaton>(args);
     if (baton == NULL) {
         return ThrowException(Exception::Error(String::New("Data type is not supported")));
     }
@@ -449,7 +449,7 @@ void Statement::EIO_BeginRun(Baton* baton) {
 }
 
 int Statement::EIO_Run(eio_req *req) {
-    STATEMENT_INIT(Baton);
+    STATEMENT_INIT(RunBaton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
     sqlite3_mutex_enter(mtx);
@@ -465,6 +465,10 @@ int Statement::EIO_Run(eio_req *req) {
         if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
             stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
         }
+        else {
+            baton->inserted_id = sqlite3_last_insert_rowid(stmt->db->handle);
+            baton->changes = sqlite3_changes(stmt->db->handle);
+        }
     }
 
     sqlite3_mutex_leave(mtx);
@@ -474,7 +478,7 @@ int Statement::EIO_Run(eio_req *req) {
 
 int Statement::EIO_AfterRun(eio_req *req) {
     HandleScope scope;
-    STATEMENT_INIT(Baton);
+    STATEMENT_INIT(RunBaton);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton);
@@ -482,6 +486,9 @@ int Statement::EIO_AfterRun(eio_req *req) {
     else {
         // Fire callbacks.
         if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+            stmt->handle_->Set(String::NewSymbol("lastID"), Local<Integer>(Integer::New(baton->inserted_id)));
+            stmt->handle_->Set(String::NewSymbol("changes"), Local<Integer>(Integer::New(baton->changes)));
+
             Local<Value> argv[] = { Local<Value>::New(Null()) };
             TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
         }

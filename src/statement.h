@@ -101,6 +101,13 @@ public:
         Data::Row row;
     };
 
+    static struct RunBaton : Baton {
+        RunBaton(Statement* stmt_, Handle<Function> cb_) :
+            Baton(stmt_, cb_), inserted_id(0), changes(0) {}
+        sqlite3_int64 inserted_id;
+        int changes;
+    };
+
     static struct RowsBaton : Baton {
         RowsBaton(Statement* stmt_, Handle<Function> cb_) :
             Baton(stmt_, cb_) {}
