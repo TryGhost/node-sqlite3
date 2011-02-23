@@ -729,15 +729,18 @@ Local<Array> Statement::RowToJS(Data::Row* row) {
     Data::Row::const_iterator end = row->end();
     for (int i = 0; it < end; it++, i++) {
         Data::Field* field = *it;
+
+        Local<Value> value;
+
         switch (field->type) {
             case SQLITE_INTEGER: {
-                result->Set(i, Local<Integer>(Integer::New(((Data::Integer*)field)->value)));
+                value = Local<Value>(Integer::New(((Data::Integer*)field)->value));
             } break;
             case SQLITE_FLOAT: {
-                result->Set(i, Local<Number>(Number::New(((Data::Float*)field)->value)));
+                value = Local<Value>(Number::New(((Data::Float*)field)->value));
             } break;
             case SQLITE_TEXT: {
-                result->Set(i, Local<String>(String::New(((Data::Text*)field)->value.c_str(), ((Data::Text*)field)->value.size())));
+                value = Local<Value>(String::New(((Data::Text*)field)->value.c_str(), ((Data::Text*)field)->value.size()));
             } break;
             case SQLITE_BLOB: {
 #if NODE_VERSION_AT_LEAST(0,3,0)
@@ -746,12 +749,15 @@ Local<Array> Statement::RowToJS(Data::Row* row) {
                 Buffer *buffer = Buffer::New(((Data::Blob*)field)->length);
                 memcpy(buffer->data(), ((Data::Blob*)field)->value, buffer->length());
 #endif
-                result->Set(i, buffer->handle_);
+                value = Local<Value>::New(buffer->handle_);
             } break;
             case SQLITE_NULL: {
-                result->Set(i, Local<Value>::New(Null()));
+                value = Local<Value>::New(Null());
             } break;
         }
+
+        result->Set(i, value);
+        result->Set(String::NewSymbol(field->name.c_str()), value);
     }
 
     return result;
@@ -762,25 +768,26 @@ void Statement::GetRow(Data::Row* row, sqlite3_stmt* stmt) {
 
     for (int i = 0; i < rows; i++) {
         int type = sqlite3_column_type(stmt, i);
+        const char* name = sqlite3_column_name(stmt, i);
         switch (type) {
             case SQLITE_INTEGER: {
-                row->push_back(new Data::Integer(i, sqlite3_column_int(stmt, i)));
+                row->push_back(new Data::Integer(name, sqlite3_column_int(stmt, i)));
             }   break;
             case SQLITE_FLOAT: {
-                row->push_back(new Data::Float(i, sqlite3_column_double(stmt, i)));
+                row->push_back(new Data::Float(name, sqlite3_column_double(stmt, i)));
             }   break;
             case SQLITE_TEXT: {
                 const char* text = (const char*)sqlite3_column_text(stmt, i);
                 int length = sqlite3_column_bytes(stmt, i);
-                row->push_back(new Data::Text(i, length, text));
+                row->push_back(new Data::Text(name, length, text));
             } break;
             case SQLITE_BLOB: {
                 const void* blob = sqlite3_column_blob(stmt, i);
                 int length = sqlite3_column_bytes(stmt, i);
-                row->push_back(new Data::Blob(i, length, blob));
+                row->push_back(new Data::Blob(name, length, blob));
             }   break;
             case SQLITE_NULL: {
-                row->push_back(new Data::Null(i));
+                row->push_back(new Data::Null(name));
             }   break;
             default:
                 assert(false);
