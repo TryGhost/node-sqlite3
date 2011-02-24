@@ -13,14 +13,15 @@ def set_options(opt):
 def configure(conf):
   conf.check_tool("compiler_cxx")
   conf.check_tool("node_addon")
-  if not conf.check_cxx(header_name='sqlite3.h'):
-      conf.fatal("Missing sqlite3.h header file.")
+  if not conf.check(lib="sqlite3", libpath=['/usr/local/lib', '/opt/local/lib'], uselib_store="SQLITE3"):
+    conf.fatal('Missing sqlite3');
 
 def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
   obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-Wall"]
   obj.target = TARGET
   obj.source = "src/sqlite3.cc src/database.cc src/statement.cc"
+  obj.uselib = "SQLITE3"
 
 def shutdown():
   if Options.commands['clean']:
