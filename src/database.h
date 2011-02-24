@@ -29,7 +29,7 @@ public:
         return constructor_template->HasInstance(obj);
     }
 
-    static struct Baton {
+    struct Baton {
         Database* db;
         Persistent<Function> callback;
         int status;
@@ -48,14 +48,14 @@ public:
         }
     };
 
-    static struct OpenBaton : Baton {
+    struct OpenBaton : Baton {
         std::string filename;
         int mode;
         OpenBaton(Database* db_, Handle<Function> cb_, const char* filename_, int mode_) :
             Baton(db_, cb_), filename(filename_), mode(mode_) {}
     };
 
-    static struct ExecBaton : Baton {
+    struct ExecBaton : Baton {
         std::string sql;
         ExecBaton(Database* db_, Handle<Function> cb_, const char* sql_) :
             Baton(db_, cb_), sql(sql_) {}
@@ -63,7 +63,7 @@ public:
 
     typedef void (*EIO_Callback)(Baton* baton);
 
-    static struct Call {
+    struct Call {
         Call(EIO_Callback cb_, Baton* baton_, bool exclusive_ = false) :
             callback(cb_), exclusive(exclusive_), baton(baton_) {};
         EIO_Callback callback;
