@@ -110,7 +110,7 @@ There is currently no way to abort execution.
 
 Runs all SQL queries in the supplied string. No result rows are retrieved. The function returns the Database object to allow for function chaining. If a query fails, no subsequent statements will be executed (wrap it in a transaction if you want all or none to be executed). When all statements have been executed successfully, or when an error occurs, the callback function is called, with the first parameter being either `null` or an error object. When no callback is provided and an error occurs, an `error` event will be emitted on the database object.
 
-Note: This function will only execute statements up to the first NULL byte.
+Note: This function will only execute statements up to the first NULL byte. **Comments are not allowed** and will lead to runtime errors.
 
 
 
