@@ -1,24 +1,25 @@
 {
     "name": "sqlite3",
     "description": "Asynchronous, non-blocking SQLite3 bindings",
-    "version": "1.1.0",
+    "version": "2.0.0",
     "homepage": "http://github.com/developmentseed/node-sqlite3",
     "author": "Konstantin Käfer <kkaefer@gmail.com>",
     "contributors": [
         "Orlando Vazquez <ovazquez@gmail.com>",
-        "Artem Kustikov",
-        "Eric Fredricksen",
-        "John Wright",
-        "Ryan Dahl",
-        "Will White",
-        "Tom MacWright"
+        "Artem Kustikov <kustikoff@gmail.com>",
+        "Eric Fredricksen <efredricksen@gmail.com>",
+        "John Wright <mrjjwright@gmail.com>",
+        "Ryan Dahl <ry@tinyclouds.org>",
+        "Will White <will@developmentseed.org>",
+        "Tom MacWright <tom@developmentseed.org>",
+        "Dane Springmeyer <dane@developmentseed.org>"
     ],
     "repository": {
         "type": "git",
         "url": "git://github.com/developmentseed/node-sqlite3.git"
     },
     "engines": {
-        "node": ">=0.2.6"
+        "node": ">=0.2.4"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"
