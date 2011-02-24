@@ -1,6 +1,8 @@
 var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
+if (process.setMaxListeners) process.setMaxListeners(0);
+
 exports['test Date() and RegExp() serialization'] = function(beforeExit) {
     var db = new sqlite3.Database(':memory:');
 

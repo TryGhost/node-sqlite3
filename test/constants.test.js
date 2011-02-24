@@ -1,6 +1,8 @@
 var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
+if (process.setMaxListeners) process.setMaxListeners(0);
+
 exports['test constants'] = function() {
     assert.ok(sqlite3.OPEN_READONLY === 1);
     assert.ok(sqlite3.OPEN_READWRITE === 2);

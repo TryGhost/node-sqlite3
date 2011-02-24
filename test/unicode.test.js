@@ -1,6 +1,8 @@
 var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
+if (process.setMaxListeners) process.setMaxListeners(0);
+
 function randomString() {
     var str = '';
     for (var i = Math.random() * 300; i > 0; i--) {

@@ -4,6 +4,8 @@ var sqlite3 = require('sqlite3'),
     assert = require('assert')
     Buffer = require('buffer').Buffer;
 
+if (process.setMaxListeners) process.setMaxListeners(0);
+
 // lots of elmo
 var elmo = fs.readFileSync(__dirname + '/support/elmo.png');
 

@@ -3,6 +3,8 @@ var assert = require('assert');
 var fs = require('fs');
 var helper = require('./support/helper');
 
+if (process.setMaxListeners) process.setMaxListeners(0);
+
 exports['open and close non-existent database'] = function(beforeExit) {
     var opened, closed;
 

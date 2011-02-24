@@ -2,6 +2,8 @@ var sqlite3 = require('sqlite3');
 var assert = require('assert');
 var util = require('util');
 
+if (process.setMaxListeners) process.setMaxListeners(0);
+
 exports['test Statement#each'] = function(beforeExit) {
     var db = new sqlite3.Database('test/support/big.db', sqlite3.OPEN_READONLY);
 

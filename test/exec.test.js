@@ -2,6 +2,8 @@ var sqlite3 = require('sqlite3');
 var assert = require('assert');
 var fs = require('fs');
 
+if (process.setMaxListeners) process.setMaxListeners(0);
+
 exports['test Database#exec'] = function(beforeExit) {
     var db = new sqlite3.Database(':memory:');
     var finished = false;
