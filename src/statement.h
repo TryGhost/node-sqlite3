@@ -7,7 +7,8 @@
 
 #include "database.h"
 
-#include <typeinfo>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 #include <queue>
 #include <vector>

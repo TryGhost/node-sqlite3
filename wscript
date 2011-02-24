@@ -13,6 +13,8 @@ def set_options(opt):
 def configure(conf):
   conf.check_tool("compiler_cxx")
   conf.check_tool("node_addon")
+  if not conf.check_cxx(header_name='sqlite3.h'):
+      conf.fatal("Missing sqlite3.h header file.")
 
 def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
