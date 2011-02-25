@@ -200,8 +200,8 @@ template <class T> Values::Field*
     }
 }
 
-template <class T> T* Statement::Bind(const Arguments& args, int start) {
-    int last = args.Length();
+template <class T> T* Statement::Bind(const Arguments& args, int start, int last) {
+    if (last < 0) last = args.Length();
     Local<Function> callback;
     if (last > start && args[last - 1]->IsFunction()) {
         callback = Local<Function>::Cast(args[last - 1]);
@@ -586,11 +586,19 @@ Handle<Value> Statement::Each(const Arguments& args) {
     HandleScope scope;
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
-    Baton* baton = stmt->Bind<Baton>(args);
+    int last = args.Length();
+
+    Local<Function> completed;
+    if (last >= 2 && args[last - 1]->IsFunction() && args[last - 2]->IsFunction()) {
+        completed = Local<Function>::Cast(args[--last]);
+    }
+
+    EachBaton* baton = stmt->Bind<EachBaton>(args, 0, last);
     if (baton == NULL) {
         return ThrowException(Exception::Error(String::New("Data type is not supported")));
     }
     else {
+        baton->completed = Persistent<Function>::New(completed);
         stmt->Schedule(EIO_BeginEach, baton);
         return args.This();
     }
@@ -601,9 +609,9 @@ void Statement::EIO_BeginEach(Baton* baton) {
 }
 
 int Statement::EIO_Each(eio_req *req) {
-    STATEMENT_INIT(Baton);
+    STATEMENT_INIT(EachBaton);
 
-    Async* async = new Async(stmt, baton->callback, AsyncEach);
+    Async* async = new Async(stmt, baton->callback, baton->completed, AsyncEach);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
 
@@ -669,6 +677,7 @@ void Statement::AsyncEach(EV_P_ ev_async *w, int revents) {
             Rows::const_iterator end = rows.end();
             for (int i = 0; it < end; it++, i++) {
                 argv[1] = RowToJS(*it);
+                async->retrieved++;
                 TRY_CATCH_CALL(async->stmt->handle_, async->callback, 2, argv);
                 delete *it;
             }
@@ -676,6 +685,11 @@ void Statement::AsyncEach(EV_P_ ev_async *w, int revents) {
     }
 
     if (async->completed) {
+        if (!async->completed_callback.IsEmpty() &&
+                async->completed_callback->IsFunction()) {
+            Local<Value> argv[] = { Integer::New(async->retrieved) };
+            TRY_CATCH_CALL(async->stmt->handle_, async->completed_callback, 1, argv);
+        }
         delete async;
         w->data = NULL;
     }
@@ -683,7 +697,7 @@ void Statement::AsyncEach(EV_P_ ev_async *w, int revents) {
 
 int Statement::EIO_AfterEach(eio_req *req) {
     HandleScope scope;
-    STATEMENT_INIT(Baton);
+    STATEMENT_INIT(EachBaton);
 
     if (stmt->status != SQLITE_DONE) {
         Error(baton);

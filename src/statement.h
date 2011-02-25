@@ -115,6 +115,12 @@ public:
         Rows rows;
     };
 
+    struct EachBaton : Baton {
+        EachBaton(Statement* stmt_, Handle<Function> cb_) :
+            Baton(stmt_, cb_) {}
+        Persistent<Function> completed;
+    };
+
     struct PrepareBaton : Database::Baton {
         Statement* stmt;
         std::string sql;
@@ -144,19 +150,24 @@ public:
         pthread_mutex_t mutex;
         Persistent<Function> callback;
         bool completed;
+        int retrieved;
+        Persistent<Function> completed_callback;
 
-        Async(Statement* st, Handle<Function> cb, Async_Callback async_cb) :
-                stmt(st), completed(false) {
+        Async(Statement* st, Handle<Function> cb, Handle<Function>completed_cb,
+              Async_Callback async_cb) :
+                stmt(st), completed(false), retrieved(0) {
             watcher.data = this;
             ev_async_init(&watcher, async_cb);
             ev_async_start(EV_DEFAULT_UC_ &watcher);
             callback = Persistent<Function>::New(cb);
+            completed_callback = Persistent<Function>::New(completed_cb);
             stmt->Ref();
             pthread_mutex_init(&mutex, NULL);
         }
 
         ~Async() {
             callback.Dispose();
+            completed_callback.Dispose();
             stmt->Unref();
             pthread_mutex_destroy(&mutex);
             ev_async_stop(EV_DEFAULT_UC_ &watcher);
@@ -196,7 +207,7 @@ protected:
     void Finalize();
 
     template <class T> inline Values::Field* BindParameter(const Handle<Value> source, T pos);
-    template <class T> T* Bind(const Arguments& args, int start = 0);
+    template <class T> T* Bind(const Arguments& args, int start = 0, int end = -1);
     bool Bind(const Parameters parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
