@@ -381,7 +381,7 @@ void Statement::EIO_BeginGet(Baton* baton) {
 int Statement::EIO_Get(eio_req *req) {
     STATEMENT_INIT(RowBaton);
 
-    if (stmt->status != SQLITE_DONE) {
+    if (stmt->status != SQLITE_DONE || baton->parameters.size()) {
         sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
         sqlite3_mutex_enter(mtx);
 
