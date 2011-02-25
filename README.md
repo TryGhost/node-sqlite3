@@ -27,7 +27,7 @@ node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings
 
 # API
 
-`node-sqlite3` has built-in function call serialization and automatically waits before executing a blocking action until no other action is pending. This means that it's safe start calling functions on the database object even if it is not yet fully opened. The `Database#close()` function will wait until all pending queries are completed before closing the database. To control serialization and parallelization of queries, see the *Control Flow* section of this document.
+`node-sqlite3` has built-in function call serialization and automatically waits before executing a blocking action until no other action is pending. This means that it's safe start calling functions on the database object even if it is not yet fully opened. The `Database#close()` function will wait until all pending queries are completed before closing the database. To control serialization and parallelization of queries, see the *Control Flow* section of this document. For debugging aid, consult the *Error Messages* section.
 
 ## new sqlite3.Database(filename, [mode], [callback])
 
@@ -234,6 +234,28 @@ If a callback is provided, it will be called immediately. All database queries s
     });
 
 If you call it without a function parameter, the execution mode setting is sticky and won't change until the next call to `Database#serialize`.
+
+
+
+# ERROR MESSAGES
+
+Writing asynchronous functions using the threadpool unfortunately also removes all stack trace information, making debugging very hard since you only see the error message, not which statement caused it. To mitigate this problem, `node-sqlite3` has a **verbose mode** which captures stack traces when enqueuing queries. To enable this mode, call the `sqlite3.verbose()`, or call it directly when requiring: `var sqlite3 = require('sqlite3').verbose()`.
+
+When you throw an error from a callback passed to any of the database functions, `node-sqlite3` will append the stack trace information from the original call, like this:
+
+    Error: SQLITE_RANGE: bind or column index out of range
+    --> in Database#run('CREATE TABLE foo (a, b)', 3, [Function])
+        at Object.<anonymous> (demo.js:5:4)
+        at Module._compile (module.js:374:26)
+        at Object..js (module.js:380:10)
+        at Module.load (module.js:306:31)
+        at Function._load (module.js:272:10)
+        at Array.<anonymous> (module.js:393:10)
+        at EventEmitter._tickCallback (node.js:108:26)
+
+Note that you shouldn't enable the verbose mode in a production setting as the performance penalty for collecting stack traces is quite high.
+
+Verbose mode currently does not add stack trace information to error objects emitted on Statement or Database objects.
 
 
 
