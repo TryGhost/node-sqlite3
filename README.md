@@ -6,12 +6,15 @@ node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings
 
 # USAGE
 
+Install with `npm install sqlite3`
+
+    var sqlite3 = require('sqlite3').verbose();
     var db = new sqlite3.Database(':memory:');
 
     db.serialize(function() {
       db.run("CREATE TABLE lorem (info TEXT)");
 
-      var stmt = db.prepare("INSERT INTO lorem VALUES(?)");
+      var stmt = db.prepare("INSERT INTO lorem VALUES (?)");
       for (var i = 0; i < 10; i++) {
           stmt.run("Ipsum " + i);
       }
@@ -272,7 +275,7 @@ To obtain and build the bindings:
 
 You can also use [`npm`](https://github.com/isaacs/npm) to download and install them:
 
-    npm install https://github.com/developmentseed/node-sqlite3/tarball/master
+    npm install sqlite3
 
 
 
