@@ -30,7 +30,7 @@ exports['test Statement#each with complete callback'] = function(beforeExit) {
     db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
         if (err) throw err;
         retrieved++;
-    }, function(num) {
+    }, function(err, num) {
         assert.equal(retrieved, num);
         completed = true;
     });

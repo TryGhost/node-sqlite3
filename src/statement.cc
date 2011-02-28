@@ -687,8 +687,11 @@ void Statement::AsyncEach(EV_P_ ev_async *w, int revents) {
     if (async->completed) {
         if (!async->completed_callback.IsEmpty() &&
                 async->completed_callback->IsFunction()) {
-            Local<Value> argv[] = { Integer::New(async->retrieved) };
-            TRY_CATCH_CALL(async->stmt->handle_, async->completed_callback, 1, argv);
+            Local<Value> argv[] = {
+                Local<Value>::New(Null()),
+                Integer::New(async->retrieved)
+            };
+            TRY_CATCH_CALL(async->stmt->handle_, async->completed_callback, 2, argv);
         }
         delete async;
         w->data = NULL;

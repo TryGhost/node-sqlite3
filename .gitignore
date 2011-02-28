@@ -1,1 +1,4 @@
 build/
+TODO
+wiki
+lib/sqlite3_bindings.node
