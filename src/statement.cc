@@ -761,7 +761,7 @@ Local<Object> Statement::RowToJS(Row* row) {
 
         switch (field->type) {
             case SQLITE_INTEGER: {
-                value = Local<Value>(Integer::New(((Values::Integer*)field)->value));
+                value = Local<Value>(Number::New(((Values::Integer*)field)->value));
             } break;
             case SQLITE_FLOAT: {
                 value = Local<Value>(Number::New(((Values::Float*)field)->value));
@@ -799,7 +799,7 @@ void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
         const char* name = sqlite3_column_name(stmt, i);
         switch (type) {
             case SQLITE_INTEGER: {
-                row->push_back(new Values::Integer(name, sqlite3_column_int(stmt, i)));
+                row->push_back(new Values::Integer(name, sqlite3_column_int64(stmt, i)));
             }   break;
             case SQLITE_FLOAT: {
                 row->push_back(new Values::Float(name, sqlite3_column_double(stmt, i)));

@@ -33,9 +33,9 @@ namespace Values {
     };
 
     struct Integer : Field {
-        template <class T> inline Integer(T _name, int val) :
+        template <class T> inline Integer(T _name, int64_t val) :
             Field(_name, SQLITE_INTEGER), value(val) {}
-        int value;
+        int64_t value;
     };
 
     struct Float : Field {
