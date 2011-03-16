@@ -343,7 +343,7 @@ int Database::EIO_Exec(eio_req *req) {
 
 int Database::EIO_AfterExec(eio_req *req) {
     HandleScope scope;
-    Baton* baton = static_cast<ExecBaton*>(req->data);
+    ExecBaton* baton = static_cast<ExecBaton*>(req->data);
     Database* db = baton->db;
 
 
