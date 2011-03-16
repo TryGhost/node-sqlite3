@@ -150,6 +150,7 @@ int Database::EIO_Open(eio_req *req) {
 
     if (baton->status != SQLITE_OK) {
         baton->message = std::string(sqlite3_errmsg(db->handle));
+        sqlite3_close(db->handle);
         db->handle = NULL;
     }
 
