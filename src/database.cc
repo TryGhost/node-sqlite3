@@ -25,6 +25,7 @@ void Database::Init(Handle<Object> target) {
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "exec", Exec);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "serialize", Serialize);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "parallelize", Parallelize);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "configure", Configure);
 
     target->Set(String::NewSymbol("Database"),
         constructor_template->GetFunction());
@@ -299,6 +300,69 @@ Handle<Value> Database::Parallelize(const Arguments& args) {
     db->Process();
 
     return args.This();
+}
+
+Handle<Value> Database::Configure(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    REQUIRE_ARGUMENTS(2);
+
+    if (args[0]->Equals(String::NewSymbol("trace"))) {
+        Local<Function> handle;
+        Baton* baton = new Baton(db, handle);
+        db->Schedule(RegisterTraceCallback, baton);
+    }
+    else {
+        ThrowException(Exception::Error(String::Concat(
+            args[0]->ToString(),
+            String::NewSymbol(" is not a valid configuration option")
+        )));
+    }
+
+    return args.This();
+}
+
+void Database::RegisterTraceCallback(Baton* baton) {
+    assert(baton->db->open);
+    assert(baton->db->handle);
+    Database* db = baton->db;
+
+    if (db->debug_trace == NULL) {
+        // Add it.
+        db->debug_trace = new AsyncTrace(db, TraceCallback);
+        sqlite3_trace(db->handle, TraceCallback, db);
+    }
+    else {
+        // Remove it.
+        sqlite3_trace(db->handle, NULL, NULL);
+        delete db->debug_trace;
+        db->debug_trace = NULL;
+    }
+
+    delete baton;
+}
+
+void Database::TraceCallback(void* db, const char* sql) {
+    // Note: This function is called in the thread pool.
+    // Note: Some queries, such as "EXPLAIN" queries, are not sent through this.
+    static_cast<Database*>(db)->debug_trace->send(std::string(sql));
+}
+
+void Database::TraceCallback(EV_P_ ev_async *w, int revents) {
+    // Note: This function is called in the main V8 thread.
+    HandleScope scope;
+    AsyncTrace* async = static_cast<AsyncTrace*>(w->data);
+
+    std::vector<std::string> queries = async->get();
+    for (int i = 0; i < queries.size(); i++) {
+        Local<Value> argv[] = {
+            String::NewSymbol("trace"),
+            String::New(queries[i].c_str())
+        };
+        EMIT_EVENT(async->parent->handle_, 2, argv);
+    }
+    queries.clear();
 }
 
 Handle<Value> Database::Exec(const Arguments& args) {

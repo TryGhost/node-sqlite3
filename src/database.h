@@ -70,6 +70,57 @@ public:
         bool exclusive;
         Baton* baton;
     };
+    
+    typedef void (*Async_Callback)(EV_P_ ev_async *w, int revents);
+
+
+    // Generic ev_async handler.
+    template <class Item, class Parent> class Async {
+    protected:
+        ev_async watcher;
+        pthread_mutex_t mutex;
+        std::vector<Item> data;
+    public:
+        Parent* parent;
+
+    public:
+        Async(Parent* parent_, Async_Callback async_cb) : parent(parent_) {
+            watcher.data = this;
+            ev_async_init(&watcher, async_cb);
+            ev_async_start(EV_DEFAULT_UC_ &watcher);
+            pthread_mutex_init(&mutex, NULL);
+        }
+
+        inline void add(Item item) {
+            pthread_mutex_lock(&mutex);
+            data.push_back(item);
+            pthread_mutex_unlock(&mutex);
+        }
+
+        inline std::vector<Item> get() {
+            std::vector<Item> rows;
+            pthread_mutex_lock(&mutex);
+            rows.swap(data);
+            pthread_mutex_unlock(&mutex);
+            return rows;
+        }
+
+        inline void send() {
+            ev_async_send(EV_DEFAULT_ &watcher);
+        }
+
+        inline void send(Item item) {
+            add(item);
+            send();
+        }
+
+        ~Async() {
+            pthread_mutex_destroy(&mutex);
+            ev_async_stop(EV_DEFAULT_UC_ &watcher);
+        }
+    };
+
+    typedef Async<std::string, Database> AsyncTrace;
 
     friend class Statement;
 
@@ -79,12 +130,17 @@ protected:
         open(false),
         locked(false),
         pending(0),
-        serialize(false) {
+        serialize(false),
+        debug_trace(NULL) {
 
     }
 
     ~Database() {
         assert(handle == NULL);
+        if (debug_trace) {
+            delete debug_trace;
+            debug_trace = NULL;
+        }
     }
 
     static Handle<Value> New(const Arguments& args);
@@ -108,6 +164,11 @@ protected:
     static Handle<Value> Serialize(const Arguments& args);
     static Handle<Value> Parallelize(const Arguments& args);
 
+    static Handle<Value> Configure(const Arguments& args);
+    static void RegisterTraceCallback(Baton* baton);
+    static void TraceCallback(void* db, const char* sql);
+    static void TraceCallback(EV_P_ ev_async *w, int revents);
+
     void Wrap (Handle<Object> handle);
     inline void MakeWeak();
     virtual void Unref();
@@ -125,6 +186,8 @@ protected:
     bool serialize;
 
     std::queue<Call*> queue;
+
+    AsyncTrace* debug_trace;
 };
 
 }
