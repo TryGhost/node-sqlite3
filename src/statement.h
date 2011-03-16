@@ -90,6 +90,10 @@ public:
             callback = Persistent<Function>::New(cb_);
         }
         ~Baton() {
+            for (int i = 0; i < parameters.size(); i++) {
+                Values::Field* field = parameters[i];
+                DELETE_FIELD(field);
+            }
             stmt->Unref();
             ev_unref(EV_DEFAULT_UC);
             callback.Dispose();

@@ -157,12 +157,14 @@ const char* sqlite_code_string(int code);
     delete baton;
 
 #define DELETE_FIELD(field)                                                    \
-    switch ((field)->type) {                                                   \
-        case SQLITE_INTEGER: delete (Values::Integer*)(field); break;          \
-        case SQLITE_FLOAT:   delete (Values::Float*)(field); break;            \
-        case SQLITE_TEXT:    delete (Values::Text*)(field); break;             \
-        case SQLITE_BLOB:    delete (Values::Blob*)(field); break;             \
-        case SQLITE_NULL:    delete (Values::Null*)(field); break;             \
+    if (field != NULL) {                                                       \
+        switch ((field)->type) {                                               \
+            case SQLITE_INTEGER: delete (Values::Integer*)(field); break;      \
+            case SQLITE_FLOAT:   delete (Values::Float*)(field); break;        \
+            case SQLITE_TEXT:    delete (Values::Text*)(field); break;         \
+            case SQLITE_BLOB:    delete (Values::Blob*)(field); break;         \
+            case SQLITE_NULL:    delete (Values::Null*)(field); break;         \
+        }                                                                      \
     }
 
 #endif

@@ -297,8 +297,6 @@ bool Statement::Bind(const Parameters parameters) {
                     status = sqlite3_bind_null(handle, pos);
                 } break;
             }
-
-            DELETE_FIELD(field);
         }
 
         if (status != SQLITE_OK) {
