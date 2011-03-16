@@ -19,7 +19,7 @@ exports['test parallel inserts'] = function(beforeExit) {
         db.run("CREATE TABLE foo (" + columns + ")");
     });
 
-    for (var i = 0; i < 10000; i++) {
+    for (var i = 0; i < 1000; i++) {
         for (var values = [], j = 0; j < columns.length; j++) {
             values.push(i * j);
         }
