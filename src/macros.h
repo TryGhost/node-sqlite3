@@ -4,15 +4,6 @@
 const char* sqlite_code_string(int code);
 
 
-#define CHECK(rc) { if ((rc) != SQLITE_OK)                              \
-      return ThrowException(Exception::Error(String::New(               \
-                                             sqlite3_errmsg(*db)))); }
-
-#define SCHECK(rc) { if ((rc) != SQLITE_OK)                             \
-      return ThrowException(Exception::Error(String::New(               \
-                        sqlite3_errmsg(sqlite3_db_handle(sto->stmt_))))); }
-
-
 #define REQUIRE_ARGUMENTS(n)                                                   \
     if (args.Length() < (n)) {                                                 \
         return ThrowException(                                                 \
