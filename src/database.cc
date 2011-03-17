@@ -214,6 +214,11 @@ int Database::EIO_Close(eio_req *req) {
     Baton* baton = static_cast<Baton*>(req->data);
     Database* db = baton->db;
 
+    if (db->debug_trace) {
+        delete db->debug_trace;
+        db->debug_trace = NULL;
+    }
+
     baton->status = sqlite3_close(db->handle);
 
     if (baton->status != SQLITE_OK) {
@@ -471,6 +476,11 @@ void Database::Destruct(Persistent<Value> value, void *data) {
 
 int Database::EIO_Destruct(eio_req *req) {
     Database* db = static_cast<Database*>(req->data);
+
+    if (db->debug_trace) {
+        delete db->debug_trace;
+        db->debug_trace = NULL;
+    }
 
     sqlite3_close(db->handle);
     db->handle = NULL;
