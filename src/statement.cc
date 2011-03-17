@@ -64,6 +64,8 @@ void Statement::Schedule(EIO_Callback callback, Baton* baton) {
 
 template <class T> void Statement::Error(T* baton) {
     Statement* stmt = baton->stmt;
+    // Fail hard on logic errors.
+    assert(stmt->status != 0);
     EXCEPTION(String::New(stmt->message.c_str()), stmt->status, exception);
 
     if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {

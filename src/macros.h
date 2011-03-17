@@ -141,6 +141,8 @@ const char* sqlite_code_string(int code);
     Statement* stmt = baton->stmt;
 
 #define STATEMENT_END()                                                        \
+    assert(stmt->locked);                                                      \
+    assert(stmt->db->pending)                                                  \
     stmt->locked = false;                                                      \
     stmt->db->pending--;                                                       \
     stmt->Process();                                                           \
