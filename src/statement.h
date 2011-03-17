@@ -132,8 +132,13 @@ public:
             Baton(db_, cb_), stmt(stmt_) {
             stmt->Ref();
         }
-        ~PrepareBaton() {
+        virtual ~PrepareBaton() {
             stmt->Unref();
+            if (!db->open && db->locked) {
+                // The database handle was closed before the statement could be
+                // prepared.
+                stmt->Finalize();
+            }
         }
     };
 

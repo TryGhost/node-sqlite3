@@ -41,7 +41,7 @@ public:
             ev_ref(EV_DEFAULT_UC);
             callback = Persistent<Function>::New(cb_);
         }
-        ~Baton() {
+        virtual ~Baton() {
             db->Unref();
             ev_unref(EV_DEFAULT_UC);
             callback.Dispose();
