@@ -188,7 +188,7 @@ public:
             handle(NULL),
             status(SQLITE_OK),
             prepared(false),
-            locked(false),
+            locked(true),
             finalized(false) {
         db->Ref();
     }
