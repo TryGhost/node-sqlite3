@@ -357,7 +357,7 @@ void Database::TraceCallback(EV_P_ ev_async *w, int revents) {
     AsyncTrace* async = static_cast<AsyncTrace*>(w->data);
 
     std::vector<std::string> queries = async->get();
-    for (int i = 0; i < queries.size(); i++) {
+    for (unsigned int i = 0; i < queries.size(); i++) {
         Local<Value> argv[] = {
             String::NewSymbol("trace"),
             String::New(queries[i].c_str())

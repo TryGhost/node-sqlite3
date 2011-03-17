@@ -90,7 +90,7 @@ public:
             callback = Persistent<Function>::New(cb_);
         }
         ~Baton() {
-            for (int i = 0; i < parameters.size(); i++) {
+            for (unsigned int i = 0; i < parameters.size(); i++) {
                 Values::Field* field = parameters[i];
                 DELETE_FIELD(field);
             }
