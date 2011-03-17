@@ -314,11 +314,13 @@ Handle<Value> Database::Configure(const Arguments& args) {
         db->Schedule(RegisterTraceCallback, baton);
     }
     else {
-        ThrowException(Exception::Error(String::Concat(
+        return ThrowException(Exception::Error(String::Concat(
             args[0]->ToString(),
             String::NewSymbol(" is not a valid configuration option")
         )));
     }
+
+    db->Process();
 
     return args.This();
 }
