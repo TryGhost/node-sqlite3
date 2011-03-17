@@ -92,3 +92,38 @@ exports['open and close memory database queuing'] = function(beforeExit) {
         assert.equal(closeFailed, 1, 'Database could be closed again');
     });
 };
+
+exports['test closing with open statements'] = function(beforeExit) {
+    var completed = false;
+    var completedSecond = false;
+    var closed = false;
+
+    var db = new sqlite3.Database(':memory:');
+
+    db.serialize(function() {
+        db.run("CREATE TABLE foo (id INT, num INT)");
+
+        var stmt = db.prepare('INSERT INTO foo VALUES (?, ?)')
+        stmt.run(1, 2);
+
+        db.close(function(err) {
+            assert.ok(err.message,
+                "SQLITE_BUSY: unable to close due to unfinalised statements");
+            completed = true;
+            stmt.run(3, 4, function() {
+                completedSecond = true;
+                stmt.finalize();
+                db.close(function(err) {
+                    if (err) throw err;
+                    closed = true;
+                });
+            });
+        });
+    });
+
+    beforeExit(function() {
+        assert.ok(completed);
+        assert.ok(completedSecond);
+        assert.ok(closed);
+    });
+};

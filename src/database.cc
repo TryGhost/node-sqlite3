@@ -256,11 +256,6 @@ int Database::EIO_AfterClose(eio_req *req) {
         EMIT_EVENT(db->handle_, 2, args);
     }
 
-    assert(baton->db->locked);
-    assert(!baton->db->open);
-    assert(!baton->db->handle);
-    assert(baton->db->pending == 0);
-
     if (!db->open) {
         Local<Value> args[] = { String::NewSymbol("close"), argv[0] };
         EMIT_EVENT(db->handle_, 1, args);
