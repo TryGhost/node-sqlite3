@@ -9,8 +9,6 @@ exports['test Database tracing'] = function(beforeExit) {
     var create = false;
     var select = false;
 
-    db.configure('trace', true);
-
     db.on('trace', function(sql) {
         if (sql.match(/^SELECT/)) {
             assert.ok(!select);
