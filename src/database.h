@@ -61,6 +61,12 @@ public:
             Baton(db_, cb_), sql(sql_) {}
     };
 
+    struct LoadExtensionBaton : Baton {
+        std::string filename;
+        LoadExtensionBaton(Database* db_, Handle<Function> cb_, const char* filename_) :
+            Baton(db_, cb_), filename(filename_) {}
+    };
+
     typedef void (*EIO_Callback)(Baton* baton);
 
     struct Call {
@@ -70,7 +76,7 @@ public:
         bool exclusive;
         Baton* baton;
     };
-    
+
     typedef void (*Async_Callback)(EV_P_ ev_async *w, int revents);
 
 
@@ -160,6 +166,11 @@ protected:
     static void EIO_BeginClose(Baton* baton);
     static int EIO_Close(eio_req *req);
     static int EIO_AfterClose(eio_req *req);
+
+    static Handle<Value> LoadExtension(const Arguments& args);
+    static void EIO_BeginLoadExtension(Baton* baton);
+    static int EIO_LoadExtension(eio_req *req);
+    static int EIO_AfterLoadExtension(eio_req *req);
 
     static Handle<Value> Serialize(const Arguments& args);
     static Handle<Value> Parallelize(const Arguments& args);

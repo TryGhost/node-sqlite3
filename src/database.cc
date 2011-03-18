@@ -23,6 +23,7 @@ void Database::Init(Handle<Object> target) {
 
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "exec", Exec);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "loadExtension", LoadExtension);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "serialize", Serialize);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "parallelize", Parallelize);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "configure", Configure);
@@ -413,6 +414,78 @@ int Database::EIO_AfterExec(eio_req *req) {
     ExecBaton* baton = static_cast<ExecBaton*>(req->data);
     Database* db = baton->db;
 
+
+    if (baton->status != SQLITE_OK) {
+        EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
+
+        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+            Local<Value> argv[] = { exception };
+            TRY_CATCH_CALL(db->handle_, baton->callback, 1, argv);
+        }
+        else {
+            Local<Value> args[] = { String::NewSymbol("error"), exception };
+            EMIT_EVENT(db->handle_, 2, args);
+        }
+    }
+    else if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+        Local<Value> argv[] = { Local<Value>::New(Null()) };
+        TRY_CATCH_CALL(db->handle_, baton->callback, 1, argv);
+    }
+
+    db->Process();
+
+    delete baton;
+    return 0;
+}
+
+Handle<Value> Database::LoadExtension(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    REQUIRE_ARGUMENT_STRING(0, filename);
+    OPTIONAL_ARGUMENT_FUNCTION(1, callback);
+
+    Baton* baton = new LoadExtensionBaton(db, callback, *filename);
+    db->Schedule(EIO_BeginLoadExtension, baton, true);
+
+    return args.This();
+}
+
+void Database::EIO_BeginLoadExtension(Baton* baton) {
+    assert(baton->db->locked);
+    assert(baton->db->open);
+    assert(baton->db->handle);
+    assert(baton->db->pending == 0);
+    eio_custom(EIO_LoadExtension, EIO_PRI_DEFAULT, EIO_AfterLoadExtension, baton);
+}
+
+int Database::EIO_LoadExtension(eio_req *req) {
+    LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(req->data);
+
+    sqlite3_enable_load_extension(baton->db->handle, 1);
+
+    char* message = NULL;
+    baton->status = sqlite3_load_extension(
+        baton->db->handle,
+        baton->filename.c_str(),
+        0,
+        &message
+    );
+
+    sqlite3_enable_load_extension(baton->db->handle, 0);
+
+    if (baton->status != SQLITE_OK && message != NULL) {
+        baton->message = std::string(message);
+        sqlite3_free(message);
+    }
+
+    return 0;
+}
+
+int Database::EIO_AfterLoadExtension(eio_req *req) {
+    HandleScope scope;
+    LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(req->data);
+    Database* db = baton->db;
 
     if (baton->status != SQLITE_OK) {
         EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
