@@ -32,8 +32,9 @@ Install with `npm install sqlite3`.
 
 * Straightforward query and parameter binding interface
 * Full Buffer/Blob support
-* Query serialization API
-* Extension support
+* Extensive [debugging support](https://github.com/developmentseed/node-sqlite3/wiki/Debugging)
+* [Query serialization](https://github.com/developmentseed/node-sqlite3/wiki/Control-Flow) API
+* [Extension support](https://github.com/developmentseed/node-sqlite3/wiki/Extensions)
 * Big test suite
 * Written in modern C++ and tested for memory leaks
 
