@@ -38,4 +38,29 @@ exports['test Database tracing'] = function(beforeExit) {
     });
 };
 
-// TODO: test turning tracing off again
+exports['test disabling tracing #1'] = function(beforeExit) {
+    var db = new sqlite3.Database(':memory:');
+
+    db.on('trace', function(sql) {});
+    db.removeAllListeners('trace');
+    db._events['trace'] = function(sql) {
+        assert.ok(false);
+    };
+
+    db.run("CREATE TABLE foo (id int)");
+    db.close();
+};
+
+exports['test disabling tracing #2'] = function(beforeExit) {
+    var db = new sqlite3.Database(':memory:');
+
+    var trace = function(sql) {};
+    db.on('trace', trace);
+    db.removeListener('trace', trace);
+    db._events['trace'] = function(sql) {
+        assert.ok(false);
+    };
+
+    db.run("CREATE TABLE foo (id int)");
+    db.close();
+};

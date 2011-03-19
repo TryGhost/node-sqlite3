@@ -208,17 +208,18 @@ void Database::EIO_BeginClose(Baton* baton) {
     assert(baton->db->open);
     assert(baton->db->handle);
     assert(baton->db->pending == 0);
+
+    if (baton->db->debug_trace) {
+        delete baton->db->debug_trace;
+        baton->db->debug_trace = NULL;
+    }
+
     eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, baton);
 }
 
 int Database::EIO_Close(eio_req *req) {
     Baton* baton = static_cast<Baton*>(req->data);
     Database* db = baton->db;
-
-    if (db->debug_trace) {
-        delete db->debug_trace;
-        db->debug_trace = NULL;
-    }
 
     baton->status = sqlite3_close(db->handle);
 
@@ -535,6 +536,12 @@ void Database::Unref() {
 
 void Database::Destruct(Persistent<Value> value, void *data) {
     Database* db = static_cast<Database*>(data);
+
+    if (db->debug_trace) {
+        delete db->debug_trace;
+        db->debug_trace = NULL;
+    }
+
     if (db->handle) {
         eio_custom(EIO_Destruct, EIO_PRI_DEFAULT, EIO_AfterDestruct, db);
         ev_ref(EV_DEFAULT_UC);
@@ -546,11 +553,6 @@ void Database::Destruct(Persistent<Value> value, void *data) {
 
 int Database::EIO_Destruct(eio_req *req) {
     Database* db = static_cast<Database*>(req->data);
-
-    if (db->debug_trace) {
-        delete db->debug_trace;
-        db->debug_trace = NULL;
-    }
 
     sqlite3_close(db->handle);
     db->handle = NULL;

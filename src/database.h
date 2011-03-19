@@ -98,6 +98,8 @@ public:
         }
 
         inline void add(Item item) {
+            // Make sure node runs long enough to deliver the messages.
+            ev_ref(EV_DEFAULT_UC);
             pthread_mutex_lock(&mutex);
             data.push_back(item);
             pthread_mutex_unlock(&mutex);
@@ -108,6 +110,9 @@ public:
             pthread_mutex_lock(&mutex);
             rows.swap(data);
             pthread_mutex_unlock(&mutex);
+            for (int i = rows.size(); i > 0; i--) {
+                ev_unref(EV_DEFAULT_UC);
+            }
             return rows;
         }
 
@@ -121,6 +126,7 @@ public:
         }
 
         ~Async() {
+            ev_invoke(&watcher, ev_async_pending(&watcher));
             pthread_mutex_destroy(&mutex);
             ev_async_stop(EV_DEFAULT_UC_ &watcher);
         }
