@@ -133,6 +133,8 @@ public:
     };
 
     typedef Async<std::string, Database> AsyncTrace;
+    typedef std::pair<std::string, sqlite3_uint64> ProfileInfo;
+    typedef Async<ProfileInfo, Database> AsyncProfile;
 
     friend class Statement;
 
@@ -143,7 +145,8 @@ protected:
         locked(false),
         pending(0),
         serialize(false),
-        debug_trace(NULL) {
+        debug_trace(NULL),
+        debug_profile(NULL) {
 
     }
 
@@ -185,7 +188,11 @@ protected:
     static void RegisterTraceCallback(Baton* baton);
     static void TraceCallback(void* db, const char* sql);
     static void TraceCallback(EV_P_ ev_async *w, int revents);
+    static void RegisterProfileCallback(Baton* baton);
+    static void ProfileCallback(void* db, const char* sql, sqlite3_uint64 nsecs);
+    static void ProfileCallback(EV_P_ ev_async *w, int revents);
 
+    void RemoveCallbacks();
     void Wrap (Handle<Object> handle);
     inline void MakeWeak();
     virtual void Unref();
@@ -205,6 +212,7 @@ protected:
     std::queue<Call*> queue;
 
     AsyncTrace* debug_trace;
+    AsyncProfile* debug_profile;
 };
 
 }

@@ -209,11 +209,7 @@ void Database::EIO_BeginClose(Baton* baton) {
     assert(baton->db->handle);
     assert(baton->db->pending == 0);
 
-    if (baton->db->debug_trace) {
-        delete baton->db->debug_trace;
-        baton->db->debug_trace = NULL;
-    }
-
+    baton->db->RemoveCallbacks();
     eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, baton);
 }
 
@@ -315,6 +311,11 @@ Handle<Value> Database::Configure(const Arguments& args) {
         Baton* baton = new Baton(db, handle);
         db->Schedule(RegisterTraceCallback, baton);
     }
+    else if (args[0]->Equals(String::NewSymbol("profile"))) {
+        Local<Function> handle;
+        Baton* baton = new Baton(db, handle);
+        db->Schedule(RegisterProfileCallback, baton);
+    }
     else {
         return ThrowException(Exception::Error(String::Concat(
             args[0]->ToString(),
@@ -365,6 +366,49 @@ void Database::TraceCallback(EV_P_ ev_async *w, int revents) {
             String::New(queries[i].c_str())
         };
         EMIT_EVENT(async->parent->handle_, 2, argv);
+    }
+    queries.clear();
+}
+
+void Database::RegisterProfileCallback(Baton* baton) {
+    assert(baton->db->open);
+    assert(baton->db->handle);
+    Database* db = baton->db;
+
+    if (db->debug_profile == NULL) {
+        // Add it.
+        db->debug_profile = new AsyncProfile(db, ProfileCallback);
+        sqlite3_profile(db->handle, ProfileCallback, db);
+    }
+    else {
+        // Remove it.
+        sqlite3_profile(db->handle, NULL, NULL);
+        delete db->debug_profile;
+        db->debug_profile = NULL;
+    }
+
+    delete baton;
+}
+
+void Database::ProfileCallback(void* db, const char* sql, sqlite3_uint64 nsecs) {
+    // Note: This function is called in the thread pool.
+    // Note: Some queries, such as "EXPLAIN" queries, are not sent through this.
+    static_cast<Database*>(db)->debug_profile->send(ProfileInfo(sql, nsecs));
+}
+
+void Database::ProfileCallback(EV_P_ ev_async *w, int revents) {
+    // Note: This function is called in the main V8 thread.
+    HandleScope scope;
+    AsyncProfile* async = static_cast<AsyncProfile*>(w->data);
+
+    std::vector<ProfileInfo> queries = async->get();
+    for (unsigned int i = 0; i < queries.size(); i++) {
+        Local<Value> argv[] = {
+            String::NewSymbol("profile"),
+            String::New(queries[i].first.c_str()),
+            Integer::New((double)queries[i].second / 1000000.0)
+        };
+        EMIT_EVENT(async->parent->handle_, 3, argv);
     }
     queries.clear();
 }
@@ -511,6 +555,17 @@ int Database::EIO_AfterLoadExtension(eio_req *req) {
     return 0;
 }
 
+void Database::RemoveCallbacks() {
+    if (debug_trace) {
+        delete debug_trace;
+        debug_trace = NULL;
+    }
+    if (debug_profile) {
+        delete debug_profile;
+        debug_profile = NULL;
+    }
+}
+
 /**
  * Override this so that we can properly close the database when this object
  * gets garbage collected.
@@ -537,10 +592,7 @@ void Database::Unref() {
 void Database::Destruct(Persistent<Value> value, void *data) {
     Database* db = static_cast<Database*>(data);
 
-    if (db->debug_trace) {
-        delete db->debug_trace;
-        db->debug_trace = NULL;
-    }
+    db->RemoveCallbacks();
 
     if (db->handle) {
         eio_custom(EIO_Destruct, EIO_PRI_DEFAULT, EIO_AfterDestruct, db);
