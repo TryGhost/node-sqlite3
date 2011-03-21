@@ -38,7 +38,6 @@ exports['test caching Database objects after it is open'] = function(beforeExit)
             });
         }, 100);
     });
-    
 
     beforeExit(function() {
         assert.equal(db1, db2);
