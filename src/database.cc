@@ -28,6 +28,8 @@ void Database::Init(Handle<Object> target) {
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "parallelize", Parallelize);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "configure", Configure);
 
+    NODE_SET_GETTER(constructor_template, "open", OpenGetter);
+
     target->Set(String::NewSymbol("Database"),
         constructor_template->GetFunction());
 }
@@ -190,6 +192,12 @@ int Database::EIO_AfterOpen(eio_req *req) {
 
     delete baton;
     return 0;
+}
+
+Handle<Value> Database::OpenGetter(Local<String> str, const AccessorInfo& accessor) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(accessor.This());
+    return Boolean::New(db->open);
 }
 
 Handle<Value> Database::Close(const Arguments& args) {

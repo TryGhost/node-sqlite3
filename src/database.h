@@ -121,6 +121,8 @@ protected:
     static int EIO_Open(eio_req *req);
     static int EIO_AfterOpen(eio_req *req);
 
+    static Handle<Value> OpenGetter(Local<String> str, const AccessorInfo& accessor);
+
     void Schedule(EIO_Callback callback, Baton* baton, bool exclusive = false);
     void Process();
 
