@@ -351,23 +351,18 @@ void Database::RegisterTraceCallback(Baton* baton) {
 void Database::TraceCallback(void* db, const char* sql) {
     // Note: This function is called in the thread pool.
     // Note: Some queries, such as "EXPLAIN" queries, are not sent through this.
-    static_cast<Database*>(db)->debug_trace->send(std::string(sql));
+    static_cast<Database*>(db)->debug_trace->send(new std::string(sql));
 }
 
-void Database::TraceCallback(EV_P_ ev_async *w, int revents) {
+void Database::TraceCallback(Database* db, std::string* sql) {
     // Note: This function is called in the main V8 thread.
     HandleScope scope;
-    AsyncTrace* async = static_cast<AsyncTrace*>(w->data);
-
-    std::vector<std::string> queries = async->get();
-    for (unsigned int i = 0; i < queries.size(); i++) {
-        Local<Value> argv[] = {
-            String::NewSymbol("trace"),
-            String::New(queries[i].c_str())
-        };
-        EMIT_EVENT(async->parent->handle_, 2, argv);
-    }
-    queries.clear();
+    Local<Value> argv[] = {
+        String::NewSymbol("trace"),
+        String::New(sql->c_str())
+    };
+    EMIT_EVENT(db->handle_, 2, argv);
+    delete sql;
 }
 
 void Database::RegisterProfileCallback(Baton* baton) {
@@ -393,24 +388,20 @@ void Database::RegisterProfileCallback(Baton* baton) {
 void Database::ProfileCallback(void* db, const char* sql, sqlite3_uint64 nsecs) {
     // Note: This function is called in the thread pool.
     // Note: Some queries, such as "EXPLAIN" queries, are not sent through this.
-    static_cast<Database*>(db)->debug_profile->send(ProfileInfo(sql, nsecs));
+    ProfileInfo* info = new ProfileInfo();
+    *info = (ProfileInfo){ std::string(sql), nsecs };
+    static_cast<Database*>(db)->debug_profile->send(info);
 }
 
-void Database::ProfileCallback(EV_P_ ev_async *w, int revents) {
-    // Note: This function is called in the main V8 thread.
+void Database::ProfileCallback(Database *db, ProfileInfo* info) {
     HandleScope scope;
-    AsyncProfile* async = static_cast<AsyncProfile*>(w->data);
-
-    std::vector<ProfileInfo> queries = async->get();
-    for (unsigned int i = 0; i < queries.size(); i++) {
-        Local<Value> argv[] = {
-            String::NewSymbol("profile"),
-            String::New(queries[i].first.c_str()),
-            Integer::New((double)queries[i].second / 1000000.0)
-        };
-        EMIT_EVENT(async->parent->handle_, 3, argv);
-    }
-    queries.clear();
+    Local<Value> argv[] = {
+        String::NewSymbol("profile"),
+        String::New(info->sql.c_str()),
+        Integer::New((double)info->nsecs / 1000000.0)
+    };
+    EMIT_EVENT(db->handle_, 3, argv);
+    delete info;
 }
 
 Handle<Value> Database::Exec(const Arguments& args) {

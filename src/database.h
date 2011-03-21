@@ -9,6 +9,7 @@
 #include <queue>
 
 #include <sqlite3.h>
+#include "async.h"
 
 using namespace v8;
 using namespace node;
@@ -77,64 +78,21 @@ public:
         Baton* baton;
     };
 
-    typedef void (*Async_Callback)(EV_P_ ev_async *w, int revents);
+    struct ProfileInfo {
+        std::string sql;
+        sqlite3_int64 nsecs;
+    };
 
-
-    // Generic ev_async handler.
-    template <class Item, class Parent> class Async {
-    protected:
-        ev_async watcher;
-        pthread_mutex_t mutex;
-        std::vector<Item> data;
-    public:
-        Parent* parent;
-
-    public:
-        Async(Parent* parent_, Async_Callback async_cb) : parent(parent_) {
-            watcher.data = this;
-            ev_async_init(&watcher, async_cb);
-            ev_async_start(EV_DEFAULT_UC_ &watcher);
-            pthread_mutex_init(&mutex, NULL);
-        }
-
-        inline void add(Item item) {
-            // Make sure node runs long enough to deliver the messages.
-            ev_ref(EV_DEFAULT_UC);
-            pthread_mutex_lock(&mutex);
-            data.push_back(item);
-            pthread_mutex_unlock(&mutex);
-        }
-
-        inline std::vector<Item> get() {
-            std::vector<Item> rows;
-            pthread_mutex_lock(&mutex);
-            rows.swap(data);
-            pthread_mutex_unlock(&mutex);
-            for (int i = rows.size(); i > 0; i--) {
-                ev_unref(EV_DEFAULT_UC);
-            }
-            return rows;
-        }
-
-        inline void send() {
-            ev_async_send(EV_DEFAULT_ &watcher);
-        }
-
-        inline void send(Item item) {
-            add(item);
-            send();
-        }
-
-        ~Async() {
-            ev_invoke(&watcher, ev_async_pending(&watcher));
-            pthread_mutex_destroy(&mutex);
-            ev_async_stop(EV_DEFAULT_UC_ &watcher);
-        }
+    struct UpdateInfo {
+        int type;
+        std::string database;
+        std::string tablename;
+        sqlite3_int64 rowid;
     };
 
     typedef Async<std::string, Database> AsyncTrace;
-    typedef std::pair<std::string, sqlite3_uint64> ProfileInfo;
     typedef Async<ProfileInfo, Database> AsyncProfile;
+    typedef Async<UpdateInfo, Database> AsyncUpdate;
 
     friend class Statement;
 
@@ -185,12 +143,18 @@ protected:
     static Handle<Value> Parallelize(const Arguments& args);
 
     static Handle<Value> Configure(const Arguments& args);
+
     static void RegisterTraceCallback(Baton* baton);
     static void TraceCallback(void* db, const char* sql);
-    static void TraceCallback(EV_P_ ev_async *w, int revents);
+    static void TraceCallback(Database* db, std::string* sql);
+
     static void RegisterProfileCallback(Baton* baton);
     static void ProfileCallback(void* db, const char* sql, sqlite3_uint64 nsecs);
-    static void ProfileCallback(EV_P_ ev_async *w, int revents);
+    static void ProfileCallback(Database* db, ProfileInfo* info);
+
+    static void RegisterUpdateCallback(Baton* baton);
+    static void UpdateCallback(void* db, int type, const char* database, const char* table, sqlite3_uint64 rowid);
+    static void UpdateCallback(Database* db, UpdateInfo* info);
 
     void RemoveCallbacks();
     void Wrap (Handle<Object> handle);
@@ -213,6 +177,7 @@ protected:
 
     AsyncTrace* debug_trace;
     AsyncProfile* debug_profile;
+    AsyncUpdate* update_event;
 };
 
 }
