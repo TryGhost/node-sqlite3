@@ -389,7 +389,8 @@ void Database::ProfileCallback(void* db, const char* sql, sqlite3_uint64 nsecs) 
     // Note: This function is called in the thread pool.
     // Note: Some queries, such as "EXPLAIN" queries, are not sent through this.
     ProfileInfo* info = new ProfileInfo();
-    *info = (ProfileInfo){ std::string(sql), nsecs };
+    info->sql = std::string(sql);
+    info->nsecs = nsecs;
     static_cast<Database*>(db)->debug_profile->send(info);
 }
 
