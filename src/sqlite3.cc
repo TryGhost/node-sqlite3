@@ -86,3 +86,12 @@ const char* sqlite_code_string(int code) {
         default:                return "UNKNOWN";
     }
 }
+
+const char* sqlite_authorizer_string(int type) {
+    switch (type) {
+        case SQLITE_INSERT:     return "insert";
+        case SQLITE_UPDATE:     return "update";
+        case SQLITE_DELETE:     return "delete";
+        default:                return "";
+    }
+}

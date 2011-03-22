@@ -86,7 +86,7 @@ public:
     struct UpdateInfo {
         int type;
         std::string database;
-        std::string tablename;
+        std::string table;
         sqlite3_int64 rowid;
     };
 
@@ -155,7 +155,7 @@ protected:
     static void ProfileCallback(Database* db, ProfileInfo* info);
 
     static void RegisterUpdateCallback(Baton* baton);
-    static void UpdateCallback(void* db, int type, const char* database, const char* table, sqlite3_uint64 rowid);
+    static void UpdateCallback(void* db, int type, const char* database, const char* table, sqlite3_int64 rowid);
     static void UpdateCallback(Database* db, UpdateInfo* info);
 
     void RemoveCallbacks();

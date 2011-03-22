@@ -2,6 +2,7 @@
 #define NODE_SQLITE3_SRC_MACROS_H
 
 const char* sqlite_code_string(int code);
+const char* sqlite_authorizer_string(int type);
 
 
 #define REQUIRE_ARGUMENTS(n)                                                   \

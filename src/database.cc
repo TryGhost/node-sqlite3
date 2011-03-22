@@ -413,6 +413,51 @@ void Database::ProfileCallback(Database *db, ProfileInfo* info) {
     delete info;
 }
 
+void Database::RegisterUpdateCallback(Baton* baton) {
+    assert(baton->db->open);
+    assert(baton->db->handle);
+    Database* db = baton->db;
+
+    if (db->update_event == NULL) {
+        // Add it.
+        db->update_event = new AsyncUpdate(db, UpdateCallback);
+        sqlite3_update_hook(db->handle, UpdateCallback, db);
+    }
+    else {
+        // Remove it.
+        sqlite3_update_hook(db->handle, NULL, NULL);
+        delete db->update_event;
+        db->update_event = NULL;
+    }
+
+    delete baton;
+}
+
+void Database::UpdateCallback(void* db, int type, const char* database,
+        const char* table, sqlite3_int64 rowid) {
+    // Note: This function is called in the thread pool.
+    // Note: Some queries, such as "EXPLAIN" queries, are not sent through this.
+    UpdateInfo* info = new UpdateInfo();
+    info->type = type;
+    info->database = std::string(database);
+    info->table = std::string(table);
+    info->rowid = rowid;
+    static_cast<Database*>(db)->update_event->send(info);
+}
+
+void Database::UpdateCallback(Database *db, UpdateInfo* info) {
+    HandleScope scope;
+
+    Local<Value> argv[] = {
+        String::NewSymbol(sqlite_authorizer_string(info->type)),
+        String::New(info->database.c_str()),
+        String::New(info->table.c_str()),
+        Integer::New(info->rowid),
+    };
+    EMIT_EVENT(db->handle_, 4, argv);
+    delete info;
+}
+
 Handle<Value> Database::Exec(const Arguments& args) {
     HandleScope scope;
     Database* db = ObjectWrap::Unwrap<Database>(args.This());
