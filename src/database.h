@@ -89,6 +89,9 @@ public:
         std::string tablename;
         sqlite3_int64 rowid;
     };
+    
+    bool IsOpen() { return open; }
+    bool IsLocked() { return locked; }
 
     typedef Async<std::string, Database> AsyncTrace;
     typedef Async<ProfileInfo, Database> AsyncProfile;
