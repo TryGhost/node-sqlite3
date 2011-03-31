@@ -1,7 +1,7 @@
 {
     "name": "sqlite3",
     "description": "Asynchronous, non-blocking SQLite3 bindings",
-    "version": "2.0.11",
+    "version": "2.0.12",
     "homepage": "http://github.com/developmentseed/node-sqlite3",
     "author": "Konstantin Käfer <kkaefer@gmail.com>",
     "contributors": [
@@ -12,7 +12,8 @@
         "Ryan Dahl <ry@tinyclouds.org>",
         "Will White <will@developmentseed.org>",
         "Tom MacWright <tom@developmentseed.org>",
-        "Dane Springmeyer <dane@developmentseed.org>"
+        "Dane Springmeyer <dane@developmentseed.org>",
+        "Carter Thaxton <carter.thaxton@gmail.com>"
     ],
     "repository": {
         "type": "git",
