@@ -134,7 +134,7 @@ public:
         }
         virtual ~PrepareBaton() {
             stmt->Unref();
-            if (!db->open && db->locked) {
+            if (!db->IsOpen() && db->IsLocked()) {
                 // The database handle was closed before the statement could be
                 // prepared.
                 stmt->Finalize();
