@@ -13,8 +13,7 @@ def set_options(opt):
 def configure(conf):
   conf.check_tool("compiler_cxx")
   conf.check_tool("node_addon")
-  if not conf.check(lib="sqlite3", libpath=['/usr/local/lib', '/opt/local/lib'], uselib_store="SQLITE3"):
-    conf.fatal('Missing sqlite3');
+  conf.check(lib="sqlite3", libpath=['/usr/local/lib', '/opt/local/lib'], uselib_store="SQLITE3", mandatory=True)
 
 def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
