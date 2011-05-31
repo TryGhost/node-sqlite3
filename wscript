@@ -13,7 +13,14 @@ def set_options(opt):
 def configure(conf):
   conf.check_tool("compiler_cxx")
   conf.check_tool("node_addon")
-  conf.check(lib="sqlite3", libpath=['/usr/local/lib', '/opt/local/lib'], uselib_store="SQLITE3", mandatory=True)
+  try:
+    conf.find_program('pkg-config')
+  except conf.errors.ConfigurationError:
+    conf.check(lib="sqlite3", libpath=['/usr/local/lib', '/opt/local/lib'],
+               uselib_store="SQLITE3", mandatory=True)
+  else:
+    conf.check_cfg(package="sqlite3", args='--libs --cflags',
+                   uselib_store="SQLITE3", mandatory=True)
 
 def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
