@@ -1,4 +1,5 @@
 import Options
+from Configure import ConfigurationError
 from os.path import exists
 from shutil import copy2 as copy
 
@@ -14,8 +15,8 @@ def configure(conf):
   conf.check_tool("compiler_cxx")
   conf.check_tool("node_addon")
   try:
-    conf.find_program('pkg-config')
-  except conf.errors.ConfigurationError:
+    conf.find_program('pkg-config', mandatory=True)
+  except ConfigurationError:
     conf.check(lib="sqlite3", libpath=['/usr/local/lib', '/opt/local/lib'],
                uselib_store="SQLITE3", mandatory=True)
   else:
