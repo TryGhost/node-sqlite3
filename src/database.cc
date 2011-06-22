@@ -157,6 +157,10 @@ int Database::EIO_Open(eio_req *req) {
         sqlite3_close(db->handle);
         db->handle = NULL;
     }
+    else {
+        // Set default database handle values.
+        sqlite3_busy_timeout(db->handle, 1000);
+    }
 
     return 0;
 }
@@ -324,6 +328,17 @@ Handle<Value> Database::Configure(const Arguments& args) {
         Baton* baton = new Baton(db, handle);
         db->Schedule(RegisterProfileCallback, baton);
     }
+    else if (args[0]->Equals(String::NewSymbol("busyTimeout"))) {
+        if (!args[1]->IsInt32()) {
+            return ThrowException(Exception::TypeError(
+                String::New("Value must be an integer"))
+            );
+        }
+        Local<Function> handle;
+        Baton* baton = new Baton(db, handle);
+        baton->status = args[1]->Int32Value();
+        db->Schedule(SetBusyTimeout, baton);
+    }
     else {
         return ThrowException(Exception::Error(String::Concat(
             args[0]->ToString(),
@@ -334,6 +349,16 @@ Handle<Value> Database::Configure(const Arguments& args) {
     db->Process();
 
     return args.This();
+}
+
+void Database::SetBusyTimeout(Baton* baton) {
+    assert(baton->db->open);
+    assert(baton->db->handle);
+
+    // Abuse the status field for passing the timeout.
+    sqlite3_busy_timeout(baton->db->handle, baton->status);
+
+    delete baton;
 }
 
 void Database::RegisterTraceCallback(Baton* baton) {

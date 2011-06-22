@@ -149,6 +149,8 @@ protected:
 
     static Handle<Value> Configure(const Arguments& args);
 
+    static void SetBusyTimeout(Baton* baton);
+
     static void RegisterTraceCallback(Baton* baton);
     static void TraceCallback(void* db, const char* sql);
     static void TraceCallback(Database* db, std::string* sql);
