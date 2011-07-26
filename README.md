@@ -85,7 +85,7 @@ You can also use [`npm`](https://github.com/isaacs/npm) to download and install 
 * [Dane Springmeyer](https://github.com/springmeyer)
 * [Carter Thaxton](https://github.com/carter-thaxton)
 * [Audrius Kažukauskas](https://github.com/audriusk)
-* [pyneo](https://github.com/pyneo)
+* [Johannes Schauer](https://github.com/pyneo)
 
 
 
