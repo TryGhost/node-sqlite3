@@ -14,7 +14,8 @@
         "Tom MacWright <tom@developmentseed.org>",
         "Dane Springmeyer <dane@developmentseed.org>",
         "Carter Thaxton <carter.thaxton@gmail.com>",
-        "Audrius Kažukauskas <audrius@neutrino.lt>"
+        "Audrius Kažukauskas <audrius@neutrino.lt>",
+        "pyneo"
     ],
     "repository": {
         "type": "git",

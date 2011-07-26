@@ -48,7 +48,7 @@ See the [API documentation](https://github.com/developmentseed/node-sqlite3/wiki
 
 # BUILDING
 
-Make sure you have the sources for `sqlite3` installed. Mac OS X ships with these by default. If you don't have them installed, install the `-dev` package with your package manager, e.g. `apt-get install libsqlite3-dev` for Debian/Ubuntu. Make sure that you have at least `libsqlite3` >= 3.6. 
+Make sure you have the sources for `sqlite3` installed. Mac OS X ships with these by default. If you don't have them installed, install the `-dev` package with your package manager, e.g. `apt-get install libsqlite3-dev` for Debian/Ubuntu. Make sure that you have at least `libsqlite3` >= 3.6.
 
 To obtain and build the bindings:
 
@@ -75,6 +75,17 @@ You can also use [`npm`](https://github.com/isaacs/npm) to download and install 
 # CONTRIBUTORS
 
 * [Konstantin Käfer](https://github.com/kkaefer)
+* [Orlando Vazquez](https://github.com/orlandov)
+* [Artem Kustikov](https://github.com/artiz)
+* [Eric Fredricksen](https://github.com/grumdrig)
+* [John Wright](https://github.com/mrjjwright)
+* [Ryan Dahl](https://github.com/ry)
+* [Will White](https://github.com/willwhite)
+* [Tom MacWright](https://github.com/tmcw)
+* [Dane Springmeyer](https://github.com/springmeyer)
+* [Carter Thaxton](https://github.com/carter-thaxton)
+* [Audrius Kažukauskas](https://github.com/audriusk)
+* [pyneo](https://github.com/pyneo)
 
 
 

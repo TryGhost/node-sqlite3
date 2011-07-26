@@ -53,7 +53,7 @@ public:
     }
 
     inline ~Async() {
-        ev_invoke(&watcher, ev_async_pending(&watcher));
+        ev_invoke(EV_DEFAULT_UC_ &watcher, ev_async_pending(&watcher));
         pthread_mutex_destroy(&mutex);
         ev_async_stop(EV_DEFAULT_UC_ &watcher);
     }
