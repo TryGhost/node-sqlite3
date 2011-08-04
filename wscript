@@ -1,3 +1,4 @@
+import os
 import Options
 from Configure import ConfigurationError
 from os.path import exists
@@ -14,6 +15,12 @@ def set_options(opt):
 def configure(conf):
   conf.check_tool("compiler_cxx")
   conf.check_tool("node_addon")
+  
+  linkflags = []
+  if os.environ.has_key('LINKFLAGS'):
+      linkflags.extend(os.environ['LINKFLAGS'].split(' '))
+  conf.env.append_value("LINKFLAGS", linkflags)
+
   try:
     conf.check_cfg(package="sqlite3", args='--libs --cflags',
                    uselib_store="SQLITE3", mandatory=True)
