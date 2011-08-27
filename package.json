@@ -21,6 +21,9 @@
         "type": "git",
         "url": "git://github.com/developmentseed/node-sqlite3.git"
     },
+    "devDependencies": {
+      "step": "0.0.4"
+    },
     "engines": {
         "node": ">=0.2.4 <0.5"
     },
