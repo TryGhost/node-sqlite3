@@ -53,8 +53,8 @@ def configure(conf):
   if os.environ.has_key('LINKFLAGS'):
       linkflags.extend(os.environ['LINKFLAGS'].split(' '))
   
-  if Options.options.internal_sqlite:
-     linkflags.append('-Wl,-search_paths_first')
+  if Options.options.internal_sqlite and Options.platform == 'darwin':
+      linkflags.append('-Wl,-search_paths_first')
   
   conf.env.append_value("LINKFLAGS", linkflags)
 
