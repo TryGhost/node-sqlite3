@@ -67,7 +67,10 @@ exports['test inserting and retrieving rows'] = function(beforeExit) {
         function(err, rows) {
             if (err) throw err;
             inserted += rows.length;
-            var stmt = db.prepare("SELECT txt, num, flt, blb FROM foo ORDER BY num");
+            var stmt = db.prepare("SELECT txt, num, flt, blb FROM foo ORDER BY num", function(err) {
+                if (err) throw err;
+                assert.equal(stmt.sql, 'SELECT txt, num, flt, blb FROM foo ORDER BY num');
+            });
 
             var group = this.group();
             for (var i = 0; i < count + 5; i++) {

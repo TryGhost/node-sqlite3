@@ -100,7 +100,7 @@ Handle<Value> Statement::New(const Arguments& args) {
     Database* db = ObjectWrap::Unwrap<Database>(args[0]->ToObject());
     Local<String> sql = Local<String>::Cast(args[1]);
 
-    args.This()->Set(String::NewSymbol("sql"), Persistent<String>::New(sql), ReadOnly);
+    args.This()->Set(String::NewSymbol("sql"), sql, ReadOnly);
 
     Statement* stmt = new Statement(db);
     stmt->Wrap(args.This());
