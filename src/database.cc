@@ -105,7 +105,7 @@ void Database::Schedule(EIO_Callback callback, Baton* baton, bool exclusive) {
 Handle<Value> Database::New(const Arguments& args) {
     HandleScope scope;
 
-    if (!Database::HasInstance(args.This())) {
+    if (!args.IsConstructCall()) {
         return ThrowException(Exception::TypeError(
             String::New("Use the new operator to create new Database objects"))
         );

@@ -1,6 +1,12 @@
 var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
+exports['test Database() without new'] = function(beforeExit) {
+    assert.throws(function() {
+        sqlite3.Database(':memory:');
+    }, (/Use the new operator to create new Database objects/));
+};
+
 exports['test Database#get prepare fail'] = function(beforeExit) {
     var db = new sqlite3.Database(':memory:');
 
