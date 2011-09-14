@@ -82,6 +82,12 @@ template <class T> void Statement::Error(T* baton) {
 Handle<Value> Statement::New(const Arguments& args) {
     HandleScope scope;
 
+    if (!args.IsConstructCall()) {
+        return ThrowException(Exception::TypeError(
+            String::New("Use the new operator to create new Statement objects"))
+        );
+    }
+
     int length = args.Length();
 
     if (length <= 0 || !Database::HasInstance(args[0])) {
