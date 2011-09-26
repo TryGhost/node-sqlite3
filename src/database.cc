@@ -1,7 +1,6 @@
 #include <string.h>
-#include <v8.h>
-#include <node.h>
-#include <node_events.h>
+#include <node/v8.h>
+#include <node/node.h>
 
 #include "macros.h"
 #include "database.h"
@@ -17,7 +16,6 @@ void Database::Init(Handle<Object> target) {
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
 
     constructor_template = Persistent<FunctionTemplate>::New(t);
-    constructor_template->Inherit(EventEmitter::constructor_template);
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     constructor_template->SetClassName(String::NewSymbol("Database"));
 
@@ -141,7 +139,7 @@ void Database::EIO_BeginOpen(Baton* baton) {
     eio_custom(EIO_Open, EIO_PRI_DEFAULT, EIO_AfterOpen, baton);
 }
 
-int Database::EIO_Open(eio_req *req) {
+void Database::EIO_Open(eio_req *req) {
     OpenBaton* baton = static_cast<OpenBaton*>(req->data);
     Database* db = baton->db;
 
@@ -161,8 +159,6 @@ int Database::EIO_Open(eio_req *req) {
         // Set default database handle values.
         sqlite3_busy_timeout(db->handle, 1000);
     }
-
-    return 0;
 }
 
 int Database::EIO_AfterOpen(eio_req *req) {
@@ -225,7 +221,7 @@ void Database::EIO_BeginClose(Baton* baton) {
     eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, baton);
 }
 
-int Database::EIO_Close(eio_req *req) {
+void Database::EIO_Close(eio_req *req) {
     Baton* baton = static_cast<Baton*>(req->data);
     Database* db = baton->db;
 
@@ -237,7 +233,6 @@ int Database::EIO_Close(eio_req *req) {
     else {
         db->handle = NULL;
     }
-    return 0;
 }
 
 int Database::EIO_AfterClose(eio_req *req) {
@@ -504,7 +499,7 @@ void Database::EIO_BeginExec(Baton* baton) {
     eio_custom(EIO_Exec, EIO_PRI_DEFAULT, EIO_AfterExec, baton);
 }
 
-int Database::EIO_Exec(eio_req *req) {
+void Database::EIO_Exec(eio_req *req) {
     ExecBaton* baton = static_cast<ExecBaton*>(req->data);
 
     char* message = NULL;
@@ -520,8 +515,6 @@ int Database::EIO_Exec(eio_req *req) {
         baton->message = std::string(message);
         sqlite3_free(message);
     }
-
-    return 0;
 }
 
 int Database::EIO_AfterExec(eio_req *req) {
@@ -574,7 +567,7 @@ void Database::EIO_BeginLoadExtension(Baton* baton) {
     eio_custom(EIO_LoadExtension, EIO_PRI_DEFAULT, EIO_AfterLoadExtension, baton);
 }
 
-int Database::EIO_LoadExtension(eio_req *req) {
+void Database::EIO_LoadExtension(eio_req *req) {
     LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(req->data);
 
     sqlite3_enable_load_extension(baton->db->handle, 1);
@@ -593,8 +586,6 @@ int Database::EIO_LoadExtension(eio_req *req) {
         baton->message = std::string(message);
         sqlite3_free(message);
     }
-
-    return 0;
 }
 
 int Database::EIO_AfterLoadExtension(eio_req *req) {
@@ -673,13 +664,11 @@ void Database::Destruct(Persistent<Value> value, void *data) {
     }
 }
 
-int Database::EIO_Destruct(eio_req *req) {
+void Database::EIO_Destruct(eio_req *req) {
     Database* db = static_cast<Database*>(req->data);
 
     sqlite3_close(db->handle);
     db->handle = NULL;
-
-    return 0;
 }
 
 int Database::EIO_AfterDestruct(eio_req *req) {

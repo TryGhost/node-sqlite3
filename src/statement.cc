@@ -1,9 +1,8 @@
 #include <string.h>
-#include <v8.h>
-#include <node.h>
-#include <node_events.h>
-#include <node_buffer.h>
-#include <node_version.h>
+#include <node/v8.h>
+#include <node/node.h>
+#include <node/node_buffer.h>
+#include <node/node_version.h>
 
 #include "macros.h"
 #include "database.h"
@@ -19,7 +18,6 @@ void Statement::Init(Handle<Object> target) {
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
 
     constructor_template = Persistent<FunctionTemplate>::New(t);
-    constructor_template->Inherit(EventEmitter::constructor_template);
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     constructor_template->SetClassName(String::NewSymbol("Statement"));
 
@@ -124,7 +122,7 @@ void Statement::EIO_BeginPrepare(Database::Baton* baton) {
     eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, baton);
 }
 
-int Statement::EIO_Prepare(eio_req *req) {
+void Statement::EIO_Prepare(eio_req *req) {
     STATEMENT_INIT(PrepareBaton);
 
     // In case preparing fails, we use a mutex to make sure we get the associated
@@ -146,8 +144,6 @@ int Statement::EIO_Prepare(eio_req *req) {
     }
 
     sqlite3_mutex_leave(mtx);
-
-    return 0;
 }
 
 int Statement::EIO_AfterPrepare(eio_req *req) {
@@ -334,15 +330,13 @@ void Statement::EIO_BeginBind(Baton* baton) {
     STATEMENT_BEGIN(Bind);
 }
 
-int Statement::EIO_Bind(eio_req *req) {
+void Statement::EIO_Bind(eio_req *req) {
     STATEMENT_INIT(Baton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
     sqlite3_mutex_enter(mtx);
     stmt->Bind(baton->parameters);
     sqlite3_mutex_leave(mtx);
-
-    return 0;
 }
 
 int Statement::EIO_AfterBind(eio_req *req) {
@@ -384,7 +378,7 @@ void Statement::EIO_BeginGet(Baton* baton) {
     STATEMENT_BEGIN(Get);
 }
 
-int Statement::EIO_Get(eio_req *req) {
+void Statement::EIO_Get(eio_req *req) {
     STATEMENT_INIT(RowBaton);
 
     if (stmt->status != SQLITE_DONE || baton->parameters.size()) {
@@ -406,8 +400,6 @@ int Statement::EIO_Get(eio_req *req) {
             GetRow(&baton->row, stmt->handle);
         }
     }
-
-    return 0;
 }
 
 int Statement::EIO_AfterGet(eio_req *req) {
@@ -454,7 +446,7 @@ void Statement::EIO_BeginRun(Baton* baton) {
     STATEMENT_BEGIN(Run);
 }
 
-int Statement::EIO_Run(eio_req *req) {
+void Statement::EIO_Run(eio_req *req) {
     STATEMENT_INIT(RunBaton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
@@ -478,8 +470,6 @@ int Statement::EIO_Run(eio_req *req) {
     }
 
     sqlite3_mutex_leave(mtx);
-
-    return 0;
 }
 
 int Statement::EIO_AfterRun(eio_req *req) {
@@ -522,7 +512,7 @@ void Statement::EIO_BeginAll(Baton* baton) {
     STATEMENT_BEGIN(All);
 }
 
-int Statement::EIO_All(eio_req *req) {
+void Statement::EIO_All(eio_req *req) {
     STATEMENT_INIT(RowsBaton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
@@ -546,8 +536,6 @@ int Statement::EIO_All(eio_req *req) {
     }
 
     sqlite3_mutex_leave(mtx);
-
-    return 0;
 }
 
 int Statement::EIO_AfterAll(eio_req *req) {
@@ -605,6 +593,7 @@ Handle<Value> Statement::Each(const Arguments& args) {
     }
     else {
         baton->completed = Persistent<Function>::New(completed);
+        baton->async = new Async(stmt, baton, AsyncEach);
         stmt->Schedule(EIO_BeginEach, baton);
         return args.This();
     }
@@ -614,10 +603,11 @@ void Statement::EIO_BeginEach(Baton* baton) {
     STATEMENT_BEGIN(Each);
 }
 
-int Statement::EIO_Each(eio_req *req) {
+void Statement::EIO_Each(eio_req *req) {
     STATEMENT_INIT(EachBaton);
 
-    Async* async = new Async(stmt, baton->callback, baton->completed, AsyncEach);
+    Async* async = baton->async;
+    fprintf(stderr, "async:%p\n", async);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
 
@@ -630,6 +620,7 @@ int Statement::EIO_Each(eio_req *req) {
 
     if (stmt->Bind(baton->parameters)) {
         while (true) {
+            fprintf(stderr, "before mutex\n");
             sqlite3_mutex_enter(mtx);
             stmt->status = sqlite3_step(stmt->handle);
             if (stmt->status == SQLITE_ROW) {
@@ -637,32 +628,39 @@ int Statement::EIO_Each(eio_req *req) {
                 Row* row = new Row();
                 GetRow(row, stmt->handle);
 
-                pthread_mutex_lock(&async->mutex);
+                // pthread_mutex_lock(&async->mutex);
                 async->data.push_back(row);
                 retrieved++;
-                pthread_mutex_unlock(&async->mutex);
-
-                ev_async_send(EV_DEFAULT_ &async->watcher);
+                // pthread_mutex_unlock(&async->mutex);
+                
+                fprintf(stderr, "retrieved:%d\n", retrieved);
+                // uv_async_send(&async->watcher);
             }
             else {
                 if (stmt->status != SQLITE_DONE) {
                     stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
                 }
                 sqlite3_mutex_leave(mtx);
+                fprintf(stderr, "done\n");
                 break;
             }
         }
     }
+    fprintf(stderr, "retrieved:%d\n", retrieved);
 
     async->completed = true;
-    ev_async_send(EV_DEFAULT_ &async->watcher);
-
-    return 0;
+    // uv_async_send(&async->watcher);
 }
 
-void Statement::AsyncEach(EV_P_ ev_async *w, int revents) {
+void Statement::CloseCallback(uv_handle_t* handle) {
+    assert(handle != NULL);
+    fprintf(stderr, "close callback\n");
+}
+
+void Statement::AsyncEach(uv_async_t* handle, int status) {
     HandleScope scope;
-    Async* async = static_cast<Async*>(w->data);
+    Async* async = static_cast<Async*>(handle->data);
+    EachBaton* baton = async->baton;
 
     while (true) {
         // Get the contents out of the data cache for us to process in the JS callback.
@@ -675,32 +673,34 @@ void Statement::AsyncEach(EV_P_ ev_async *w, int revents) {
             break;
         }
 
-        if (!async->callback.IsEmpty() && async->callback->IsFunction()) {
+        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
             Local<Value> argv[2];
             argv[0] = Local<Value>::New(Null());
 
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
             for (int i = 0; it < end; it++, i++) {
-                argv[1] = RowToJS(*it);
+                // argv[1] = RowToJS(*it);
                 async->retrieved++;
-                TRY_CATCH_CALL(async->stmt->handle_, async->callback, 2, argv);
-                delete *it;
+            //     TRY_CATCH_CALL(async->stmt->handle_, baton->callback, 2, argv);
+                // delete *it;
             }
         }
     }
 
     if (async->completed) {
-        if (!async->completed_callback.IsEmpty() &&
-                async->completed_callback->IsFunction()) {
+        fprintf(stderr, "completed\n");
+        if (!baton->completed.IsEmpty() &&
+                baton->completed->IsFunction()) {
             Local<Value> argv[] = {
                 Local<Value>::New(Null()),
                 Integer::New(async->retrieved)
             };
-            TRY_CATCH_CALL(async->stmt->handle_, async->completed_callback, 2, argv);
+            TRY_CATCH_CALL(async->stmt->handle_, baton->completed, 2, argv);
         }
+        // uv_close((uv_handle_t*)handle, CloseCallback);
         delete async;
-        w->data = NULL;
+        handle->data = NULL;
     }
 }
 
@@ -732,13 +732,11 @@ void Statement::EIO_BeginReset(Baton* baton) {
     STATEMENT_BEGIN(Reset);
 }
 
-int Statement::EIO_Reset(eio_req *req) {
+void Statement::EIO_Reset(eio_req *req) {
     STATEMENT_INIT(Baton);
 
     sqlite3_reset(stmt->handle);
     stmt->status = SQLITE_OK;
-
-    return 0;
 }
 
 int Statement::EIO_AfterReset(eio_req *req) {

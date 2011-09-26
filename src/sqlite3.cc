@@ -1,7 +1,11 @@
 #include <v8.h>
 #include <node.h>
-#include <node_events.h>
+#include <node_buffer.h>
 
+#include <stdint.h>
+#include <sstream>
+#include <cstring>
+#include <string>
 #include <sqlite3.h>
 
 #include "macros.h"
@@ -10,7 +14,9 @@
 
 using namespace node_sqlite3;
 
-extern "C" void init (v8::Handle<Object> target) {
+namespace {
+
+void RegisterModule(v8::Handle<Object> target) {
     Database::Init(target);
     Statement::Init(target);
 
@@ -50,6 +56,8 @@ extern "C" void init (v8::Handle<Object> target) {
     DEFINE_CONSTANT_INTEGER(target, SQLITE_FORMAT, FORMAT);
     DEFINE_CONSTANT_INTEGER(target, SQLITE_RANGE, RANGE);
     DEFINE_CONSTANT_INTEGER(target, SQLITE_NOTADB, NOTADB);
+}
+
 }
 
 const char* sqlite_code_string(int code) {
@@ -95,3 +103,5 @@ const char* sqlite_authorizer_string(int type) {
         default:                return "";
     }
 }
+
+NODE_MODULE(sqlite3_bindings, RegisterModule);

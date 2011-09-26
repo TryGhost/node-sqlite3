@@ -1,9 +1,8 @@
 #ifndef NODE_SQLITE3_SRC_STATEMENT_H
 #define NODE_SQLITE3_SRC_STATEMENT_H
 
-#include <v8.h>
-#include <node.h>
-#include <node_events.h>
+#include <node/v8.h>
+#include <node/node.h>
 
 #include "database.h"
 
@@ -72,7 +71,7 @@ typedef Row Parameters;
 
 
 
-class Statement : public EventEmitter {
+class Statement : public ObjectWrap {
 public:
     static Persistent<FunctionTemplate> constructor_template;
 
@@ -119,10 +118,13 @@ public:
         Rows rows;
     };
 
+    struct Async;
+
     struct EachBaton : Baton {
         EachBaton(Statement* stmt_, Handle<Function> cb_) :
             Baton(stmt_, cb_) {}
         Persistent<Function> completed;
+        Async* async;
     };
 
     struct PrepareBaton : Database::Baton {
@@ -150,40 +152,33 @@ public:
         Baton* baton;
     };
 
-    typedef void (*Async_Callback)(EV_P_ ev_async *w, int revents);
-
     struct Async {
-        ev_async watcher;
+        uv_async_t watcher;
         Statement* stmt;
+        EachBaton* baton;
         Rows data;
         pthread_mutex_t mutex;
-        Persistent<Function> callback;
         bool completed;
         int retrieved;
-        Persistent<Function> completed_callback;
 
-        Async(Statement* st, Handle<Function> cb, Handle<Function>completed_cb,
-              Async_Callback async_cb) :
-                stmt(st), completed(false), retrieved(0) {
+        Async(Statement* st, EachBaton* eb, uv_async_cb async_cb) :
+                stmt(st), baton(eb), completed(false), retrieved(0) {
             watcher.data = this;
-            ev_async_init(&watcher, async_cb);
-            ev_async_start(EV_DEFAULT_UC_ &watcher);
-            callback = Persistent<Function>::New(cb);
-            completed_callback = Persistent<Function>::New(completed_cb);
-            stmt->Ref();
             pthread_mutex_init(&mutex, NULL);
+            fprintf(stderr, "initialized mutex\n");
+            stmt->Ref();
+            fprintf(stderr, "referenced stmt\n");
+            uv_async_init(uv_default_loop(), &watcher, async_cb);
+            fprintf(stderr, "started async\n");
         }
 
         ~Async() {
-            callback.Dispose();
-            completed_callback.Dispose();
             stmt->Unref();
             pthread_mutex_destroy(&mutex);
-            ev_async_stop(EV_DEFAULT_UC_ &watcher);
         }
     };
 
-    Statement(Database* db_) : EventEmitter(),
+    Statement(Database* db_) : ObjectWrap(),
             db(db_),
             handle(NULL),
             status(SQLITE_OK),
@@ -199,7 +194,7 @@ public:
 
 protected:
     static void EIO_BeginPrepare(Database::Baton* baton);
-    static int EIO_Prepare(eio_req *req);
+    static void EIO_Prepare(eio_req *req);
     static int EIO_AfterPrepare(eio_req *req);
 
     EIO_DEFINITION(Bind);
@@ -209,7 +204,8 @@ protected:
     EIO_DEFINITION(Each);
     EIO_DEFINITION(Reset);
 
-    static void AsyncEach(EV_P_ ev_async *w, int revents);
+    static void AsyncEach(uv_async_t* handle, int status);
+    static void CloseCallback(uv_handle_t* handle);
 
     static Handle<Value> Finalize(const Arguments& args);
     static void Finalize(Baton* baton);

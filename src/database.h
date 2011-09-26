@@ -1,9 +1,8 @@
 #ifndef NODE_SQLITE3_SRC_DATABASE_H
 #define NODE_SQLITE3_SRC_DATABASE_H
 
-#include <v8.h>
-#include <node.h>
-#include <node_events.h>
+#include <node/v8.h>
+#include <node/node.h>
 
 #include <string>
 #include <queue>
@@ -19,7 +18,7 @@ namespace node_sqlite3 {
 class Database;
 
 
-class Database : public EventEmitter {
+class Database : public ObjectWrap {
 public:
     static Persistent<FunctionTemplate> constructor_template;
     static void Init(Handle<Object> target);
@@ -100,7 +99,7 @@ public:
     friend class Statement;
 
 protected:
-    Database() : EventEmitter(),
+    Database() : ObjectWrap(),
         handle(NULL),
         open(false),
         locked(false),
@@ -121,7 +120,7 @@ protected:
 
     static Handle<Value> New(const Arguments& args);
     static void EIO_BeginOpen(Baton* baton);
-    static int EIO_Open(eio_req *req);
+    static void EIO_Open(eio_req *req);
     static int EIO_AfterOpen(eio_req *req);
 
     static Handle<Value> OpenGetter(Local<String> str, const AccessorInfo& accessor);
@@ -131,17 +130,17 @@ protected:
 
     static Handle<Value> Exec(const Arguments& args);
     static void EIO_BeginExec(Baton* baton);
-    static int EIO_Exec(eio_req *req);
+    static void EIO_Exec(eio_req *req);
     static int EIO_AfterExec(eio_req *req);
 
     static Handle<Value> Close(const Arguments& args);
     static void EIO_BeginClose(Baton* baton);
-    static int EIO_Close(eio_req *req);
+    static void EIO_Close(eio_req *req);
     static int EIO_AfterClose(eio_req *req);
 
     static Handle<Value> LoadExtension(const Arguments& args);
     static void EIO_BeginLoadExtension(Baton* baton);
-    static int EIO_LoadExtension(eio_req *req);
+    static void EIO_LoadExtension(eio_req *req);
     static int EIO_AfterLoadExtension(eio_req *req);
 
     static Handle<Value> Serialize(const Arguments& args);
@@ -168,7 +167,7 @@ protected:
     inline void MakeWeak();
     virtual void Unref();
     static void Destruct (Persistent<Value> value, void *data);
-    static int EIO_Destruct(eio_req *req);
+    static void EIO_Destruct(eio_req *req);
     static int EIO_AfterDestruct(eio_req *req);
 
 protected:

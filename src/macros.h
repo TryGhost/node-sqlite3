@@ -124,7 +124,7 @@ const char* sqlite_authorizer_string(int type);
 #define EIO_DEFINITION(name)                                                   \
     static Handle<Value> name(const Arguments& args);                          \
     static void EIO_Begin##name(Baton* baton);                                 \
-    static int EIO_##name(eio_req *req);                                       \
+    static void EIO_##name(eio_req *req);                                      \
     static int EIO_After##name(eio_req *req);
 
 #define STATEMENT_BEGIN(type)                                                  \
