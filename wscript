@@ -25,7 +25,7 @@ def set_options(opt):
 
   opt.add_option( '--internal-sqlite'
                 , action='store_true'
-                , default=True
+                , default=False
                 , help='Build dynamically against external install of libsqlite3 (default False - build uses internal copy)'
                 , dest='internal_sqlite'
                 )
