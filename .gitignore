@@ -4,4 +4,4 @@ build/
 TODO
 wiki
 lib/sqlite3_bindings.node
-deps/sqlite-autoconf-3070701
+deps/sqlite-autoconf-3070800
