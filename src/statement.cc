@@ -636,11 +636,10 @@ int Statement::EIO_Each(eio_req *req) {
                 sqlite3_mutex_leave(mtx);
                 Row* row = new Row();
                 GetRow(row, stmt->handle);
-
-                pthread_mutex_lock(&async->mutex);
+                NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
                 async->data.push_back(row);
                 retrieved++;
-                pthread_mutex_unlock(&async->mutex);
+                NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
 
                 ev_async_send(EV_DEFAULT_ &async->watcher);
             }
@@ -667,9 +666,9 @@ void Statement::AsyncEach(EV_P_ ev_async *w, int revents) {
     while (true) {
         // Get the contents out of the data cache for us to process in the JS callback.
         Rows rows;
-        pthread_mutex_lock(&async->mutex);
+        NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
         rows.swap(async->data);
-        pthread_mutex_unlock(&async->mutex);
+        NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
 
         if (rows.empty()) {
             break;

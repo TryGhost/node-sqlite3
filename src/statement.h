@@ -156,7 +156,7 @@ public:
         ev_async watcher;
         Statement* stmt;
         Rows data;
-        pthread_mutex_t mutex;
+        NODE_SQLITE3_MUTEX_t;
         Persistent<Function> callback;
         bool completed;
         int retrieved;
@@ -171,14 +171,14 @@ public:
             callback = Persistent<Function>::New(cb);
             completed_callback = Persistent<Function>::New(completed_cb);
             stmt->Ref();
-            pthread_mutex_init(&mutex, NULL);
+            NODE_SQLITE3_MUTEX_INIT
         }
 
         ~Async() {
             callback.Dispose();
             completed_callback.Dispose();
             stmt->Unref();
-            pthread_mutex_destroy(&mutex);
+            NODE_SQLITE3_MUTEX_DESTROY
             ev_async_stop(EV_DEFAULT_UC_ &watcher);
         }
     };
