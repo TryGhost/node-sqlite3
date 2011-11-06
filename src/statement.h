@@ -6,6 +6,7 @@
 #include <node_events.h>
 
 #include "database.h"
+#include "threading.h"
 
 #include <cstdlib>
 #include <cstring>
