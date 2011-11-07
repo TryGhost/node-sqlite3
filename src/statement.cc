@@ -593,13 +593,19 @@ Handle<Value> Statement::Each(const Arguments& args) {
     }
     else {
         baton->completed = Persistent<Function>::New(completed);
-        baton->async = new Async(stmt, baton, AsyncEach);
         stmt->Schedule(EIO_BeginEach, baton);
         return args.This();
     }
 }
 
 void Statement::EIO_BeginEach(Baton* baton) {
+    // Only create the Async object when we're actually going into
+    // the event loop. This prevents dangling events.
+    EachBaton* each_baton = static_cast<EachBaton*>(baton);
+    each_baton->async = new Async(each_baton->stmt, AsyncEach);
+    each_baton->async->item_cb = Persistent<Function>::New(each_baton->callback);
+    each_baton->async->completed_cb = Persistent<Function>::New(each_baton->completed);
+
     STATEMENT_BEGIN(Each);
 }
 
@@ -649,6 +655,7 @@ void Statement::EIO_Each(eio_req *req) {
 
 void Statement::CloseCallback(uv_handle_t* handle) {
     assert(handle != NULL);
+    assert(handle->data != NULL);
     Async* async = static_cast<Async*>(handle->data);
     delete async;
     handle->data = NULL;
@@ -657,7 +664,6 @@ void Statement::CloseCallback(uv_handle_t* handle) {
 void Statement::AsyncEach(uv_async_t* handle, int status) {
     HandleScope scope;
     Async* async = static_cast<Async*>(handle->data);
-    EachBaton* baton = async->baton;
 
     while (true) {
         // Get the contents out of the data cache for us to process in the JS callback.
@@ -670,7 +676,7 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
             break;
         }
 
-        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+        if (!async->item_cb.IsEmpty() && async->item_cb->IsFunction()) {
             Local<Value> argv[2];
             argv[0] = Local<Value>::New(Null());
 
@@ -679,20 +685,20 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
             for (int i = 0; it < end; it++, i++) {
                 argv[1] = RowToJS(*it);
                 async->retrieved++;
-                TRY_CATCH_CALL(async->stmt->handle_, baton->callback, 2, argv);
+                TRY_CATCH_CALL(async->stmt->handle_, async->item_cb, 2, argv);
                 delete *it;
             }
         }
     }
 
     if (async->completed) {
-        if (!baton->completed.IsEmpty() &&
-                baton->completed->IsFunction()) {
+        if (!async->completed_cb.IsEmpty() &&
+                async->completed_cb->IsFunction()) {
             Local<Value> argv[] = {
                 Local<Value>::New(Null()),
                 Integer::New(async->retrieved)
             };
-            TRY_CATCH_CALL(async->stmt->handle_, baton->completed, 2, argv);
+            TRY_CATCH_CALL(async->stmt->handle_, async->completed_cb, 2, argv);
         }
         uv_close((uv_handle_t*)handle, CloseCallback);
     }

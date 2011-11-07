@@ -88,7 +88,7 @@ public:
             ev_ref(EV_DEFAULT_UC);
             callback = Persistent<Function>::New(cb_);
         }
-        ~Baton() {
+        virtual ~Baton() {
             for (unsigned int i = 0; i < parameters.size(); i++) {
                 Values::Field* field = parameters[i];
                 DELETE_FIELD(field);
@@ -124,7 +124,7 @@ public:
         EachBaton(Statement* stmt_, Handle<Function> cb_) :
             Baton(stmt_, cb_) {}
         Persistent<Function> completed;
-        Async* async;
+        Async* async; // Isn't deleted when the baton is deleted.
     };
 
     struct PrepareBaton : Database::Baton {
@@ -155,14 +155,18 @@ public:
     struct Async {
         uv_async_t watcher;
         Statement* stmt;
-        EachBaton* baton;
         Rows data;
         pthread_mutex_t mutex;
         bool completed;
         int retrieved;
 
-        Async(Statement* st, EachBaton* eb, uv_async_cb async_cb) :
-                stmt(st), baton(eb), completed(false), retrieved(0) {
+        // Store the callbacks here because we don't have
+        // access to the baton in the async callback.
+        Persistent<Function> item_cb;
+        Persistent<Function> completed_cb;
+
+        Async(Statement* st, uv_async_cb async_cb) :
+                stmt(st), completed(false), retrieved(0) {
             watcher.data = this;
             pthread_mutex_init(&mutex, NULL);
             stmt->Ref();
@@ -171,6 +175,8 @@ public:
 
         ~Async() {
             stmt->Unref();
+            item_cb.Dispose();
+            completed_cb.Dispose();
             pthread_mutex_destroy(&mutex);
         }
     };
