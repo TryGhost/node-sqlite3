@@ -1,8 +1,8 @@
 #include <string.h>
-#include <node/v8.h>
-#include <node/node.h>
-#include <node/node_buffer.h>
-#include <node/node_version.h>
+#include <v8.h>
+#include <node.h>
+#include <node_buffer.h>
+#include <node_version.h>
 
 #include "macros.h"
 #include "database.h"
