@@ -165,11 +165,8 @@ public:
                 stmt(st), baton(eb), completed(false), retrieved(0) {
             watcher.data = this;
             pthread_mutex_init(&mutex, NULL);
-            fprintf(stderr, "initialized mutex\n");
             stmt->Ref();
-            fprintf(stderr, "referenced stmt\n");
             uv_async_init(uv_default_loop(), &watcher, async_cb);
-            fprintf(stderr, "started async\n");
         }
 
         ~Async() {

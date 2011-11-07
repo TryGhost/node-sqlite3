@@ -607,7 +607,6 @@ void Statement::EIO_Each(eio_req *req) {
     STATEMENT_INIT(EachBaton);
 
     Async* async = baton->async;
-    fprintf(stderr, "async:%p\n", async);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
 
@@ -620,7 +619,6 @@ void Statement::EIO_Each(eio_req *req) {
 
     if (stmt->Bind(baton->parameters)) {
         while (true) {
-            fprintf(stderr, "before mutex\n");
             sqlite3_mutex_enter(mtx);
             stmt->status = sqlite3_step(stmt->handle);
             if (stmt->status == SQLITE_ROW) {
@@ -628,33 +626,32 @@ void Statement::EIO_Each(eio_req *req) {
                 Row* row = new Row();
                 GetRow(row, stmt->handle);
 
-                // pthread_mutex_lock(&async->mutex);
+                pthread_mutex_lock(&async->mutex);
                 async->data.push_back(row);
                 retrieved++;
-                // pthread_mutex_unlock(&async->mutex);
-                
-                fprintf(stderr, "retrieved:%d\n", retrieved);
-                // uv_async_send(&async->watcher);
+                pthread_mutex_unlock(&async->mutex);
+
+                uv_async_send(&async->watcher);
             }
             else {
                 if (stmt->status != SQLITE_DONE) {
                     stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
                 }
                 sqlite3_mutex_leave(mtx);
-                fprintf(stderr, "done\n");
                 break;
             }
         }
     }
-    fprintf(stderr, "retrieved:%d\n", retrieved);
 
     async->completed = true;
-    // uv_async_send(&async->watcher);
+    uv_async_send(&async->watcher);
 }
 
 void Statement::CloseCallback(uv_handle_t* handle) {
     assert(handle != NULL);
-    fprintf(stderr, "close callback\n");
+    Async* async = static_cast<Async*>(handle->data);
+    delete async;
+    handle->data = NULL;
 }
 
 void Statement::AsyncEach(uv_async_t* handle, int status) {
@@ -680,16 +677,15 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
             for (int i = 0; it < end; it++, i++) {
-                // argv[1] = RowToJS(*it);
+                argv[1] = RowToJS(*it);
                 async->retrieved++;
-            //     TRY_CATCH_CALL(async->stmt->handle_, baton->callback, 2, argv);
-                // delete *it;
+                TRY_CATCH_CALL(async->stmt->handle_, baton->callback, 2, argv);
+                delete *it;
             }
         }
     }
 
     if (async->completed) {
-        fprintf(stderr, "completed\n");
         if (!baton->completed.IsEmpty() &&
                 baton->completed->IsFunction()) {
             Local<Value> argv[] = {
@@ -698,9 +694,7 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
             };
             TRY_CATCH_CALL(async->stmt->handle_, baton->completed, 2, argv);
         }
-        // uv_close((uv_handle_t*)handle, CloseCallback);
-        delete async;
-        handle->data = NULL;
+        uv_close((uv_handle_t*)handle, CloseCallback);
     }
 }
 
