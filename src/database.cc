@@ -657,7 +657,7 @@ void Database::Destruct(Persistent<Value> value, void *data) {
 
     if (db->handle) {
         eio_custom(EIO_Destruct, EIO_PRI_DEFAULT, EIO_AfterDestruct, db);
-        ev_ref(EV_DEFAULT_UC);
+        uv_ref(uv_default_loop());
     }
     else {
         delete db;
@@ -673,7 +673,7 @@ void Database::EIO_Destruct(eio_req *req) {
 
 int Database::EIO_AfterDestruct(eio_req *req) {
     Database* db = static_cast<Database*>(req->data);
-    ev_unref(EV_DEFAULT_UC);
+    uv_unref(uv_default_loop());
     delete db;
     return 0;
 }

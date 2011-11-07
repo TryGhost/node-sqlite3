@@ -30,14 +30,14 @@ public:
         rows.swap(async->data);
         pthread_mutex_unlock(&async->mutex);
         for (unsigned int i = 0, size = rows.size(); i < size; i++) {
-            ev_unref(EV_DEFAULT_UC);
+            uv_unref(uv_default_loop());
             async->callback(async->parent, rows[i]);
         }
     }
 
     inline void add(Item* item) {
         // Make sure node runs long enough to deliver the messages.
-        ev_ref(EV_DEFAULT_UC);
+        uv_ref(uv_default_loop());
         pthread_mutex_lock(&mutex);
         data.push_back(item);
         pthread_mutex_unlock(&mutex);

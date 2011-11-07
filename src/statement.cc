@@ -2,7 +2,6 @@
 #include <v8.h>
 #include <node.h>
 #include <node_buffer.h>
-#include <node_version.h>
 
 #include "macros.h"
 #include "database.h"
@@ -185,13 +184,8 @@ template <class T> Values::Field*
         return new Values::Null(pos);
     }
     else if (Buffer::HasInstance(source)) {
-#if NODE_VERSION_AT_LEAST(0,3,0)
         Local<Object> buffer = source->ToObject();
         return new Values::Blob(pos, Buffer::Length(buffer), Buffer::Data(buffer));
-#else
-        Buffer* buffer = ObjectWrap::Unwrap<Buffer>(source->ToObject());
-        return new Values::Blob(pos, buffer->length(), buffer->data());
-#endif
     }
     else if (source->IsDate()) {
         return new Values::Float(pos, source->NumberValue());
@@ -774,12 +768,7 @@ Local<Object> Statement::RowToJS(Row* row) {
                 value = Local<Value>(String::New(((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size()));
             } break;
             case SQLITE_BLOB: {
-#if NODE_VERSION_AT_LEAST(0,3,0)
                 Buffer *buffer = Buffer::New(((Values::Blob*)field)->value, ((Values::Blob*)field)->length);
-#else
-                Buffer *buffer = Buffer::New(((Values::Blob*)field)->length);
-                memcpy(buffer->data(), ((Values::Blob*)field)->value, buffer->length());
-#endif
                 value = Local<Value>::New(buffer->handle_);
             } break;
             case SQLITE_NULL: {

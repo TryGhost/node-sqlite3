@@ -85,7 +85,7 @@ public:
 
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
-            ev_ref(EV_DEFAULT_UC);
+            uv_ref(uv_default_loop());
             callback = Persistent<Function>::New(cb_);
         }
         virtual ~Baton() {
@@ -94,7 +94,7 @@ public:
                 DELETE_FIELD(field);
             }
             stmt->Unref();
-            ev_unref(EV_DEFAULT_UC);
+            uv_unref(uv_default_loop());
             callback.Dispose();
         }
     };
