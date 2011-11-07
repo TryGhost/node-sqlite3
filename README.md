@@ -1,6 +1,6 @@
 # NAME
 
-node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [node.js](https://github.com/joyent/node) 0.2.\* and 0.4.\*.
+node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [node.js](https://github.com/joyent/node) 0.2.z, 0.4.x and **0.6.x**.
 
 
 
@@ -75,14 +75,14 @@ You can also use [`npm`](https://github.com/isaacs/npm) to download and install 
 # CONTRIBUTORS
 
 * [Konstantin Käfer](https://github.com/kkaefer)
+* [Dane Springmeyer](https://github.com/springmeyer)
+* [Will White](https://github.com/willwhite)
 * [Orlando Vazquez](https://github.com/orlandov)
 * [Artem Kustikov](https://github.com/artiz)
 * [Eric Fredricksen](https://github.com/grumdrig)
 * [John Wright](https://github.com/mrjjwright)
 * [Ryan Dahl](https://github.com/ry)
-* [Will White](https://github.com/willwhite)
 * [Tom MacWright](https://github.com/tmcw)
-* [Dane Springmeyer](https://github.com/springmeyer)
 * [Carter Thaxton](https://github.com/carter-thaxton)
 * [Audrius Kažukauskas](https://github.com/audriusk)
 * [Johannes Schauer](https://github.com/pyneo)
