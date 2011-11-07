@@ -1,14 +1,13 @@
-#!/usr/bin/env python
 import os
 import sys
+import Options
+from Configure import ConfigurationError
 from os.path import exists
-from os import unlink
 from shutil import copy2 as copy, rmtree
 
 # node-wafadmin
 import Options
 import Utils
-from Configure import ConfigurationError
 
 
 TARGET = 'sqlite3_bindings'
@@ -20,7 +19,6 @@ BUNDLED_SQLITE3_VERSION = '3070800'
 BUNDLED_SQLITE3 = 'sqlite-autoconf-%s' % BUNDLED_SQLITE3_VERSION
 BUNDLED_SQLITE3_TAR = 'sqlite-autoconf-%s.tar.gz' % BUNDLED_SQLITE3_VERSION
 SQLITE3_TARGET = 'deps/%s' % BUNDLED_SQLITE3
-
 
 sqlite3_test_program = '''
 #include "stdio.h"
@@ -123,31 +121,26 @@ def build_internal_sqlite3(bld):
         os.chdir('../../')
 
 def clean_internal_sqlite3():
-  if os.path.exists(SQLITE3_TARGET):
-    rmtree(SQLITE3_TARGET)
+    if os.path.exists(SQLITE3_TARGET):
+        rmtree(SQLITE3_TARGET)
 
-def build(ctx):
-  build_internal_sqlite3()
-  t = ctx.new_task_gen('cxx', 'shlib', 'node_addon')
-  t.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE",
-                "-DSQLITE_ENABLE_RTREE=1", "-pthread", "-Wall"]
-  # uncomment the next line to remove '-undefined -dynamic_lookup'
+def build(bld):
+  obj = bld.new_task_gen("cxx", "shlib", "node_addon")
+  build_internal_sqlite3(bld)
+  obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE",
+                  "-DSQLITE_ENABLE_RTREE=1", "-pthread", "-Wall"]
+  # uncomment the next line to remove '-undefined dynamic_lookup'
   # in order to review linker errors (v8, libev/eio references can be ignored)
-  # t.env['LINKFLAGS_MACBUNDLE'] = ['-bundle']
-  t.target = TARGET
-  t.source = "src/database.cc src/statement.cc src/sqlite3.cc"
-  # t.uselib = "SQLITE3"
-
-
-def clean(ctx):
-  if exists("build"):
-    rmtree("build")
-  if exists(dest):
-    unlink(dest)
-
-  clean_internal_sqlite3()
-
+  #obj.env['LINKFLAGS_MACBUNDLE'] = ['-bundle']
+  obj.target = TARGET
+  obj.source = "src/sqlite3.cc src/database.cc src/statement.cc"
+  obj.uselib = "SQLITE3"
 
 def shutdown():
-  if not Options.commands['clean'] and exists(built):
-    copy(built, dest)
+  if Options.commands['clean']:
+      if exists(TARGET_FILE):
+        unlink(TARGET_FILE)
+      clean_internal_sqlite3()
+  else:
+    if exists(built):
+      copy(built, dest)
