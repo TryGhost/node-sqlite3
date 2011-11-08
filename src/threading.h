@@ -2,7 +2,21 @@
 #define NODE_SQLITE3_SRC_THREADING_H
 
 
-#if defined(NODE_SQLITE3_BOOST_THREADING)
+#ifdef _WIN32
+
+#include <windows.h>
+
+    #define NODE_SQLITE3_MUTEX_t HANDLE;
+
+    #define NODE_SQLITE3_MUTEX_INIT CreateMutex(NULL, FALSE, NULL);
+
+    #define NODE_SQLITE3_MUTEX_LOCK(m) WaitForSingleObject(m, INFINITE);
+
+    #define NODE_SQLITE3_MUTEX_UNLOCK(m) ReleaseMutex(m);
+
+    #define NODE_SQLITE3_MUTEX_DESTROY CloseHandle(mutex);
+
+#elif defined(NODE_SQLITE3_BOOST_THREADING)
 
 #include <boost/thread/mutex.hpp>
 
