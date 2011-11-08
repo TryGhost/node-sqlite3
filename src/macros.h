@@ -121,11 +121,11 @@ const char* sqlite_authorizer_string(int type);
         FatalException(try_catch);                                             \
     }                                                                          }
 
-#define EIO_DEFINITION(name)                                                   \
+#define WORK_DEFINITION(name)                                                 \
     static Handle<Value> name(const Arguments& args);                          \
-    static void EIO_Begin##name(Baton* baton);                                 \
-    static void EIO_##name(eio_req *req);                                      \
-    static int EIO_After##name(eio_req *req);
+    static void Work_Begin##name(Baton* baton);                                \
+    static void Work_##name(uv_work_t* req);                                   \
+    static void Work_After##name(uv_work_t* req);
 
 #define STATEMENT_BEGIN(type)                                                  \
     assert(baton);                                                             \
@@ -135,7 +135,9 @@ const char* sqlite_authorizer_string(int type);
     assert(baton->stmt->prepared);                                             \
     baton->stmt->locked = true;                                                \
     baton->stmt->db->pending++;                                                \
-    eio_custom(EIO_##type, EIO_PRI_DEFAULT, EIO_After##type, baton);
+    int status = uv_queue_work(uv_default_loop(),                              \
+        &baton->request, Work_##type, Work_After##type);                       \
+    assert(status == 0);
 
 #define STATEMENT_INIT(type)                                                   \
     type* baton = static_cast<type*>(req->data);                               \

@@ -30,6 +30,7 @@ public:
     }
 
     struct Baton {
+        uv_work_t request;
         Database* db;
         Persistent<Function> callback;
         int status;
@@ -39,6 +40,7 @@ public:
                 db(db_), status(SQLITE_OK) {
             db->Ref();
             uv_ref(uv_default_loop());
+            request.data = this;
             callback = Persistent<Function>::New(cb_);
         }
         virtual ~Baton() {
@@ -67,12 +69,12 @@ public:
             Baton(db_, cb_), filename(filename_) {}
     };
 
-    typedef void (*EIO_Callback)(Baton* baton);
+    typedef void (*Work_Callback)(Baton* baton);
 
     struct Call {
-        Call(EIO_Callback cb_, Baton* baton_, bool exclusive_ = false) :
+        Call(Work_Callback cb_, Baton* baton_, bool exclusive_ = false) :
             callback(cb_), exclusive(exclusive_), baton(baton_) {};
-        EIO_Callback callback;
+        Work_Callback callback;
         bool exclusive;
         Baton* baton;
     };
@@ -88,7 +90,7 @@ public:
         std::string table;
         sqlite3_int64 rowid;
     };
-    
+
     bool IsOpen() { return open; }
     bool IsLocked() { return locked; }
 
@@ -111,37 +113,36 @@ protected:
     }
 
     ~Database() {
-        assert(handle == NULL);
-        if (debug_trace) {
-            delete debug_trace;
-            debug_trace = NULL;
-        }
+        RemoveCallbacks();
+        sqlite3_close(handle);
+        handle = NULL;
+        open = false;
     }
 
     static Handle<Value> New(const Arguments& args);
-    static void EIO_BeginOpen(Baton* baton);
-    static void EIO_Open(eio_req *req);
-    static int EIO_AfterOpen(eio_req *req);
+    static void Work_BeginOpen(Baton* baton);
+    static void Work_Open(uv_work_t* req);
+    static void Work_AfterOpen(uv_work_t* req);
 
     static Handle<Value> OpenGetter(Local<String> str, const AccessorInfo& accessor);
 
-    void Schedule(EIO_Callback callback, Baton* baton, bool exclusive = false);
+    void Schedule(Work_Callback callback, Baton* baton, bool exclusive = false);
     void Process();
 
     static Handle<Value> Exec(const Arguments& args);
-    static void EIO_BeginExec(Baton* baton);
-    static void EIO_Exec(eio_req *req);
-    static int EIO_AfterExec(eio_req *req);
+    static void Work_BeginExec(Baton* baton);
+    static void Work_Exec(uv_work_t* req);
+    static void Work_AfterExec(uv_work_t* req);
 
     static Handle<Value> Close(const Arguments& args);
-    static void EIO_BeginClose(Baton* baton);
-    static void EIO_Close(eio_req *req);
-    static int EIO_AfterClose(eio_req *req);
+    static void Work_BeginClose(Baton* baton);
+    static void Work_Close(uv_work_t* req);
+    static void Work_AfterClose(uv_work_t* req);
 
     static Handle<Value> LoadExtension(const Arguments& args);
-    static void EIO_BeginLoadExtension(Baton* baton);
-    static void EIO_LoadExtension(eio_req *req);
-    static int EIO_AfterLoadExtension(eio_req *req);
+    static void Work_BeginLoadExtension(Baton* baton);
+    static void Work_LoadExtension(uv_work_t* req);
+    static void Work_AfterLoadExtension(uv_work_t* req);
 
     static Handle<Value> Serialize(const Arguments& args);
     static Handle<Value> Parallelize(const Arguments& args);
@@ -163,12 +164,6 @@ protected:
     static void UpdateCallback(Database* db, UpdateInfo* info);
 
     void RemoveCallbacks();
-    void Wrap (Handle<Object> handle);
-    inline void MakeWeak();
-    virtual void Unref();
-    static void Destruct (Persistent<Value> value, void *data);
-    static void EIO_Destruct(eio_req *req);
-    static int EIO_AfterDestruct(eio_req *req);
 
 protected:
     sqlite3* handle;

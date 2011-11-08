@@ -46,7 +46,7 @@ void Statement::Process() {
     }
 }
 
-void Statement::Schedule(EIO_Callback callback, Baton* baton) {
+void Statement::Schedule(Work_Callback callback, Baton* baton) {
     if (finalized) {
         queue.push(new Call(callback, baton));
         CleanQueue();
@@ -110,18 +110,20 @@ Handle<Value> Statement::New(const Arguments& args) {
 
     PrepareBaton* baton = new PrepareBaton(db, Local<Function>::Cast(args[2]), stmt);
     baton->sql = std::string(*String::Utf8Value(sql));
-    db->Schedule(EIO_BeginPrepare, baton);
+    db->Schedule(Work_BeginPrepare, baton);
 
     return args.This();
 }
 
-void Statement::EIO_BeginPrepare(Database::Baton* baton) {
+void Statement::Work_BeginPrepare(Database::Baton* baton) {
     assert(baton->db->open);
     baton->db->pending++;
-    eio_custom(EIO_Prepare, EIO_PRI_DEFAULT, EIO_AfterPrepare, baton);
+    int status = uv_queue_work(uv_default_loop(),
+        &baton->request, Work_Prepare, Work_AfterPrepare);
+    assert(status == 0);
 }
 
-void Statement::EIO_Prepare(eio_req *req) {
+void Statement::Work_Prepare(uv_work_t* req) {
     STATEMENT_INIT(PrepareBaton);
 
     // In case preparing fails, we use a mutex to make sure we get the associated
@@ -145,7 +147,7 @@ void Statement::EIO_Prepare(eio_req *req) {
     sqlite3_mutex_leave(mtx);
 }
 
-int Statement::EIO_AfterPrepare(eio_req *req) {
+void Statement::Work_AfterPrepare(uv_work_t* req) {
     HandleScope scope;
     STATEMENT_INIT(PrepareBaton);
 
@@ -162,7 +164,6 @@ int Statement::EIO_AfterPrepare(eio_req *req) {
     }
 
     STATEMENT_END();
-    return 0;
 }
 
 template <class T> Values::Field*
@@ -315,16 +316,16 @@ Handle<Value> Statement::Bind(const Arguments& args) {
         return ThrowException(Exception::Error(String::New("Data type is not supported")));
     }
     else {
-        stmt->Schedule(EIO_BeginBind, baton);
+        stmt->Schedule(Work_BeginBind, baton);
         return args.This();
     }
 }
 
-void Statement::EIO_BeginBind(Baton* baton) {
+void Statement::Work_BeginBind(Baton* baton) {
     STATEMENT_BEGIN(Bind);
 }
 
-void Statement::EIO_Bind(eio_req *req) {
+void Statement::Work_Bind(uv_work_t* req) {
     STATEMENT_INIT(Baton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
@@ -333,7 +334,7 @@ void Statement::EIO_Bind(eio_req *req) {
     sqlite3_mutex_leave(mtx);
 }
 
-int Statement::EIO_AfterBind(eio_req *req) {
+void Statement::Work_AfterBind(uv_work_t* req) {
     HandleScope scope;
     STATEMENT_INIT(Baton);
 
@@ -349,7 +350,6 @@ int Statement::EIO_AfterBind(eio_req *req) {
     }
 
     STATEMENT_END();
-    return 0;
 }
 
 
@@ -363,16 +363,16 @@ Handle<Value> Statement::Get(const Arguments& args) {
         return ThrowException(Exception::Error(String::New("Data type is not supported")));
     }
     else {
-        stmt->Schedule(EIO_BeginGet, baton);
+        stmt->Schedule(Work_BeginGet, baton);
         return args.This();
     }
 }
 
-void Statement::EIO_BeginGet(Baton* baton) {
+void Statement::Work_BeginGet(Baton* baton) {
     STATEMENT_BEGIN(Get);
 }
 
-void Statement::EIO_Get(eio_req *req) {
+void Statement::Work_Get(uv_work_t* req) {
     STATEMENT_INIT(RowBaton);
 
     if (stmt->status != SQLITE_DONE || baton->parameters.size()) {
@@ -396,7 +396,7 @@ void Statement::EIO_Get(eio_req *req) {
     }
 }
 
-int Statement::EIO_AfterGet(eio_req *req) {
+void Statement::Work_AfterGet(uv_work_t* req) {
     HandleScope scope;
     STATEMENT_INIT(RowBaton);
 
@@ -419,7 +419,6 @@ int Statement::EIO_AfterGet(eio_req *req) {
     }
 
     STATEMENT_END();
-    return 0;
 }
 
 Handle<Value> Statement::Run(const Arguments& args) {
@@ -431,16 +430,16 @@ Handle<Value> Statement::Run(const Arguments& args) {
         return ThrowException(Exception::Error(String::New("Data type is not supported")));
     }
     else {
-        stmt->Schedule(EIO_BeginRun, baton);
+        stmt->Schedule(Work_BeginRun, baton);
         return args.This();
     }
 }
 
-void Statement::EIO_BeginRun(Baton* baton) {
+void Statement::Work_BeginRun(Baton* baton) {
     STATEMENT_BEGIN(Run);
 }
 
-void Statement::EIO_Run(eio_req *req) {
+void Statement::Work_Run(uv_work_t* req) {
     STATEMENT_INIT(RunBaton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
@@ -466,7 +465,7 @@ void Statement::EIO_Run(eio_req *req) {
     sqlite3_mutex_leave(mtx);
 }
 
-int Statement::EIO_AfterRun(eio_req *req) {
+void Statement::Work_AfterRun(uv_work_t* req) {
     HandleScope scope;
     STATEMENT_INIT(RunBaton);
 
@@ -485,7 +484,6 @@ int Statement::EIO_AfterRun(eio_req *req) {
     }
 
     STATEMENT_END();
-    return 0;
 }
 
 Handle<Value> Statement::All(const Arguments& args) {
@@ -497,16 +495,16 @@ Handle<Value> Statement::All(const Arguments& args) {
         return ThrowException(Exception::Error(String::New("Data type is not supported")));
     }
     else {
-        stmt->Schedule(EIO_BeginAll, baton);
+        stmt->Schedule(Work_BeginAll, baton);
         return args.This();
     }
 }
 
-void Statement::EIO_BeginAll(Baton* baton) {
+void Statement::Work_BeginAll(Baton* baton) {
     STATEMENT_BEGIN(All);
 }
 
-void Statement::EIO_All(eio_req *req) {
+void Statement::Work_All(uv_work_t* req) {
     STATEMENT_INIT(RowsBaton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
@@ -532,7 +530,7 @@ void Statement::EIO_All(eio_req *req) {
     sqlite3_mutex_leave(mtx);
 }
 
-int Statement::EIO_AfterAll(eio_req *req) {
+void Statement::Work_AfterAll(uv_work_t* req) {
     HandleScope scope;
     STATEMENT_INIT(RowsBaton);
 
@@ -567,7 +565,6 @@ int Statement::EIO_AfterAll(eio_req *req) {
     }
 
     STATEMENT_END();
-    return 0;
 }
 
 Handle<Value> Statement::Each(const Arguments& args) {
@@ -587,12 +584,12 @@ Handle<Value> Statement::Each(const Arguments& args) {
     }
     else {
         baton->completed = Persistent<Function>::New(completed);
-        stmt->Schedule(EIO_BeginEach, baton);
+        stmt->Schedule(Work_BeginEach, baton);
         return args.This();
     }
 }
 
-void Statement::EIO_BeginEach(Baton* baton) {
+void Statement::Work_BeginEach(Baton* baton) {
     // Only create the Async object when we're actually going into
     // the event loop. This prevents dangling events.
     EachBaton* each_baton = static_cast<EachBaton*>(baton);
@@ -603,7 +600,7 @@ void Statement::EIO_BeginEach(Baton* baton) {
     STATEMENT_BEGIN(Each);
 }
 
-void Statement::EIO_Each(eio_req *req) {
+void Statement::Work_Each(uv_work_t* req) {
     STATEMENT_INIT(EachBaton);
 
     Async* async = baton->async;
@@ -698,7 +695,7 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
     }
 }
 
-int Statement::EIO_AfterEach(eio_req *req) {
+void Statement::Work_AfterEach(uv_work_t* req) {
     HandleScope scope;
     STATEMENT_INIT(EachBaton);
 
@@ -707,7 +704,6 @@ int Statement::EIO_AfterEach(eio_req *req) {
     }
 
     STATEMENT_END();
-    return 0;
 }
 
 Handle<Value> Statement::Reset(const Arguments& args) {
@@ -717,23 +713,23 @@ Handle<Value> Statement::Reset(const Arguments& args) {
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     Baton* baton = new Baton(stmt, callback);
-    stmt->Schedule(EIO_BeginReset, baton);
+    stmt->Schedule(Work_BeginReset, baton);
 
     return args.This();
 }
 
-void Statement::EIO_BeginReset(Baton* baton) {
+void Statement::Work_BeginReset(Baton* baton) {
     STATEMENT_BEGIN(Reset);
 }
 
-void Statement::EIO_Reset(eio_req *req) {
+void Statement::Work_Reset(uv_work_t* req) {
     STATEMENT_INIT(Baton);
 
     sqlite3_reset(stmt->handle);
     stmt->status = SQLITE_OK;
 }
 
-int Statement::EIO_AfterReset(eio_req *req) {
+void Statement::Work_AfterReset(uv_work_t* req) {
     HandleScope scope;
     STATEMENT_INIT(Baton);
 
@@ -744,7 +740,6 @@ int Statement::EIO_AfterReset(eio_req *req) {
     }
 
     STATEMENT_END();
-    return 0;
 }
 
 Local<Object> Statement::RowToJS(Row* row) {

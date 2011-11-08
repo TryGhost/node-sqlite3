@@ -77,7 +77,7 @@ void Database::Process() {
     }
 }
 
-void Database::Schedule(EIO_Callback callback, Baton* baton, bool exclusive) {
+void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
     if (!open && locked) {
         EXCEPTION(String::New("Database is closed"), SQLITE_MISUSE, exception);
         if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
@@ -130,16 +130,18 @@ Handle<Value> Database::New(const Arguments& args) {
 
     // Start opening the database.
     OpenBaton* baton = new OpenBaton(db, callback, *filename, SQLITE_OPEN_FULLMUTEX | mode);
-    EIO_BeginOpen(baton);
+    Work_BeginOpen(baton);
 
     return args.This();
 }
 
-void Database::EIO_BeginOpen(Baton* baton) {
-    eio_custom(EIO_Open, EIO_PRI_DEFAULT, EIO_AfterOpen, baton);
+void Database::Work_BeginOpen(Baton* baton) {
+    int status = uv_queue_work(uv_default_loop(),
+        &baton->request, Work_Open, Work_AfterOpen);
+    assert(status == 0);
 }
 
-void Database::EIO_Open(eio_req *req) {
+void Database::Work_Open(uv_work_t* req) {
     OpenBaton* baton = static_cast<OpenBaton*>(req->data);
     Database* db = baton->db;
 
@@ -161,7 +163,7 @@ void Database::EIO_Open(eio_req *req) {
     }
 }
 
-int Database::EIO_AfterOpen(eio_req *req) {
+void Database::Work_AfterOpen(uv_work_t* req) {
     HandleScope scope;
     OpenBaton* baton = static_cast<OpenBaton*>(req->data);
     Database* db = baton->db;
@@ -191,7 +193,6 @@ int Database::EIO_AfterOpen(eio_req *req) {
     }
 
     delete baton;
-    return 0;
 }
 
 Handle<Value> Database::OpenGetter(Local<String> str, const AccessorInfo& accessor) {
@@ -206,22 +207,24 @@ Handle<Value> Database::Close(const Arguments& args) {
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     Baton* baton = new Baton(db, callback);
-    db->Schedule(EIO_BeginClose, baton, true);
+    db->Schedule(Work_BeginClose, baton, true);
 
     return args.This();
 }
 
-void Database::EIO_BeginClose(Baton* baton) {
+void Database::Work_BeginClose(Baton* baton) {
     assert(baton->db->locked);
     assert(baton->db->open);
     assert(baton->db->handle);
     assert(baton->db->pending == 0);
 
     baton->db->RemoveCallbacks();
-    eio_custom(EIO_Close, EIO_PRI_DEFAULT, EIO_AfterClose, baton);
+    int status = uv_queue_work(uv_default_loop(),
+        &baton->request, Work_Close, Work_AfterClose);
+    assert(status == 0);
 }
 
-void Database::EIO_Close(eio_req *req) {
+void Database::Work_Close(uv_work_t* req) {
     Baton* baton = static_cast<Baton*>(req->data);
     Database* db = baton->db;
 
@@ -235,7 +238,7 @@ void Database::EIO_Close(eio_req *req) {
     }
 }
 
-int Database::EIO_AfterClose(eio_req *req) {
+void Database::Work_AfterClose(uv_work_t* req) {
     HandleScope scope;
     Baton* baton = static_cast<Baton*>(req->data);
     Database* db = baton->db;
@@ -268,7 +271,6 @@ int Database::EIO_AfterClose(eio_req *req) {
     }
 
     delete baton;
-    return 0;
 }
 
 Handle<Value> Database::Serialize(const Arguments& args) {
@@ -486,20 +488,22 @@ Handle<Value> Database::Exec(const Arguments& args) {
     OPTIONAL_ARGUMENT_FUNCTION(1, callback);
 
     Baton* baton = new ExecBaton(db, callback, *sql);
-    db->Schedule(EIO_BeginExec, baton, true);
+    db->Schedule(Work_BeginExec, baton, true);
 
     return args.This();
 }
 
-void Database::EIO_BeginExec(Baton* baton) {
+void Database::Work_BeginExec(Baton* baton) {
     assert(baton->db->locked);
     assert(baton->db->open);
     assert(baton->db->handle);
     assert(baton->db->pending == 0);
-    eio_custom(EIO_Exec, EIO_PRI_DEFAULT, EIO_AfterExec, baton);
+    int status = uv_queue_work(uv_default_loop(),
+        &baton->request, Work_Exec, Work_AfterExec);
+    assert(status == 0);
 }
 
-void Database::EIO_Exec(eio_req *req) {
+void Database::Work_Exec(uv_work_t* req) {
     ExecBaton* baton = static_cast<ExecBaton*>(req->data);
 
     char* message = NULL;
@@ -517,7 +521,7 @@ void Database::EIO_Exec(eio_req *req) {
     }
 }
 
-int Database::EIO_AfterExec(eio_req *req) {
+void Database::Work_AfterExec(uv_work_t* req) {
     HandleScope scope;
     ExecBaton* baton = static_cast<ExecBaton*>(req->data);
     Database* db = baton->db;
@@ -543,7 +547,6 @@ int Database::EIO_AfterExec(eio_req *req) {
     db->Process();
 
     delete baton;
-    return 0;
 }
 
 Handle<Value> Database::LoadExtension(const Arguments& args) {
@@ -554,20 +557,22 @@ Handle<Value> Database::LoadExtension(const Arguments& args) {
     OPTIONAL_ARGUMENT_FUNCTION(1, callback);
 
     Baton* baton = new LoadExtensionBaton(db, callback, *filename);
-    db->Schedule(EIO_BeginLoadExtension, baton, true);
+    db->Schedule(Work_BeginLoadExtension, baton, true);
 
     return args.This();
 }
 
-void Database::EIO_BeginLoadExtension(Baton* baton) {
+void Database::Work_BeginLoadExtension(Baton* baton) {
     assert(baton->db->locked);
     assert(baton->db->open);
     assert(baton->db->handle);
     assert(baton->db->pending == 0);
-    eio_custom(EIO_LoadExtension, EIO_PRI_DEFAULT, EIO_AfterLoadExtension, baton);
+    int status = uv_queue_work(uv_default_loop(),
+        &baton->request, Work_LoadExtension, Work_AfterLoadExtension);
+    assert(status == 0);
 }
 
-void Database::EIO_LoadExtension(eio_req *req) {
+void Database::Work_LoadExtension(uv_work_t* req) {
     LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(req->data);
 
     sqlite3_enable_load_extension(baton->db->handle, 1);
@@ -588,7 +593,7 @@ void Database::EIO_LoadExtension(eio_req *req) {
     }
 }
 
-int Database::EIO_AfterLoadExtension(eio_req *req) {
+void Database::Work_AfterLoadExtension(uv_work_t* req) {
     HandleScope scope;
     LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(req->data);
     Database* db = baton->db;
@@ -613,7 +618,6 @@ int Database::EIO_AfterLoadExtension(eio_req *req) {
     db->Process();
 
     delete baton;
-    return 0;
 }
 
 void Database::RemoveCallbacks() {
@@ -625,55 +629,4 @@ void Database::RemoveCallbacks() {
         delete debug_profile;
         debug_profile = NULL;
     }
-}
-
-/**
- * Override this so that we can properly close the database when this object
- * gets garbage collected.
- */
-void Database::Wrap(Handle<Object> handle) {
-    assert(handle_.IsEmpty());
-    assert(handle->InternalFieldCount() > 0);
-    handle_ = Persistent<Object>::New(handle);
-    handle_->SetPointerInInternalField(0, this);
-    handle_.MakeWeak(this, Destruct);
-}
-
-inline void Database::MakeWeak (void) {
-    handle_.MakeWeak(this, Destruct);
-}
-
-void Database::Unref() {
-    assert(!handle_.IsEmpty());
-    assert(!handle_.IsWeak());
-    assert(refs_ > 0);
-    if (--refs_ == 0) { MakeWeak(); }
-}
-
-void Database::Destruct(Persistent<Value> value, void *data) {
-    Database* db = static_cast<Database*>(data);
-
-    db->RemoveCallbacks();
-
-    if (db->handle) {
-        eio_custom(EIO_Destruct, EIO_PRI_DEFAULT, EIO_AfterDestruct, db);
-        uv_ref(uv_default_loop());
-    }
-    else {
-        delete db;
-    }
-}
-
-void Database::EIO_Destruct(eio_req *req) {
-    Database* db = static_cast<Database*>(req->data);
-
-    sqlite3_close(db->handle);
-    db->handle = NULL;
-}
-
-int Database::EIO_AfterDestruct(eio_req *req) {
-    Database* db = static_cast<Database*>(req->data);
-    uv_unref(uv_default_loop());
-    delete db;
-    return 0;
 }

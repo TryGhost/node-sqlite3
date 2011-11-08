@@ -79,6 +79,7 @@ public:
     static Handle<Value> New(const Arguments& args);
 
     struct Baton {
+        uv_work_t request;
         Statement* stmt;
         Persistent<Function> callback;
         Parameters parameters;
@@ -86,6 +87,7 @@ public:
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
             uv_ref(uv_default_loop());
+            request.data = this;
             callback = Persistent<Function>::New(cb_);
         }
         virtual ~Baton() {
@@ -144,11 +146,11 @@ public:
         }
     };
 
-    typedef void (*EIO_Callback)(Baton* baton);
+    typedef void (*Work_Callback)(Baton* baton);
 
     struct Call {
-        Call(EIO_Callback cb_, Baton* baton_) : callback(cb_), baton(baton_) {};
-        EIO_Callback callback;
+        Call(Work_Callback cb_, Baton* baton_) : callback(cb_), baton(baton_) {};
+        Work_Callback callback;
         Baton* baton;
     };
 
@@ -196,16 +198,16 @@ public:
     }
 
 protected:
-    static void EIO_BeginPrepare(Database::Baton* baton);
-    static void EIO_Prepare(eio_req *req);
-    static int EIO_AfterPrepare(eio_req *req);
+    static void Work_BeginPrepare(Database::Baton* baton);
+    static void Work_Prepare(uv_work_t* req);
+    static void Work_AfterPrepare(uv_work_t* req);
 
-    EIO_DEFINITION(Bind);
-    EIO_DEFINITION(Get);
-    EIO_DEFINITION(Run);
-    EIO_DEFINITION(All);
-    EIO_DEFINITION(Each);
-    EIO_DEFINITION(Reset);
+    WORK_DEFINITION(Bind);
+    WORK_DEFINITION(Get);
+    WORK_DEFINITION(Run);
+    WORK_DEFINITION(All);
+    WORK_DEFINITION(Each);
+    WORK_DEFINITION(Reset);
 
     static void AsyncEach(uv_async_t* handle, int status);
     static void CloseCallback(uv_handle_t* handle);
@@ -220,7 +222,7 @@ protected:
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
     static Local<Object> RowToJS(Row* row);
-    void Schedule(EIO_Callback callback, Baton* baton);
+    void Schedule(Work_Callback callback, Baton* baton);
     void Process();
     void CleanQueue();
     template <class T> static void Error(T* baton);
