@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "node-sqlite3", "node-sqlite3.vcxproj", "{2018883C-427E-4E54-B1CB-9A232C3B2844}"
+	ProjectSection(ProjectDependencies) = postProject
+		{87745018-5C6E-4BFA-B3F6-8466A10B51EA} = {87745018-5C6E-4BFA-B3F6-8466A10B51EA}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlite3", "deps\sqlite3\sqlite3.vcxproj", "{87745018-5C6E-4BFA-B3F6-8466A10B51EA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2018883C-427E-4E54-B1CB-9A232C3B2844}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2018883C-427E-4E54-B1CB-9A232C3B2844}.Debug|Win32.Build.0 = Debug|Win32
+		{2018883C-427E-4E54-B1CB-9A232C3B2844}.Release|Win32.ActiveCfg = Release|Win32
+		{2018883C-427E-4E54-B1CB-9A232C3B2844}.Release|Win32.Build.0 = Release|Win32
+		{87745018-5C6E-4BFA-B3F6-8466A10B51EA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{87745018-5C6E-4BFA-B3F6-8466A10B51EA}.Debug|Win32.Build.0 = Debug|Win32
+		{87745018-5C6E-4BFA-B3F6-8466A10B51EA}.Release|Win32.ActiveCfg = Release|Win32
+		{87745018-5C6E-4BFA-B3F6-8466A10B51EA}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
