@@ -6,7 +6,7 @@
 
 #include <windows.h>
 
-    #define NODE_SQLITE3_MUTEX_t HANDLE;
+    #define NODE_SQLITE3_MUTEX_t HANDLE mutex;
 
     #define NODE_SQLITE3_MUTEX_INIT CreateMutex(NULL, FALSE, NULL);
 
