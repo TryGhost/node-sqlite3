@@ -1,6 +1,12 @@
 #ifndef NODE_SQLITE3_SRC_ASYNC_H
 #define NODE_SQLITE3_SRC_ASYNC_H
 
+#include "threading.h"
+
+#if defined(NODE_SQLITE3_BOOST_THREADING)
+#include <boost/thread/mutex.hpp>
+#endif
+
 
 // Generic uv_async handler.
 template <class Item, class Parent> class Async {
@@ -8,7 +14,7 @@ template <class Item, class Parent> class Async {
 
 protected:
     uv_async_t watcher;
-    pthread_mutex_t mutex;
+    NODE_SQLITE3_MUTEX_t
     std::vector<Item*> data;
     Callback callback;
 public:
@@ -18,16 +24,16 @@ public:
     Async(Parent* parent_, Callback cb_)
         : callback(cb_), parent(parent_) {
         watcher.data = this;
-        pthread_mutex_init(&mutex, NULL);
+        NODE_SQLITE3_MUTEX_INIT
         uv_async_init(uv_default_loop(), &watcher, listener);
     }
 
     static void listener(uv_async_t* handle, int status) {
         Async* async = static_cast<Async*>(handle->data);
         std::vector<Item*> rows;
-        pthread_mutex_lock(&async->mutex);
+        NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
         rows.swap(async->data);
-        pthread_mutex_unlock(&async->mutex);
+        NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
         for (unsigned int i = 0, size = rows.size(); i < size; i++) {
             uv_unref(uv_default_loop());
             async->callback(async->parent, rows[i]);
@@ -53,9 +59,9 @@ public:
     void add(Item* item) {
         // Make sure node runs long enough to deliver the messages.
         uv_ref(uv_default_loop());
-        pthread_mutex_lock(&mutex);
+        NODE_SQLITE3_MUTEX_LOCK(&mutex);
         data.push_back(item);
-        pthread_mutex_unlock(&mutex);
+        NODE_SQLITE3_MUTEX_UNLOCK(&mutex)
     }
 
     void send() {
@@ -68,7 +74,7 @@ public:
     }
 
     ~Async() {
-        pthread_mutex_destroy(&mutex);
+        NODE_SQLITE3_MUTEX_DESTROY
     }
 };
 
