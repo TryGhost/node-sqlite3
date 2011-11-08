@@ -371,7 +371,7 @@ void Database::RegisterTraceCallback(Baton* baton) {
     else {
         // Remove it.
         sqlite3_trace(db->handle, NULL, NULL);
-        delete db->debug_trace;
+        db->debug_trace->finish();
         db->debug_trace = NULL;
     }
 
@@ -408,7 +408,7 @@ void Database::RegisterProfileCallback(Baton* baton) {
     else {
         // Remove it.
         sqlite3_profile(db->handle, NULL, NULL);
-        delete db->debug_profile;
+        db->debug_profile->finish();
         db->debug_profile = NULL;
     }
 
@@ -448,7 +448,7 @@ void Database::RegisterUpdateCallback(Baton* baton) {
     else {
         // Remove it.
         sqlite3_update_hook(db->handle, NULL, NULL);
-        delete db->update_event;
+        db->update_event->finish();
         db->update_event = NULL;
     }
 
@@ -622,11 +622,11 @@ void Database::Work_AfterLoadExtension(uv_work_t* req) {
 
 void Database::RemoveCallbacks() {
     if (debug_trace) {
-        delete debug_trace;
+        debug_trace->finish();
         debug_trace = NULL;
     }
     if (debug_profile) {
-        delete debug_profile;
+        debug_profile->finish();
         debug_profile = NULL;
     }
 }

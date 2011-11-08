@@ -43,14 +43,16 @@ exports['test scheduling a query with callback after the database was closed'] =
 exports['test running a query after the database was closed'] = function(beforeExit) {
     var error = false;
     var db = new sqlite3.Database(':memory:');
-    db.on('error', function(err) {
-        error = true;
-        assert.equal(err.message, "SQLITE_BUSY: unable to close due to unfinalised statements");
-    });
 
-    var stmt = db.prepare("CREATE TABLE foo (id int)");
-    db.close();
-    stmt.run();
+    var stmt = db.prepare("SELECT * FROM sqlite_master", function(err) {
+        if (err) throw err;
+        db.close(function(err) {
+            assert.ok(err);
+            error = true;
+            assert.equal(err.message, "SQLITE_BUSY: unable to close due to unfinalised statements");
+            stmt.run();
+        });
+    });
 
     beforeExit(function() {
         assert.ok(error);

@@ -2,12 +2,12 @@
 #define NODE_SQLITE3_SRC_ASYNC_H
 
 
-// Generic ev_async handler.
+// Generic uv_async handler.
 template <class Item, class Parent> class Async {
     typedef void (*Callback)(Parent* parent, Item* item);
 
 protected:
-    ev_async watcher;
+    uv_async_t watcher;
     pthread_mutex_t mutex;
     std::vector<Item*> data;
     Callback callback;
@@ -15,16 +15,15 @@ public:
     Parent* parent;
 
 public:
-    inline Async(Parent* parent_, Callback cb_)
+    Async(Parent* parent_, Callback cb_)
         : callback(cb_), parent(parent_) {
         watcher.data = this;
-        ev_async_init(&watcher, listener);
-        ev_async_start(EV_DEFAULT_UC_ &watcher);
         pthread_mutex_init(&mutex, NULL);
+        uv_async_init(uv_default_loop(), &watcher, listener);
     }
 
-    static void listener(EV_P_ ev_async *w, int revents) {
-        Async* async = static_cast<Async*>(w->data);
+    static void listener(uv_async_t* handle, int status) {
+        Async* async = static_cast<Async*>(handle->data);
         std::vector<Item*> rows;
         pthread_mutex_lock(&async->mutex);
         rows.swap(async->data);
@@ -35,7 +34,23 @@ public:
         }
     }
 
-    inline void add(Item* item) {
+    static void close(uv_handle_t* handle) {
+        assert(handle != NULL);
+        assert(handle->data != NULL);
+        Async* async = static_cast<Async*>(handle->data);
+        delete async;
+        handle->data = NULL;
+    }
+
+    void finish() {
+        // Need to call the listener again to ensure all items have been
+        // processed. Is this a bug in uv_async? Feels like uv_close
+        // should handle that.
+        listener(&watcher, 0);
+        uv_close((uv_handle_t*)&watcher, close);
+    }
+
+    void add(Item* item) {
         // Make sure node runs long enough to deliver the messages.
         uv_ref(uv_default_loop());
         pthread_mutex_lock(&mutex);
@@ -43,19 +58,17 @@ public:
         pthread_mutex_unlock(&mutex);
     }
 
-    inline void send() {
-        ev_async_send(EV_DEFAULT_ &watcher);
+    void send() {
+        uv_async_send(&watcher);
     }
 
-    inline void send(Item* item) {
+    void send(Item* item) {
         add(item);
         send();
     }
 
-    inline ~Async() {
-        ev_invoke(EV_DEFAULT_UC_ &watcher, ev_async_pending(&watcher));
+    ~Async() {
         pthread_mutex_destroy(&mutex);
-        ev_async_stop(EV_DEFAULT_UC_ &watcher);
     }
 };
 
