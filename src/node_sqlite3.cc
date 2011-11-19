@@ -1,4 +1,3 @@
-#include <v8.h>
 #include <node.h>
 #include <node_buffer.h>
 
@@ -104,4 +103,4 @@ const char* sqlite_authorizer_string(int type) {
     }
 }
 
-NODE_MODULE(sqlite3_bindings, RegisterModule);
+NODE_MODULE(node_sqlite3, RegisterModule);

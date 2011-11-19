@@ -1,5 +1,4 @@
 #include <string.h>
-#include <v8.h>
 #include <node.h>
 
 #include "macros.h"

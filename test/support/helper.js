@@ -5,7 +5,7 @@ exports.deleteFile = function(name) {
     try {
         fs.unlinkSync(name);
     } catch(err) {
-        if (err.errno !== process.ENOENT && err.code !== 'ENOENT') {
+        if (err.errno !== process.ENOENT && err.code !== 'ENOENT' && err.syscall !== 'unlink') {
             throw err;
         }
     }
@@ -15,7 +15,7 @@ assert.fileDoesNotExist = function(name) {
     try {
         fs.statSync(name);
     } catch(err) {
-        if (err.errno !== process.ENOENT && err.code !== 'ENOENT') {
+        if (err.errno !== process.ENOENT && err.code !== 'ENOENT' && err.syscall !== 'unlink') {
             throw err;
         }
     }
