@@ -4,6 +4,7 @@ import Options
 from Configure import ConfigurationError
 from os.path import exists
 from shutil import copy2 as copy, rmtree
+from subprocess import Popen, PIPE
 
 # node-wafadmin
 import Options
@@ -17,8 +18,9 @@ dest = 'lib/%s' % TARGET_FILE
 
 BUNDLED_SQLITE3_VERSION = '3070800'
 BUNDLED_SQLITE3 = 'sqlite-autoconf-%s' % BUNDLED_SQLITE3_VERSION
-BUNDLED_SQLITE3_TAR = 'sqlite-autoconf-%s.tar.gz' % BUNDLED_SQLITE3_VERSION
 SQLITE3_TARGET = 'deps/%s' % BUNDLED_SQLITE3
+SQLITE3_TARGET_ABS = os.path.join(os.path.dirname(os.getcwd()),SQLITE3_TARGET)
+BUNDLED_SQLITE3_TAR = 'sqlite-autoconf-%s.tar.gz' % BUNDLED_SQLITE3_VERSION
 
 sqlite3_test_program = '''
 #include "stdio.h"
@@ -36,6 +38,11 @@ main() {
 }
 '''
 
+def call(cmd):
+    stdin, stderr = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE).communicate()
+    if not stderr:
+        return stdin.strip()
+    return None
 
 def set_options(opt):
   opt.tool_options("compiler_cxx")
@@ -84,7 +91,7 @@ def configure(conf):
 
   if not o.sqlite3_dir and Options.platform == 'darwin':
       linkflags.append('-Wl,-search_paths_first')
-
+  
   conf.env.append_value("LINKFLAGS", linkflags)
 
 def configure_internal_sqlite3(conf):
@@ -102,14 +109,18 @@ def configure_internal_sqlite3(conf):
           cxxflags += os.environ['CXXFLAGS']
       # LINKFLAGS appear to be picked up automatically...
       if not os.path.exists('config.status'):
-          cmd = "CFLAGS='%s -DSQLITE_ENABLE_RTREE=1 -fPIC -O3 -DNDEBUG' ./configure --enable-static --disable-shared" % cxxflags
+          cmd = "CFLAGS='%s -DSQLITE_ENABLE_RTREE=1 -fPIC -O3 -DNDEBUG' ./configure --prefix=%s --enable-static --disable-shared" % (cxxflags, SQLITE3_TARGET_ABS)
           if Options.platform == 'darwin':
               cmd += ' --disable-dependency-tracking'
           os.system(cmd)
       os.chdir('../../')
 
       conf.env.append_value("CPPPATH_SQLITE3", ['../deps/%s' % BUNDLED_SQLITE3])
-      conf.env.append_value("LINKFLAGS", ['-L../deps/%s/.libs' % BUNDLED_SQLITE3, '-lsqlite3'])
+      linkflags = ['-L../deps/%s/.libs' % BUNDLED_SQLITE3]
+      extra_sqlite_libs = call('pkg-config %s/sqlite3.pc --static --libs-only-l' % SQLITE3_TARGET)
+      if extra_sqlite_libs:
+          linkflags.extend(extra_sqlite_libs.split(' '))
+      conf.env.append_value("LINKFLAGS", linkflags)
 
 def build_internal_sqlite3(bld):
     if not Options.commands['clean'] and '../deps' in bld.env['CPPPATH_SQLITE3'][0]:
