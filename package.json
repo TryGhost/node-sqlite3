@@ -30,7 +30,7 @@
       "step": "0.0.4"
     },
     "engines": {
-        "node": "~0.6.0"
+        "node": "0.6.x"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"
