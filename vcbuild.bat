@@ -1,4 +1,6 @@
 del build.sln
+rd /q /s Default
+del lib\\node_sqlite3.node
 python gyp/gyp build.gyp --depth=. -f msvs -G msvs_version=2010
 msbuild build.sln
 copy Default\\node_sqlite3.node lib\\node_sqlite3.node
