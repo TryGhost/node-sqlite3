@@ -39,13 +39,13 @@ public:
         Baton(Database* db_, Handle<Function> cb_) :
                 db(db_), status(SQLITE_OK) {
             db->Ref();
-            uv_ref(uv_default_loop());
+            uv_ref(Loop());
             request.data = this;
             callback = Persistent<Function>::New(cb_);
         }
         virtual ~Baton() {
             db->Unref();
-            uv_unref(uv_default_loop());
+            uv_unref(Loop());
             callback.Dispose();
         }
     };

@@ -4,6 +4,14 @@
 const char* sqlite_code_string(int code);
 const char* sqlite_authorizer_string(int type);
 
+/*
+ * Add a compatible function call to the 'correct' way to determine the
+ * current loop in node 0.7.  This is essential if you are using Isolates.
+ *
+ * This should be removed once the addon is updated for at least node 0.7.x
+ */
+uv_loop_t * Loop();
+
 
 #define REQUIRE_ARGUMENTS(n)                                                   \
     if (args.Length() < (n)) {                                                 \
@@ -135,7 +143,7 @@ const char* sqlite_authorizer_string(int type);
     assert(baton->stmt->prepared);                                             \
     baton->stmt->locked = true;                                                \
     baton->stmt->db->pending++;                                                \
-    int status = uv_queue_work(uv_default_loop(),                              \
+    int status = uv_queue_work(Loop(),                                         \
         &baton->request, Work_##type, Work_After##type);                       \
     assert(status == 0);
 

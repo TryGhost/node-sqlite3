@@ -86,7 +86,7 @@ public:
 
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
-            uv_ref(uv_default_loop());
+            uv_ref(Loop());
             request.data = this;
             callback = Persistent<Function>::New(cb_);
         }
@@ -96,7 +96,7 @@ public:
                 DELETE_FIELD(field);
             }
             stmt->Unref();
-            uv_unref(uv_default_loop());
+            uv_unref(Loop());
             callback.Dispose();
         }
     };
@@ -172,7 +172,7 @@ public:
             watcher.data = this;
             pthread_mutex_init(&mutex, NULL);
             stmt->Ref();
-            uv_async_init(uv_default_loop(), &watcher, async_cb);
+            uv_async_init(Loop(), &watcher, async_cb);
         }
 
         ~Async() {
