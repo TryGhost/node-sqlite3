@@ -15,3 +15,4 @@ Makefile.gyp
 gyp-mac-tool
 .dirstamp
 npm-debug.log
+test/support/big.db
