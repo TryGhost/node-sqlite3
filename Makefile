@@ -1,12 +1,12 @@
 
 build:
-	node-waf build
+	node-gyp build
 
 clean:
-	node-waf clean
+	node-gyp clean
 
 db:
-	@if ! [ -f test/support/big.db ]; then                                     \
+	@if ! [ -f test/support/big.db ]; then                                   \
 		echo "Creating test database... This may take several minutes." ;      \
 		node test/support/createdb.js ;                                        \
 	fi
