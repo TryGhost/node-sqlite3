@@ -45,9 +45,16 @@
       'direct_dependent_settings': {
         'include_dirs': [ '.' ],
         'defines': [
+          'SQLITE_THREADSAFE=1',
+          'SQLITE_ENABLE_FTS3',
+          'SQLITE_ENABLE_RTREE'
         ],
       },
       'defines': [
+        '_REENTRANT=1',
+        'SQLITE_THREADSAFE=1',
+        'SQLITE_ENABLE_FTS3',
+        'SQLITE_ENABLE_RTREE'
       ],
       'sources': [ './sqlite3.c', ],
     },
