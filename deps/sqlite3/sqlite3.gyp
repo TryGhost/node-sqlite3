@@ -50,6 +50,13 @@
       'defines': [
       ],
       'sources': [ './sqlite3.c', ],
+    },
+
+    {
+      'target_name': 'shell',
+      'type': 'executable',
+      'dependencies': [ 'sqlite3' ],
+      'sources': [ './shell.c' ]
     }
   ]
 }
