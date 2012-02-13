@@ -4,9 +4,9 @@
     "version": "2.1.1",
     "homepage": "http://github.com/developmentseed/node-sqlite3",
     "author": {
-      "name": "Development Seed",
-      "url": "http://developmentseed.org/",
-      "email": "info@developmentseed.org"
+        "name": "Development Seed",
+        "url": "http://developmentseed.org/",
+        "email": "info@developmentseed.org"
     },
     "contributors": [
         "Konstantin Käfer <mail@kkaefer.com>",
