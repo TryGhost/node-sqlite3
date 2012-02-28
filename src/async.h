@@ -19,7 +19,7 @@ public:
         : callback(cb_), parent(parent_) {
         watcher.data = this;
         pthread_mutex_init(&mutex, NULL);
-        uv_async_init(uv_default_loop(), &watcher, listener);
+        uv_async_init(Loop(), &watcher, listener);
     }
 
     static void listener(uv_async_t* handle, int status) {
@@ -29,7 +29,7 @@ public:
         rows.swap(async->data);
         pthread_mutex_unlock(&async->mutex);
         for (unsigned int i = 0, size = rows.size(); i < size; i++) {
-            uv_unref(uv_default_loop());
+            uv_unref(Loop());
             async->callback(async->parent, rows[i]);
         }
     }
@@ -52,7 +52,7 @@ public:
 
     void add(Item* item) {
         // Make sure node runs long enough to deliver the messages.
-        uv_ref(uv_default_loop());
+        uv_ref(Loop());
         pthread_mutex_lock(&mutex);
         data.push_back(item);
         pthread_mutex_unlock(&mutex);

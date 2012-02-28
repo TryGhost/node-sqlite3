@@ -104,4 +104,12 @@ const char* sqlite_authorizer_string(int type) {
     }
 }
 
+uv_loop_t * Loop(){
+#if defined(HAVE_ISOLATES) && HAVE_ISOLATES
+    return node::Isolate::GetCurrent()->GetLoop();
+#else
+    return uv_default_loop();
+#endif
+}
+
 NODE_MODULE(sqlite3_bindings, RegisterModule);
