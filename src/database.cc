@@ -112,9 +112,11 @@ Handle<Value> Database::New(const Arguments& args) {
     REQUIRE_ARGUMENT_STRING(0, filename);
     int pos = 1;
 
-    int mode = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+    int mode;
     if (args.Length() >= pos && args[pos]->IsInt32()) {
         mode = args[pos++]->Int32Value();
+    } else {
+        mode = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX;
     }
 
     Local<Function> callback;
@@ -129,7 +131,7 @@ Handle<Value> Database::New(const Arguments& args) {
     args.This()->Set(String::NewSymbol("mode"), Integer::New(mode), ReadOnly);
 
     // Start opening the database.
-    OpenBaton* baton = new OpenBaton(db, callback, *filename, SQLITE_OPEN_FULLMUTEX | mode);
+    OpenBaton* baton = new OpenBaton(db, callback, *filename, mode);
     Work_BeginOpen(baton);
 
     return args.This();
