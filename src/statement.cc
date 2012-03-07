@@ -1,5 +1,4 @@
 #include <string.h>
-#include <v8.h>
 #include <node.h>
 #include <node_buffer.h>
 
@@ -622,11 +621,10 @@ void Statement::Work_Each(uv_work_t* req) {
                 sqlite3_mutex_leave(mtx);
                 Row* row = new Row();
                 GetRow(row, stmt->handle);
-
-                pthread_mutex_lock(&async->mutex);
+                NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
                 async->data.push_back(row);
                 retrieved++;
-                pthread_mutex_unlock(&async->mutex);
+                NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
 
                 uv_async_send(&async->watcher);
             }
@@ -659,9 +657,9 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
     while (true) {
         // Get the contents out of the data cache for us to process in the JS callback.
         Rows rows;
-        pthread_mutex_lock(&async->mutex);
+        NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
         rows.swap(async->data);
-        pthread_mutex_unlock(&async->mutex);
+        NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
 
         if (rows.empty()) {
             break;

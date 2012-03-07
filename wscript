@@ -23,7 +23,7 @@ SQLITE3_TARGET_ABS = os.path.join(os.path.dirname(os.getcwd()),SQLITE3_TARGET)
 BUNDLED_SQLITE3_TAR = 'sqlite-autoconf-%s.tar.gz' % BUNDLED_SQLITE3_VERSION
 
 sqlite3_test_program = '''
-#include "stdio.h"
+#include <cstdio>"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -34,6 +34,16 @@ extern "C" {
 
 int
 main() {
+    return 0;
+}
+'''
+
+boost_thread_test_program = '''
+#include <boost/thread/mutex.hpp>
+
+int
+main() {
+    boost::mutex mutex_;
     return 0;
 }
 '''
@@ -51,6 +61,13 @@ def set_options(opt):
                 , default=None
                 , help='Directory prefix containing sqlite "lib" and "include" files (default is to compile against internal copy of sqlite v%s' % BUNDLED_SQLITE3_VERSION
                 , dest='sqlite3_dir'
+                )
+
+  opt.add_option( '--with-boost'
+                , action='store'
+                , default=None
+                , help='Directory prefix containing boost "lib" and "include" files (default is to use pthreads not boost for threading support)'
+                , dest='boost_dir'
                 )
 
 def _conf_exit(conf,msg):
@@ -82,16 +99,34 @@ def configure(conf):
                 msg='Checking for libsqlite3 at %s' % lib,
                 includes=include):
           Utils.pprint('GREEN', 'Sweet, found viable sqlite3 dependency at: %s ' % o.sqlite3_dir)
+
       else:
           _conf_exit(conf,'sqlite3 libs/headers not found at %s' % o.sqlite3_dir)
 
   linkflags = []
+
+  if o.boost_dir:
+      lib, include = _build_paths(conf,o.boost_dir)
+      if conf.check_cxx(lib='boost_thread',
+                fragment=boost_thread_test_program,
+                uselib_store='SQLITE3',
+                libpath=lib,
+                msg='Checking for libboost_thread at %s' % lib,
+                includes=include):
+          Utils.pprint('GREEN', 'Sweet, found viable boost dependency at: %s ' % o.boost_dir)
+          conf.env.append_value("CXXFLAGS_SQLITE3", ['-DNODE_SQLITE3_BOOST_THREADING'])
+      else:
+          _conf_exit(conf,'boost libs/headers not found at %s' % o.boost_dir)
+
+  else:
+      conf.env.append_value("CXXFLAGS_SQLITE3", ["-pthread"])
+
   if os.environ.has_key('LINKFLAGS'):
       linkflags.extend(os.environ['LINKFLAGS'].split(' '))
 
   if not o.sqlite3_dir and Options.platform == 'darwin':
       linkflags.append('-Wl,-search_paths_first')
-  
+
   conf.env.append_value("LINKFLAGS", linkflags)
 
 def configure_internal_sqlite3(conf):
@@ -139,7 +174,7 @@ def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
   build_internal_sqlite3(bld)
   obj.cxxflags = ["-g", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE",
-                  "-DSQLITE_ENABLE_RTREE=1", "-pthread", "-Wall"]
+                  "-DSQLITE_ENABLE_RTREE=1", "-Wall"]
   # uncomment the next line to remove '-undefined dynamic_lookup'
   # in order to review linker errors (v8, libev/eio references can be ignored)
   #obj.env['LINKFLAGS_MACBUNDLE'] = ['-bundle']

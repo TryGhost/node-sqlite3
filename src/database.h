@@ -1,7 +1,6 @@
 #ifndef NODE_SQLITE3_SRC_DATABASE_H
 #define NODE_SQLITE3_SRC_DATABASE_H
 
-#include <v8.h>
 #include <node.h>
 
 #include <string>

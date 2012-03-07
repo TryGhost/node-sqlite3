@@ -1,10 +1,10 @@
 #ifndef NODE_SQLITE3_SRC_STATEMENT_H
 #define NODE_SQLITE3_SRC_STATEMENT_H
 
-#include <v8.h>
 #include <node.h>
 
 #include "database.h"
+#include "threading.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -158,7 +158,7 @@ public:
         uv_async_t watcher;
         Statement* stmt;
         Rows data;
-        pthread_mutex_t mutex;
+        NODE_SQLITE3_MUTEX_t;
         bool completed;
         int retrieved;
 
@@ -170,7 +170,7 @@ public:
         Async(Statement* st, uv_async_cb async_cb) :
                 stmt(st), completed(false), retrieved(0) {
             watcher.data = this;
-            pthread_mutex_init(&mutex, NULL);
+            NODE_SQLITE3_MUTEX_INIT
             stmt->Ref();
             uv_async_init(uv_default_loop(), &watcher, async_cb);
         }
@@ -179,7 +179,7 @@ public:
             stmt->Unref();
             item_cb.Dispose();
             completed_cb.Dispose();
-            pthread_mutex_destroy(&mutex);
+            NODE_SQLITE3_MUTEX_DESTROY
         }
     };
 

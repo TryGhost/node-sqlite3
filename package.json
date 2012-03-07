@@ -4,9 +4,9 @@
     "version": "2.1.1",
     "homepage": "http://github.com/developmentseed/node-sqlite3",
     "author": {
-      "name": "Development Seed",
-      "url": "http://developmentseed.org/",
-      "email": "info@developmentseed.org"
+        "name": "Development Seed",
+        "url": "http://developmentseed.org/",
+        "email": "info@developmentseed.org"
     },
     "contributors": [
         "Konstantin Käfer <mail@kkaefer.com>",
@@ -26,8 +26,12 @@
         "type": "git",
         "url": "git://github.com/developmentseed/node-sqlite3.git"
     },
+    "dependencies": {
+        "bindings": "*"
+    },
     "devDependencies": {
-      "step": "0.0.4"
+        "step": "0.0.4",
+        "expresso": "*"
     },
     "engines": {
         "node": "0.6.x"
