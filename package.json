@@ -26,9 +26,6 @@
         "type": "git",
         "url": "git://github.com/developmentseed/node-sqlite3.git"
     },
-    "dependencies": {
-        "bindings": "*"
-    },
     "devDependencies": {
         "step": "0.0.4",
         "expresso": "*"
