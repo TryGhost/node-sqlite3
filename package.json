@@ -36,6 +36,9 @@
     "engines": {
         "node": "0.6.x"
     },
+    "scripts": {
+        "test": "expresso -I lib test/*.test.js"
+    },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"
 }
