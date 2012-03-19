@@ -99,7 +99,7 @@ def configure_internal_sqlite3(conf):
 
       os.chdir('deps')
       if not os.path.exists(BUNDLED_SQLITE3):
-          os.system('tar xf %s' % BUNDLED_SQLITE3_TAR)
+          os.system('tar xzf %s' % BUNDLED_SQLITE3_TAR)
       os.chdir(BUNDLED_SQLITE3)
       cxxflags = ''
       if os.environ.has_key('CFLAGS'):
