@@ -8,7 +8,7 @@
         'src/statement.cc'
       ],
       'dependencies': [
-        'deps/sqlite3/sqlite3.gyp:sqlite3'
+        'deps/sqlite3/binding.gyp:sqlite3'
       ]
     }
   ]
