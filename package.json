@@ -20,7 +20,8 @@
         "Tom MacWright <tom@developmentseed.org>",
         "Carter Thaxton <carter.thaxton@gmail.com>",
         "Audrius Kažukauskas <audrius@neutrino.lt>",
-        "Johannes Schauer <josch@pyneo.org>"
+        "Johannes Schauer <josch@pyneo.org>",
+        "Nathan Rajlich <nathan@tootallnate.net>"
     ],
     "repository": {
         "type": "git",
@@ -31,7 +32,10 @@
         "expresso": "*"
     },
     "engines": {
-        "node": ">= 0.6.0"
+        "node": "0.6.x"
+    },
+    "scripts": {
+        "test": "expresso -I lib test/*.test.js"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"
