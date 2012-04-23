@@ -1,7 +1,7 @@
 {
     "name": "sqlite3",
     "description": "Asynchronous, non-blocking SQLite3 bindings",
-    "version": "2.1.1",
+    "version": "2.1.2",
     "homepage": "http://github.com/developmentseed/node-sqlite3",
     "author": {
         "name": "Development Seed",
@@ -32,7 +32,7 @@
         "expresso": "*"
     },
     "engines": {
-        "node": "0.6.x"
+        "node": "~0.6.13"
     },
     "scripts": {
         "test": "expresso -I lib test/*.test.js"
