@@ -86,7 +86,6 @@ public:
 
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
-            uv_ref(uv_default_loop());
             request.data = this;
             callback = Persistent<Function>::New(cb_);
         }
@@ -96,7 +95,6 @@ public:
                 DELETE_FIELD(field);
             }
             stmt->Unref();
-            uv_unref(uv_default_loop());
             callback.Dispose();
         }
     };

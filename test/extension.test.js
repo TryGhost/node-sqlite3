@@ -1,6 +1,6 @@
 var sqlite3 = require('sqlite3');
 var assert = require('assert');
-var path = require('path');
+var exists = require('fs').existsSync || require('path').existsSync
 
 if (process.setMaxListeners) process.setMaxListeners(0);
 
@@ -10,7 +10,7 @@ exports['test loadExtension'] = function(beforeExit) {
     var db = new sqlite3.Database(':memory:');
     var completed = false;
 
-    if (path.existsSync(spatialite_ext)) {
+    if (exists(spatialite_ext)) {
         db.loadExtension(spatialite_ext, function(err) {
             if (err) throw err;
             completed = true;

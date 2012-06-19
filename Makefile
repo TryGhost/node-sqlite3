@@ -14,11 +14,11 @@ db:
 ifndef only
 test: build db
 	@rm -rf ./test/tmp && mkdir -p ./test/tmp
-	NODE_PATH=./lib:$NODE_PATH expresso -I lib test/*.test.js
+	NODE_PATH="./lib:$(NODE_PATH)" expresso -I lib test/*.test.js
 else
 test: build db
 	@rm -rf ./test/tmp && mkdir -p ./test/tmp
-	NODE_PATH=./lib:$NODE_PATH expresso -I lib test/${only}.test.js
+	NODE_PATH="./lib:$(NODE_PATH)" expresso -I lib test/${only}.test.js
 endif
 
 .PHONY: build clean test

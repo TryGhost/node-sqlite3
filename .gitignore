@@ -16,3 +16,4 @@ gyp-mac-tool
 .dirstamp
 npm-debug.log
 test/support/big.db
+test/tmp
