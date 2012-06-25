@@ -1,6 +1,6 @@
 # NAME
 
-node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [node.js](https://github.com/joyent/node) 0.2-0.4 (versions 2.0.x) and **0.6.x** (versions 2.1.x).
+node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [node.js](https://github.com/joyent/node) 0.2-0.4 (versions 2.0.x), **0.6.13+ and 0.8.x** (versions 2.1.x).
 
 
 
