@@ -1,6 +1,23 @@
 var sqlite3 = require('sqlite3');
 var assert = require('assert');
-var domain = require('domain');
+var shouldSkip = false;
+var domain;
+
+try {
+  domain = require('domain');
+} catch (e) {
+  shouldSkip = true;
+}
+
+
+if(shouldSkip) {
+  exports['skipping domain tests'] = function(beforeExit) {
+    beforeExit(function() {
+
+    });
+  };
+  return;
+}
 
 if (process.setMaxListeners) process.setMaxListeners(0);
 

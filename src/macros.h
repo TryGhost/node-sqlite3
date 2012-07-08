@@ -1,5 +1,6 @@
 #ifndef NODE_SQLITE3_SRC_MACROS_H
 #define NODE_SQLITE3_SRC_MACROS_H
+#include <node_version.h>
 
 const char* sqlite_code_string(int code);
 const char* sqlite_authorizer_string(int type);
@@ -114,8 +115,18 @@ const char* sqlite_authorizer_string(int type);
         argc, argv                                                             \
     );
 
+#if NODE_VERSION_AT_LEAST(0,8,0)
 #define TRY_CATCH_CALL(context, callback, argc, argv)                          \
 {   MakeCallback(context, callback, argc, argv);                               }
+#else
+#define TRY_CATCH_CALL(context, callback, argc, argv)                          \
+{   TryCatch try_catch;                                                        \
+    (callback)->Call((context), (argc), (argv));                               \
+    if (try_catch.HasCaught()) {                                               \
+        FatalException(try_catch);                                             \
+    }                                                                          }
+#endif
+
 
 #define WORK_DEFINITION(name)                                                 \
     static Handle<Value> name(const Arguments& args);                          \
