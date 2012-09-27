@@ -52,6 +52,10 @@ See the [API documentation](https://github.com/developmentseed/node-sqlite3/wiki
 
 Make sure you have the sources for `sqlite3` installed. Mac OS X ships with these by default. If you don't have them installed, install the `-dev` package with your package manager, e.g. `apt-get install libsqlite3-dev` for Debian/Ubuntu. Make sure that you have at least `libsqlite3` >= 3.6.
 
+Bulding also requires node-gyp to be installed. You can do this with npm:
+
+    npm install -g node-gyp
+
 To obtain and build the bindings:
 
     git clone git://github.com/developmentseed/node-sqlite3.git
