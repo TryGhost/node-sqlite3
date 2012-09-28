@@ -924,7 +924,7 @@ static int auth_callback(
   Tcl_DStringAppendElement(&str, zArg4 ? zArg4 : "");
   rc = Tcl_GlobalEval(pDb->interp, Tcl_DStringValue(&str));
   Tcl_DStringFree(&str);
-  zReply = Tcl_GetStringResult(pDb->interp);
+  zReply = rc==TCL_OK ? Tcl_GetStringResult(pDb->interp) : "SQLITE_DENY";
   if( strcmp(zReply,"SQLITE_OK")==0 ){
     rc = SQLITE_OK;
   }else if( strcmp(zReply,"SQLITE_DENY")==0 ){
@@ -973,14 +973,12 @@ static char *local_getline(char *zPrompt, FILE *in){
   char *zLine;
   int nLine;
   int n;
-  int eol;
 
   nLine = 100;
   zLine = malloc( nLine );
   if( zLine==0 ) return 0;
   n = 0;
-  eol = 0;
-  while( !eol ){
+  while( 1 ){
     if( n+100>nLine ){
       nLine = nLine*2 + 100;
       zLine = realloc(zLine, nLine);
@@ -992,14 +990,13 @@ static char *local_getline(char *zPrompt, FILE *in){
         return 0;
       }
       zLine[n] = 0;
-      eol = 1;
       break;
     }
     while( zLine[n] ){ n++; }
     if( n>0 && zLine[n-1]=='\n' ){
       n--;
       zLine[n] = 0;
-      eol = 1;
+      break;
     }
   }
   zLine = realloc( zLine, n+1 );
@@ -1171,7 +1168,7 @@ static int dbPrepareAndBind(
     memset(pPreStmt, 0, nByte);
 
     pPreStmt->pStmt = pStmt;
-    pPreStmt->nSql = (*pzOut - zSql);
+    pPreStmt->nSql = (int)(*pzOut - zSql);
     pPreStmt->zSql = sqlite3_sql(pStmt);
     pPreStmt->apParm = (Tcl_Obj **)&pPreStmt[1];
 #ifdef SQLITE_TEST
@@ -2126,7 +2123,6 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
     zCommit = "COMMIT";
     while( (zLine = local_getline(0, in))!=0 ){
       char *z;
-      i = 0;
       lineno++;
       azCol[0] = zLine;
       for(i=0, z=zLine; *z; z++){
@@ -2555,14 +2551,16 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
   ** Change the encryption key on the currently open database.
   */
   case DB_REKEY: {
+#ifdef SQLITE_HAS_CODEC
     int nKey;
     void *pKey;
+#endif
     if( objc!=3 ){
       Tcl_WrongNumArgs(interp, 2, objv, "KEY");
       return TCL_ERROR;
     }
-    pKey = Tcl_GetByteArrayFromObj(objv[2], &nKey);
 #ifdef SQLITE_HAS_CODEC
+    pKey = Tcl_GetByteArrayFromObj(objv[2], &nKey);
     rc = sqlite3_rekey(pDb->db, pKey, nKey);
     if( rc ){
       Tcl_AppendResult(interp, sqlite3ErrStr(rc), 0);
@@ -2925,8 +2923,6 @@ static int DbObjCmdAdaptor(
 */
 static int DbMain(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
   SqliteDb *p;
-  void *pKey = 0;
-  int nKey = 0;
   const char *zArg;
   char *zErrMsg;
   int i;
@@ -2934,6 +2930,10 @@ static int DbMain(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
   const char *zVfs = 0;
   int flags;
   Tcl_DString translatedFilename;
+#ifdef SQLITE_HAS_CODEC
+  void *pKey = 0;
+  int nKey = 0;
+#endif
 
   /* In normal use, each TCL interpreter runs in a single thread.  So
   ** by default, we can turn of mutexing on SQLite database connections.
@@ -2965,7 +2965,9 @@ static int DbMain(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
   for(i=3; i+1<objc; i+=2){
     zArg = Tcl_GetString(objv[i]);
     if( strcmp(zArg,"-key")==0 ){
+#ifdef SQLITE_HAS_CODEC
       pKey = Tcl_GetByteArrayFromObj(objv[i+1], &nKey);
+#endif
     }else if( strcmp(zArg, "-vfs")==0 ){
       zVfs = Tcl_GetString(objv[i+1]);
     }else if( strcmp(zArg, "-readonly")==0 ){
@@ -3004,6 +3006,14 @@ static int DbMain(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       }else{
         flags &= ~SQLITE_OPEN_FULLMUTEX;
       }
+    }else if( strcmp(zArg, "-uri")==0 ){
+      int b;
+      if( Tcl_GetBooleanFromObj(interp, objv[i+1], &b) ) return TCL_ERROR;
+      if( b ){
+        flags |= SQLITE_OPEN_URI;
+      }else{
+        flags &= ~SQLITE_OPEN_URI;
+      }
     }else{
       Tcl_AppendResult(interp, "unknown option: ", zArg, (char*)0);
       return TCL_ERROR;
@@ -3012,7 +3022,7 @@ static int DbMain(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
   if( objc<3 || (objc&1)!=1 ){
     Tcl_WrongNumArgs(interp, 1, objv, 
       "HANDLE FILENAME ?-vfs VFSNAME? ?-readonly BOOLEAN? ?-create BOOLEAN?"
-      " ?-nomutex BOOLEAN? ?-fullmutex BOOLEAN?"
+      " ?-nomutex BOOLEAN? ?-fullmutex BOOLEAN? ?-uri BOOLEAN?"
 #ifdef SQLITE_HAS_CODEC
       " ?-key CODECKEY?"
 #endif
@@ -3103,23 +3113,19 @@ EXTERN int Sqlite3_Init(Tcl_Interp *interp){
   return TCL_OK;
 }
 EXTERN int Tclsqlite3_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
-EXTERN int Sqlite3_SafeInit(Tcl_Interp *interp){ return TCL_OK; }
-EXTERN int Tclsqlite3_SafeInit(Tcl_Interp *interp){ return TCL_OK; }
 EXTERN int Sqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
 EXTERN int Tclsqlite3_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
-EXTERN int Sqlite3_SafeUnload(Tcl_Interp *interp, int flags){ return TCL_OK; }
-EXTERN int Tclsqlite3_SafeUnload(Tcl_Interp *interp, int flags){ return TCL_OK;}
 
+/* Because it accesses the file-system and uses persistent state, SQLite
+** is not considered appropriate for safe interpreters.  Hence, we deliberately
+** omit the _SafeInit() interfaces.
+*/
 
 #ifndef SQLITE_3_SUFFIX_ONLY
 int Sqlite_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
 int Tclsqlite_Init(Tcl_Interp *interp){ return Sqlite3_Init(interp); }
-int Sqlite_SafeInit(Tcl_Interp *interp){ return TCL_OK; }
-int Tclsqlite_SafeInit(Tcl_Interp *interp){ return TCL_OK; }
 int Sqlite_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
 int Tclsqlite_Unload(Tcl_Interp *interp, int flags){ return TCL_OK; }
-int Sqlite_SafeUnload(Tcl_Interp *interp, int flags){ return TCL_OK; }
-int Tclsqlite_SafeUnload(Tcl_Interp *interp, int flags){ return TCL_OK;}
 #endif
 
 #ifdef TCLSH
@@ -3469,7 +3475,7 @@ static int md5file_cmd(void*cd, Tcl_Interp*interp, int argc, const char **argv){
   MD5Init(&ctx);
   for(;;){
     int n;
-    n = fread(zBuf, 1, sizeof(zBuf), in);
+    n = (int)fread(zBuf, 1, sizeof(zBuf), in);
     if( n<=0 ) break;
     MD5Update(&ctx, (unsigned char*)zBuf, (unsigned)n);
   }
@@ -3515,7 +3521,7 @@ static void md5step(sqlite3_context *context, int argc, sqlite3_value **argv){
   for(i=0; i<argc; i++){
     const char *zData = (char*)sqlite3_value_text(argv[i]);
     if( zData ){
-      MD5Update(p, (unsigned char*)zData, strlen(zData));
+      MD5Update(p, (unsigned char*)zData, (int)strlen(zData));
     }
   }
 }
@@ -3544,33 +3550,34 @@ int Md5_Register(sqlite3 *db){
 ** the TCL interpreter reads and evaluates that file.
 */
 #if TCLSH==1
-static char zMainloop[] =
-  "set line {}\n"
-  "while {![eof stdin]} {\n"
-    "if {$line!=\"\"} {\n"
-      "puts -nonewline \"> \"\n"
-    "} else {\n"
-      "puts -nonewline \"% \"\n"
-    "}\n"
-    "flush stdout\n"
-    "append line [gets stdin]\n"
-    "if {[info complete $line]} {\n"
-      "if {[catch {uplevel #0 $line} result]} {\n"
-        "puts stderr \"Error: $result\"\n"
-      "} elseif {$result!=\"\"} {\n"
-        "puts $result\n"
+static const char *tclsh_main_loop(void){
+  static const char zMainloop[] =
+    "set line {}\n"
+    "while {![eof stdin]} {\n"
+      "if {$line!=\"\"} {\n"
+        "puts -nonewline \"> \"\n"
+      "} else {\n"
+        "puts -nonewline \"% \"\n"
       "}\n"
-      "set line {}\n"
-    "} else {\n"
-      "append line \\n\n"
+      "flush stdout\n"
+      "append line [gets stdin]\n"
+      "if {[info complete $line]} {\n"
+        "if {[catch {uplevel #0 $line} result]} {\n"
+          "puts stderr \"Error: $result\"\n"
+        "} elseif {$result!=\"\"} {\n"
+          "puts $result\n"
+        "}\n"
+        "set line {}\n"
+      "} else {\n"
+        "append line \\n\n"
+      "}\n"
     "}\n"
-  "}\n"
-;
+  ;
+  return zMainloop;
+}
 #endif
 #if TCLSH==2
-static char zMainloop[] = 
-#include "spaceanal_tcl.h"
-;
+static const char *tclsh_main_loop(void);
 #endif
 
 #ifdef SQLITE_TEST
@@ -3654,6 +3661,17 @@ static void init_all(Tcl_Interp *interp){
   Md5_Init(interp);
 #endif
 
+  /* Install the [register_dbstat_vtab] command to access the implementation
+  ** of virtual table dbstat (source file test_stat.c). This command is
+  ** required for testfixture and sqlite3_analyzer, but not by the production
+  ** Tcl extension.  */
+#if defined(SQLITE_TEST) || TCLSH==2
+  {
+    extern int SqlitetestStat_Init(Tcl_Interp*);
+    SqlitetestStat_Init(interp);
+  }
+#endif
+
 #ifdef SQLITE_TEST
   {
     extern int Sqliteconfig_Init(Tcl_Interp*);
@@ -3683,7 +3701,6 @@ static void init_all(Tcl_Interp *interp){
     extern int Sqlitetestbackup_Init(Tcl_Interp*);
     extern int Sqlitetestintarray_Init(Tcl_Interp*);
     extern int Sqlitetestvfs_Init(Tcl_Interp *);
-    extern int SqlitetestStat_Init(Tcl_Interp*);
     extern int Sqlitetestrtree_Init(Tcl_Interp*);
     extern int Sqlitequota_Init(Tcl_Interp*);
     extern int Sqlitemultiplex_Init(Tcl_Interp*);
@@ -3727,7 +3744,6 @@ static void init_all(Tcl_Interp *interp){
     Sqlitetestbackup_Init(interp);
     Sqlitetestintarray_Init(interp);
     Sqlitetestvfs_Init(interp);
-    SqlitetestStat_Init(interp);
     Sqlitetestrtree_Init(interp);
     Sqlitequota_Init(interp);
     Sqlitemultiplex_Init(interp);
@@ -3763,12 +3779,13 @@ int TCLSH_MAIN(int argc, char **argv){
   ** sqlite3_initialize() is. */
   sqlite3_shutdown();
 
+  Tcl_FindExecutable(argv[0]);
+  interp = Tcl_CreateInterp();
+
 #if TCLSH==2
   sqlite3_config(SQLITE_CONFIG_SINGLETHREAD);
 #endif
-  Tcl_FindExecutable(argv[0]);
 
-  interp = Tcl_CreateInterp();
   init_all(interp);
   if( argc>=2 ){
     int i;
@@ -3789,7 +3806,7 @@ int TCLSH_MAIN(int argc, char **argv){
     }
   }
   if( TCLSH==2 || argc<=1 ){
-    Tcl_GlobalEval(interp, zMainloop);
+    Tcl_GlobalEval(interp, tclsh_main_loop());
   }
   return 0;
 }

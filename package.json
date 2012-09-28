@@ -1,7 +1,7 @@
 {
     "name": "sqlite3",
     "description": "Asynchronous, non-blocking SQLite3 bindings",
-    "version": "2.1.5",
+    "version": "2.1.6",
     "homepage": "http://github.com/developmentseed/node-sqlite3",
     "author": {
         "name": "Development Seed",
@@ -21,7 +21,8 @@
         "Carter Thaxton <carter.thaxton@gmail.com>",
         "Audrius Kažukauskas <audrius@neutrino.lt>",
         "Johannes Schauer <josch@pyneo.org>",
-        "Nathan Rajlich <nathan@tootallnate.net>"
+        "Nathan Rajlich <nathan@tootallnate.net>",
+        "AJ ONeal <coolaj86@gmail.com>"
     ],
     "repository": {
         "type": "git",
