@@ -35,7 +35,7 @@
         "node": ">= 0.6.13 && < 0.9.0"
     },
     "scripts": {
-        "test": "expresso -I lib test/*.test.js"
+        "test": "make test"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"
