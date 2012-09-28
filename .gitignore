@@ -17,3 +17,4 @@ gyp-mac-tool
 npm-debug.log
 test/support/big.db
 test/tmp
+.DS_Store
