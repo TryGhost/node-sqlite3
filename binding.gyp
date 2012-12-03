@@ -7,9 +7,7 @@
         'src/node_sqlite3.cc',
         'src/statement.cc'
       ],
-      'dependencies': [
-        'deps/sqlite3/binding.gyp:sqlite3'
-      ]
+      'libraries': [ '-L/opt/local/lib', '-lsqlite3' ]
     }
   ]
 }

@@ -20,6 +20,7 @@ void Database::Init(Handle<Object> target) {
 
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "exec", Exec);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "execSync", ExecSync);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "loadExtension", LoadExtension);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "serialize", Serialize);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "parallelize", Parallelize);
@@ -490,6 +491,26 @@ Handle<Value> Database::Exec(const Arguments& args) {
 
     Baton* baton = new ExecBaton(db, callback, *sql);
     db->Schedule(Work_BeginExec, baton, true);
+
+    return args.This();
+}
+
+Handle<Value> Database::ExecSync(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    REQUIRE_ARGUMENT_STRING(0, sql);
+
+    char* message = NULL;
+    int status = sqlite3_exec(db->handle, *sql, NULL, NULL, &message);
+    if (status != SQLITE_OK) {
+        std::string msg("sqlite3 error");
+        if (message != NULL) {
+            std::string msg(message);
+            sqlite3_free(message);
+        }
+	return ThrowException(Exception::Error(String::New(msg.c_str()))); 
+    }
 
     return args.This();
 }

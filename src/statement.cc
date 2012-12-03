@@ -22,6 +22,7 @@ void Statement::Init(Handle<Object> target) {
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "get", Get);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "run", Run);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "runSync", RunSync);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "all", All);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "each", Each);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "reset", Reset);
@@ -418,6 +419,43 @@ void Statement::Work_AfterGet(uv_work_t* req) {
     }
 
     STATEMENT_END();
+}
+
+Handle<Value> Statement::RunSync(const Arguments& args) {
+    HandleScope scope;
+    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+
+    RunBaton* baton = stmt->Bind<RunBaton>(args);
+
+    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
+    sqlite3_mutex_enter(mtx);
+
+    // Make sure that we also reset when there are no parameters.
+    if (!baton->parameters.size()) {
+        sqlite3_reset(stmt->handle);
+    }
+
+    if (stmt->Bind(baton->parameters)) {
+        stmt->status = sqlite3_step(stmt->handle);
+
+        if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
+            stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+        }
+        else {
+            baton->inserted_id = sqlite3_last_insert_rowid(stmt->db->handle);
+            baton->changes = sqlite3_changes(stmt->db->handle);
+        }
+    }
+    sqlite3_mutex_leave(mtx);
+
+    if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
+        return ThrowException(Exception::Error(String::New(stmt->message.c_str()))); 
+    } else {
+        stmt->handle_->Set(String::NewSymbol("lastID"), Local<Integer>(Integer::New(baton->inserted_id)));
+        stmt->handle_->Set(String::NewSymbol("changes"), Local<Integer>(Integer::New(baton->changes)));
+    }
+    delete baton;
+    return args.This();
 }
 
 Handle<Value> Statement::Run(const Arguments& args) {
