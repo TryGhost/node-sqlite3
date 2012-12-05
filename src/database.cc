@@ -25,6 +25,7 @@ void Database::Init(Handle<Object> target) {
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "serialize", Serialize);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "parallelize", Parallelize);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "configure", Configure);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "copy", Copy);
 
     NODE_SET_GETTER(constructor_template, "open", OpenGetter);
 
@@ -652,3 +653,32 @@ void Database::RemoveCallbacks() {
         debug_profile = NULL;
     }
 }
+
+Handle<Value> Database::Copy(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    REQUIRE_ARGUMENT_STRING(0, filename);
+
+    sqlite3 *handle;
+    sqlite3_backup *backup;
+    int rc = sqlite3_open_v2(*filename, &handle, SQLITE_OPEN_READONLY, NULL);
+    std::string msg(sqlite3_errmsg(handle));
+
+    if (rc == SQLITE_OK) {
+        backup = sqlite3_backup_init(db->handle, "main", handle, "main");
+        if (backup ){
+            sqlite3_backup_step(backup, -1);
+            sqlite3_backup_finish(backup);
+        }
+        rc = sqlite3_errcode(db->handle);
+        msg = sqlite3_errmsg(db->handle);
+    }
+    sqlite3_close(handle);
+
+    if (rc != SQLITE_OK) {
+	return ThrowException(Exception::Error(String::New(msg.c_str()))); 
+    }
+    return args.This();
+}
+

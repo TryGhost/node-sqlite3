@@ -146,6 +146,7 @@ protected:
     static Handle<Value> Parallelize(const Arguments& args);
 
     static Handle<Value> Configure(const Arguments& args);
+    static Handle<Value> Copy(const Arguments& args);
 
     static void SetBusyTimeout(Baton* baton);
 
