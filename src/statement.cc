@@ -168,7 +168,7 @@ void Statement::Work_AfterPrepare(uv_work_t* req) {
 
 template <class T> Values::Field*
                    Statement::BindParameter(const Handle<Value> source, T pos) {
-    if (source->IsString() || source->IsRegExp()) {
+    if (source->IsString() || source->IsRegExp() || source->IsArray()) {
         String::Utf8Value val(source->ToString());
         return new Values::Text(pos, val.length(), *val);
     }
