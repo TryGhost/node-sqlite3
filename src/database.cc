@@ -20,10 +20,12 @@ void Database::Init(Handle<Object> target) {
 
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "exec", Exec);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "execSync", ExecSync);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "loadExtension", LoadExtension);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "serialize", Serialize);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "parallelize", Parallelize);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "configure", Configure);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "copy", Copy);
 
     NODE_SET_GETTER(constructor_template, "open", OpenGetter);
 
@@ -494,6 +496,29 @@ Handle<Value> Database::Exec(const Arguments& args) {
     return args.This();
 }
 
+Handle<Value> Database::ExecSync(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    REQUIRE_ARGUMENT_STRING(0, sql);
+
+    char* message = NULL;
+    int status = sqlite3_exec(db->handle, *sql, NULL, NULL, &message);
+    if (status != SQLITE_OK) {
+        char tmp[32];
+        sprintf(tmp, "sqlite3 error %d: ", status);
+        std::string msg(tmp);
+        msg += sqlite3_errstr(status);
+        if (message != NULL) {
+            std::string msg(message);
+            sqlite3_free(message);
+        }
+	return ThrowException(Exception::Error(String::New(msg.c_str()))); 
+    }
+
+    return args.This();
+}
+
 void Database::Work_BeginExec(Baton* baton) {
     assert(baton->db->locked);
     assert(baton->db->open);
@@ -631,3 +656,47 @@ void Database::RemoveCallbacks() {
         debug_profile = NULL;
     }
 }
+
+Handle<Value> Database::Copy(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    std::string errmsg;
+    sqlite3 *handle;
+    int rc;
+
+    if (args.Length() && Database::HasInstance(args[0])) {
+        Database* sdb = ObjectWrap::Unwrap<Database>(args[0]->ToObject());
+        handle = sdb->handle;
+    } else
+    if (args.Length() && args[0]->IsString()) {
+        String::Utf8Value filename(args[0]);
+        rc = sqlite3_open_v2(*filename, &handle, SQLITE_OPEN_READONLY, NULL);
+        if (rc != SQLITE_OK) {
+            errmsg = sqlite3_errmsg(handle);
+            sqlite3_close(handle);
+    	    return ThrowException(Exception::Error(String::New(errmsg.c_str()))); 
+        }
+    } else {
+        return ThrowException(Exception::TypeError(
+            String::New("Database object or database file name expected")));
+    }
+
+    sqlite3_backup *backup;
+    backup = sqlite3_backup_init(db->handle, "main", handle, "main");
+    if (backup ){
+        sqlite3_backup_step(backup, -1);
+        sqlite3_backup_finish(backup);
+        rc = sqlite3_errcode(db->handle);
+        errmsg = sqlite3_errmsg(db->handle);
+    }
+
+    if (args[0]->IsString()) {
+        sqlite3_close(handle);
+    }
+
+    if (rc != SQLITE_OK) {
+	return ThrowException(Exception::Error(String::New(errmsg.c_str()))); 
+    }
+    return args.This();
+}
+

@@ -210,7 +210,10 @@ protected:
     static void AsyncEach(uv_async_t* handle, int status);
     static void CloseCallback(uv_handle_t* handle);
 
+    static Handle<Value> AllSync(const Arguments& args);
+    static Handle<Value> RunSync(const Arguments& args);
     static Handle<Value> Finalize(const Arguments& args);
+    static Handle<Value> FinalizeSync(const Arguments& args);
     static void Finalize(Baton* baton);
     void Finalize();
 

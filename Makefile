@@ -1,6 +1,11 @@
 
+all: build
+
 build:
-	node-gyp build
+	npm build .
+
+install:
+	npm install .
 
 clean:
 	rm test/support/big.db*

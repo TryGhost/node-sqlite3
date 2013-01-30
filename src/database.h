@@ -126,6 +126,7 @@ protected:
     void Schedule(Work_Callback callback, Baton* baton, bool exclusive = false);
     void Process();
 
+    static Handle<Value> ExecSync(const Arguments& args);
     static Handle<Value> Exec(const Arguments& args);
     static void Work_BeginExec(Baton* baton);
     static void Work_Exec(uv_work_t* req);
@@ -145,6 +146,7 @@ protected:
     static Handle<Value> Parallelize(const Arguments& args);
 
     static Handle<Value> Configure(const Arguments& args);
+    static Handle<Value> Copy(const Arguments& args);
 
     static void SetBusyTimeout(Baton* baton);
 
