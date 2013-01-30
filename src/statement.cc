@@ -24,9 +24,11 @@ void Statement::Init(Handle<Object> target) {
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "run", Run);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "runSync", RunSync);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "all", All);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "allSync", AllSync);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "each", Each);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "reset", Reset);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalize", Finalize);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalizeSync", Finalize);
 
     target->Set(String::NewSymbol("Statement"),
         constructor_template->GetFunction());
@@ -523,6 +525,49 @@ void Statement::Work_AfterRun(uv_work_t* req) {
     STATEMENT_END();
 }
 
+Handle<Value> Statement::AllSync(const Arguments& args) {
+    HandleScope scope;
+    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+
+    RowsBaton* baton = stmt->Bind<RowsBaton>(args);
+
+    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
+    sqlite3_mutex_enter(mtx);
+
+    // Make sure that we also reset when there are no parameters.
+    if (!baton->parameters.size()) {
+        sqlite3_reset(stmt->handle);
+    }
+
+    if (stmt->Bind(baton->parameters)) {
+        while ((stmt->status = sqlite3_step(stmt->handle)) == SQLITE_ROW) {
+            Row* row = new Row();
+            GetRow(row, stmt->handle);
+            baton->rows.push_back(row);
+        }
+        if (stmt->status != SQLITE_DONE) {
+            stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+        }
+    }
+    sqlite3_mutex_leave(mtx);
+
+    if (stmt->status != SQLITE_DONE) {
+        delete baton;
+        return ThrowException(Exception::Error(String::New(stmt->message.c_str()))); 
+    }
+
+    // Create the result array from the data we acquired.
+    Local<Array> result(Array::New(baton->rows.size()));
+    Rows::const_iterator it = baton->rows.begin();
+    Rows::const_iterator end = baton->rows.end();
+    for (int i = 0; it < end; it++, i++) {
+        result->Set(i, RowToJS(*it));
+        delete *it;
+    }
+    delete baton;
+    return scope.Close(result);
+}
+
 Handle<Value> Statement::All(const Arguments& args) {
     HandleScope scope;
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
@@ -845,6 +890,13 @@ void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
                 assert(false);
         }
     }
+}
+
+Handle<Value> Statement::FinalizeSync(const Arguments& args) {
+    HandleScope scope;
+    Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
+    stmt->Finalize();
+    return args.This();
 }
 
 Handle<Value> Statement::Finalize(const Arguments& args) {
