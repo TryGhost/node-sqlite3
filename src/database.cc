@@ -138,7 +138,7 @@ Handle<Value> Database::New(const Arguments& args) {
 
 void Database::Work_BeginOpen(Baton* baton) {
     int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Open, Work_AfterOpen);
+        &baton->request, Work_Open, (uv_after_work_cb)Work_AfterOpen);
     assert(status == 0);
 }
 
@@ -221,7 +221,7 @@ void Database::Work_BeginClose(Baton* baton) {
 
     baton->db->RemoveCallbacks();
     int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Close, Work_AfterClose);
+        &baton->request, Work_Close, (uv_after_work_cb)Work_AfterClose);
     assert(status == 0);
 }
 
@@ -500,7 +500,7 @@ void Database::Work_BeginExec(Baton* baton) {
     assert(baton->db->handle);
     assert(baton->db->pending == 0);
     int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Exec, Work_AfterExec);
+        &baton->request, Work_Exec, (uv_after_work_cb)Work_AfterExec);
     assert(status == 0);
 }
 
@@ -569,7 +569,7 @@ void Database::Work_BeginLoadExtension(Baton* baton) {
     assert(baton->db->handle);
     assert(baton->db->pending == 0);
     int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_LoadExtension, Work_AfterLoadExtension);
+        &baton->request, Work_LoadExtension, (uv_after_work_cb)Work_AfterLoadExtension);
     assert(status == 0);
 }
 
