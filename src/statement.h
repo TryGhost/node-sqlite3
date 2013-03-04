@@ -195,11 +195,6 @@ public:
         if (!finalized) Finalize();
     }
 
-protected:
-    static void Work_BeginPrepare(Database::Baton* baton);
-    static void Work_Prepare(uv_work_t* req);
-    static void Work_AfterPrepare(uv_work_t* req);
-
     WORK_DEFINITION(Bind);
     WORK_DEFINITION(Get);
     WORK_DEFINITION(Run);
@@ -207,10 +202,16 @@ protected:
     WORK_DEFINITION(Each);
     WORK_DEFINITION(Reset);
 
+    static Handle<Value> Finalize(const Arguments& args);
+
+protected:
+    static void Work_BeginPrepare(Database::Baton* baton);
+    static void Work_Prepare(uv_work_t* req);
+    static void Work_AfterPrepare(uv_work_t* req);
+
     static void AsyncEach(uv_async_t* handle, int status);
     static void CloseCallback(uv_handle_t* handle);
 
-    static Handle<Value> Finalize(const Arguments& args);
     static void Finalize(Baton* baton);
     void Finalize();
 
