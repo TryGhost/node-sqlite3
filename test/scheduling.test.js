@@ -49,7 +49,10 @@ exports['test running a query after the database was closed'] = function(beforeE
         db.close(function(err) {
             assert.ok(err);
             error = true;
-            assert.equal(err.message, "SQLITE_BUSY: unable to close due to unfinalised statements");
+            assert.ok(
+              err.message == "SQLITE_BUSY: unable to close due to unfinalised statements" ||
+              err.message == "SQLITE_BUSY: unable to close due to unfinalized statements or unfinished backups"
+            );
             stmt.run();
         });
     });
