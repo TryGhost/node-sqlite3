@@ -30,7 +30,7 @@ exports['test scheduling a query with callback after the database was closed'] =
 
     db.close();
     db.run("CREATE TABLE foo (id int)", function(err) {
-        assert.ok(err.message, "SQLITE_MISUSE: Database handle is closed");
+        assert.equal(err.message, "SQLITE_MISUSE: Database handle is closed");
         error = true;
     });
 
