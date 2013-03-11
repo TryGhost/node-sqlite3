@@ -22,7 +22,8 @@
         "Audrius Kažukauskas <audrius@neutrino.lt>",
         "Johannes Schauer <josch@pyneo.org>",
         "Nathan Rajlich <nathan@tootallnate.net>",
-        "AJ ONeal <coolaj86@gmail.com>"
+        "AJ ONeal <coolaj86@gmail.com>",
+        "Jon Buckley <jon@jbuckley.ca>"
     ],
     "repository": {
         "type": "git",
@@ -33,7 +34,7 @@
         "expresso": "*"
     },
     "engines": {
-        "node": ">= 0.6.13 && < 0.9.0"
+        "node": ">= 0.6.13"
     },
     "scripts": {
         "test": "make test"
