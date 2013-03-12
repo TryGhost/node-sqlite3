@@ -136,7 +136,7 @@ const char* sqlite_authorizer_string(int type);
     baton->stmt->locked = true;                                                \
     baton->stmt->db->pending++;                                                \
     int status = uv_queue_work(uv_default_loop(),                              \
-        &baton->request, Work_##type, Work_After##type);                       \
+        &baton->request, Work_##type, (uv_after_work_cb)Work_After##type);                       \
     assert(status == 0);
 
 #define STATEMENT_INIT(type)                                                   \
