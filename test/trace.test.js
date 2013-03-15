@@ -49,6 +49,8 @@ exports['test disabling tracing #1'] = function(beforeExit) {
 
     db.run("CREATE TABLE foo (id int)");
     db.close();
+
+    beforeExit(function(){});
 };
 
 exports['test disabling tracing #2'] = function(beforeExit) {
@@ -63,4 +65,6 @@ exports['test disabling tracing #2'] = function(beforeExit) {
 
     db.run("CREATE TABLE foo (id int)");
     db.close();
+
+    beforeExit(function(){});
 };

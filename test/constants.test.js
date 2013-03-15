@@ -3,7 +3,8 @@ var assert = require('assert');
 
 if (process.setMaxListeners) process.setMaxListeners(0);
 
-exports['test constants'] = function() {
+exports['test constants'] = function(beforeExit) {
+    beforeExit(function() {
     assert.ok(sqlite3.OPEN_READONLY === 1);
     assert.ok(sqlite3.OPEN_READWRITE === 2);
     assert.ok(sqlite3.OPEN_CREATE === 4);
@@ -35,4 +36,5 @@ exports['test constants'] = function() {
     assert.ok(sqlite3.FORMAT === 24);
     assert.ok(sqlite3.RANGE === 25);
     assert.ok(sqlite3.NOTADB === 26);
+    });
 };
