@@ -8,7 +8,7 @@ exports['test scheduling a query after the database was closed'] = function(befo
     var db = new sqlite3.Database(':memory:');
     db.on('error', function(err) {
         error = true;
-        assert.equal(err.message, "SQLITE_MISUSE: Database handle is closed");
+        assert.ok(err.message && err.message.indexOf("SQLITE_MISUSE: Database handle is closed") > -1);
     });
 
     db.close();
@@ -30,7 +30,7 @@ exports['test scheduling a query with callback after the database was closed'] =
 
     db.close();
     db.run("CREATE TABLE foo (id int)", function(err) {
-        assert.ok(err.message, "SQLITE_MISUSE: Database handle is closed");
+        assert.ok(err.message && err.message.indexOf("SQLITE_MISUSE: Database handle is closed") > -1);
         error = true;
     });
 
@@ -49,7 +49,7 @@ exports['test running a query after the database was closed'] = function(beforeE
         db.close(function(err) {
             assert.ok(err);
             error = true;
-            assert.equal(err.message, "SQLITE_BUSY: unable to close due to unfinalised statements");
+            assert.ok(err.message && err.message.indexOf("SQLITE_BUSY: unable to close due to") > -1);
             stmt.run();
         });
     });
