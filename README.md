@@ -124,6 +124,8 @@ They define how long the wrapper waits for a test to be completed. (Longer de
 
 The “Developer Tools” window is automatically opened. You may use its “Console” tab to see if some test fails. (In case of a failure, the subsequent tests are not run.)
 
+Some tests require a writable `test/tmp` subdirectory in order to run properly.
+
 
 
 # CONTRIBUTORS
