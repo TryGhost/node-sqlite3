@@ -3,10 +3,10 @@
   "main": "index.html",
   "window": {
     "width": 600,
-    "height": 1000,
+    "height": 700,
     "position": "center",
     "toolbar": false,
     "title": "Starting...",
-    "resizable": false
+    "resizable": true
   }
 }
