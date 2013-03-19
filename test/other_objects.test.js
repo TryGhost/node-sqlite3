@@ -1,36 +1,41 @@
-var sqlite3 = require('sqlite3');
+var sqlite3 = require('..');
 var assert = require('assert');
 
-if (process.setMaxListeners) process.setMaxListeners(0);
+describe('data types', function() {
+    var db;
+    before(function(done) {
+        db = new sqlite3.Database(':memory:');
+        db.run("CREATE TABLE txt_table (txt TEXT)");
+        db.run("CREATE TABLE int_table (int INTEGER)");
+        db.run("CREATE TABLE flt_table (flt FLOAT)");
+        db.wait(done);
+    });
 
-exports['test Date() and RegExp() serialization'] = function(beforeExit) {
-    var db = new sqlite3.Database(':memory:');
+    beforeEach(function(done) {
+        db.exec('DELETE FROM txt_table; DELETE FROM int_table; DELETE FROM flt_table;', done);
+    });
 
-    var retrieved = false;
-    var date = new Date();
-
-    db.serialize(function() {
-        db.run("CREATE TABLE foo (txt TEXT, num FLOAT)");
-        db.run("INSERT INTO foo VALUES(?, ?)", (/^f\noo/), date);
-        db.get("SELECT txt, num FROM foo", function(err, row) {
+    it('should serialize Date()', function(done) {
+        var date = new Date();
+        db.run("INSERT INTO int_table VALUES(?)", date);
+        db.get("SELECT int FROM int_table", function(err, row) {
             if (err) throw err;
-            assert.equal(row.txt, '/^f\\noo/');
-            assert.equal(row.num, +date);
-            retrieved = true;
-        })
+            assert.equal(row.int, +date);
+            done();
+        });
     });
 
-    beforeExit(function() {
-        assert.ok(retrieved);
+    it('should serialize RegExp()', function(done) {
+        var regexp = /^f\noo/;
+        db.run("INSERT INTO txt_table VALUES(?)", regexp);
+        db.get("SELECT txt FROM txt_table", function(err, row) {
+            if (err) throw err;
+            assert.equal(row.txt, String(regexp));
+            done();
+        });
     });
-};
 
-exports['test large floats'] = function(beforeExit) {
-    var db = new sqlite3.Database(':memory:');
-
-    var retrieved = false;
-
-    var numbers = [
+    [
         4294967296.249,
         Math.PI,
         3924729304762836.5,
@@ -42,39 +47,18 @@ exports['test large floats'] = function(beforeExit) {
         -9.293476892934982e+300,
         -2.3948728634826374e+83,
         -Infinity
-    ];
-
-    db.serialize(function() {
-        db.run("CREATE TABLE foo (id INT, num FLOAT)");
-
-        var stmt = db.prepare("INSERT INTO foo VALUES(?, ?)");
-        for (var i = 0; i < numbers.length; i++) {
-            stmt.run(i, numbers[i]);
-        }
-        stmt.finalize();
-
-        db.all("SELECT num FROM foo ORDER BY id", function(err, rows) {
-            if (err) throw err;
-
-            for (var i = 0; i < rows.length; i++) {
-                assert.equal(numbers[i], rows[i].num);
-            }
-
-            retrieved = true;
-        })
+    ].forEach(function(flt) {
+        it('should serialize float ' + flt, function(done) {
+            db.run("INSERT INTO flt_table VALUES(?)", flt);
+            db.get("SELECT flt FROM flt_table", function(err, row) {
+                if (err) throw err;
+                assert.equal(row.flt, flt);
+                done();
+            });
+        });
     });
 
-    beforeExit(function() {
-        assert.ok(retrieved);
-    });
-};
-
-exports['test large integers'] = function(beforeExit) {
-    var db = new sqlite3.Database(':memory:');
-
-    var retrieved = false;
-
-    var numbers = [
+    [
         4294967299,
         3924729304762836,
         new Date().valueOf(),
@@ -84,29 +68,14 @@ exports['test large integers'] = function(beforeExit) {
         -9.293476892934982e+300,
         -2.3948728634826374e+83,
         -Infinity
-    ];
-
-    db.serialize(function() {
-        db.run("CREATE TABLE foo (id INT, num INTEGER)");
-
-        var stmt = db.prepare("INSERT INTO foo VALUES(?, ?)");
-        for (var i = 0; i < numbers.length; i++) {
-            stmt.run(i, numbers[i]);
-        }
-        stmt.finalize();
-
-        db.all("SELECT num FROM foo ORDER BY id", function(err, rows) {
-            if (err) throw err;
-
-            for (var i = 0; i < rows.length; i++) {
-                assert.equal(numbers[i], rows[i].num);
-            }
-
-            retrieved = true;
-        })
+    ].forEach(function(integer) {
+        it('should serialize integer ' + integer, function(done) {
+            db.run("INSERT INTO int_table VALUES(?)", integer);
+            db.get("SELECT int AS integer FROM int_table", function(err, row) {
+                if (err) throw err;
+                assert.equal(row.integer, integer);
+                done();
+            });
+        });
     });
-
-    beforeExit(function() {
-        assert.ok(retrieved);
-    });
-};
+});

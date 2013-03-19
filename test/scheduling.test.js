@@ -1,60 +1,44 @@
-var sqlite3 = require('sqlite3');
+var sqlite3 = require('..');
 var assert = require('assert');
 
-if (process.setMaxListeners) process.setMaxListeners(0);
+describe('scheduling', function() {
+    it('scheduling after the database was closed', function(done) {
+        var db = new sqlite3.Database(':memory:');
+        db.on('error', function(err) {
+            assert.equal(err.message, "SQLITE_MISUSE: Database handle is closed");
+            done();
+        });
 
-exports['test scheduling a query after the database was closed'] = function(beforeExit) {
-    var error = false;
-    var db = new sqlite3.Database(':memory:');
-    db.on('error', function(err) {
-        error = true;
-        assert.equal(err.message, "SQLITE_MISUSE: Database handle is closed");
+        db.close();
+        db.run("CREATE TABLE foo (id int)");
     });
 
-    db.close();
-    db.run("CREATE TABLE foo (id int)");
 
-    beforeExit(function() {
-        assert.ok(error);
-    });
-};
+    it('scheduling a query with callback after the database was closed', function(done) {
+        var db = new sqlite3.Database(':memory:');
+        db.on('error', function(err) {
+            assert.ok(false, 'Event was accidentally triggered');
+        });
 
-
-exports['test scheduling a query with callback after the database was closed'] = function(beforeExit) {
-    var error = false;
-    var errorEvent = false;
-    var db = new sqlite3.Database(':memory:');
-    db.on('error', function(err) {
-        errorEvent = true;
-    });
-
-    db.close();
-    db.run("CREATE TABLE foo (id int)", function(err) {
-        assert.ok(err.message, "SQLITE_MISUSE: Database handle is closed");
-        error = true;
-    });
-
-    beforeExit(function() {
-        assert.ok(error);
-        assert.ok(!errorEvent);
-    });
-};
-
-exports['test running a query after the database was closed'] = function(beforeExit) {
-    var error = false;
-    var db = new sqlite3.Database(':memory:');
-
-    var stmt = db.prepare("SELECT * FROM sqlite_master", function(err) {
-        if (err) throw err;
-        db.close(function(err) {
-            assert.ok(err);
-            error = true;
-            assert.equal(err.message, "SQLITE_BUSY: unable to close due to unfinalised statements");
-            stmt.run();
+        db.close();
+        db.run("CREATE TABLE foo (id int)", function(err) {
+            assert.ok(err.message, "SQLITE_MISUSE: Database handle is closed");
+            done();
         });
     });
 
-    beforeExit(function() {
-        assert.ok(error);
+    it('running a query after the database was closed', function(done) {
+        var db = new sqlite3.Database(':memory:');
+
+        var stmt = db.prepare("SELECT * FROM sqlite_master", function(err) {
+            if (err) throw err;
+            db.close(function(err) {
+                assert.ok(err);
+                assert.equal(err.message, "SQLITE_BUSY: unable to close due to unfinalised statements");
+
+                // Running a statement now should not fail.
+                stmt.run(done);
+            });
+        });
     });
-};
+});

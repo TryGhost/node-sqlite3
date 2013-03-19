@@ -1,129 +1,125 @@
-var sqlite3 = require('sqlite3');
+var sqlite3 = require('..');
 var assert = require('assert');
 var fs = require('fs');
 var helper = require('./support/helper');
 
-if (process.setMaxListeners) process.setMaxListeners(0);
-
-exports['open and close non-existent database'] = function(beforeExit) {
-    var opened, closed;
-
-    helper.deleteFile('test/tmp/test_create.db');
-    var db = new sqlite3.Database('test/tmp/test_create.db', function(err) {
-        if (err) throw err;
-        assert.ok(!opened);
-        assert.ok(!closed);
-        opened = true;
-    });
-
-    db.close(function(err) {
-        if (err) throw err;
-        assert.ok(opened);
-        assert.ok(!closed);
-        closed = true;
-    });
-
-    beforeExit(function() {
-        assert.ok(opened, 'Database not opened');
-        assert.ok(closed, 'Database not closed');
-        assert.fileExists('test/tmp/test_create.db');
-        helper.deleteFile('test/tmp/test_create.db');
-    });
-};
-
-exports['open inaccessible database'] = function(beforeExit) {
-    var notOpened;
-
-    var db = new sqlite3.Database('/usr/bin/test.db', function(err) {
-        if (err && err.errno === sqlite3.CANTOPEN) {
-            notOpened = true;
-        }
-        else if (err) throw err;
-    });
-
-    beforeExit(function() {
-        assert.ok(notOpened, 'Database could be opened');
-    });
-};
-
-
-exports['open non-existent database without create'] = function(beforeExit) {
-    var notOpened;
-
-    helper.deleteFile('tmp/test_readonly.db');
-    var db = new sqlite3.Database('tmp/test_readonly.db', sqlite3.OPEN_READONLY,
-        function(err) {
-            if (err && err.errno === sqlite3.CANTOPEN) {
-                notOpened = true;
-            }
-            else if (err) throw err;
+describe('open/close', function() {
+    describe('open and close non-existant database', function() {
+        before(function() {
+            helper.deleteFile('test/tmp/test_create.db');
         });
 
-    beforeExit(function() {
-        assert.ok(notOpened, 'Database could be opened');
-        assert.fileDoesNotExist('tmp/test_readonly.db');
+        var db;
+        it('should open the database', function(done) {
+            db = new sqlite3.Database('test/tmp/test_create.db', done);
+        });
+
+        it('should close the database', function(done) {
+            db.close(done);
+        });
+
+        it('should have created the file', function() {
+            assert.fileExists('test/tmp/test_create.db');
+        });
+
+        after(function() {
+            helper.deleteFile('test/tmp/test_create.db');
+        });
     });
-};
 
-exports['open and close memory database queuing'] = function(beforeExit) {
-    var opened = 0, closed = 0, closeFailed = 0;
-
-    var db = new sqlite3.Database(':memory:', function openedCallback(err) {
-        if (err) throw err;
-        opened++;
+    it('should be unable to open an inaccessible database', function(done) {
+        // NOTE: test assumes that the user is not allowed to create new files
+        // in /usr/bin.
+        var db = new sqlite3.Database('/usr/bin/test.db', function(err) {
+            if (err && err.errno === sqlite3.CANTOPEN) {
+                done();
+            } else if (err) {
+                done(err);
+            } else {
+                done('Opened database that should be inaccessible');
+            }
+        });
     });
 
-    function closedCallback(err) {
-        if (closed > 0) {
-            assert.ok(err, 'No error object received on second close');
-            assert.ok(err.errno === sqlite3.MISUSE);
-            closeFailed++;
-        }
-        else if (err) throw err;
-        else closed++;
-    }
 
-    db.close(closedCallback);
-    db.close(closedCallback);
+    describe('creating database without create flag', function() {
+        before(function() {
+            helper.deleteFile('test/tmp/test_readonly.db');
+        });
 
-    beforeExit(function() {
-        assert.equal(opened, 1, 'Database not opened');
-        assert.equal(closed, 1, 'Database not closed');
-        assert.equal(closeFailed, 1, 'Database could be closed again');
+        it('should fail to open the database', function(done) {
+            new sqlite3.Database('tmp/test_readonly.db', sqlite3.OPEN_READONLY, function(err) {
+                if (err && err.errno === sqlite3.CANTOPEN) {
+                    done();
+                } else if (err) {
+                    done(err);
+                } else {
+                    done('Created database without create flag');
+                }
+            });
+        });
+
+        it('should not have created the file', function() {
+            assert.fileDoesNotExist('test/tmp/test_readonly.db');
+        });
+
+        after(function() {
+            helper.deleteFile('test/tmp/test_readonly.db');
+        });
     });
-};
 
-exports['test closing with open statements'] = function(beforeExit) {
-    var completed = false;
-    var completedSecond = false;
-    var closed = false;
+    describe('open and close memory database queuing', function() {
+        var db;
+        it('should open the database', function(done) {
+            db = new sqlite3.Database(':memory:', done);
+        });
 
-    var db = new sqlite3.Database(':memory:');
+        it('should close the database', function(done) {
+            db.close(done);
+        });
 
-    db.serialize(function() {
-        db.run("CREATE TABLE foo (id INT, num INT)");
-
-        var stmt = db.prepare('INSERT INTO foo VALUES (?, ?)')
-        stmt.run(1, 2);
-
-        db.close(function(err) {
-            assert.ok(err.message,
-                "SQLITE_BUSY: unable to close due to unfinalised statements");
-            completed = true;
-            stmt.run(3, 4, function() {
-                completedSecond = true;
-                stmt.finalize();
-                db.close(function(err) {
-                    if (err) throw err;
-                    closed = true;
-                });
+        it('shouldn\'t close the database again', function(done) {
+            db.close(function(err) {
+                assert.ok(err, 'No error object received on second close');
+                assert.ok(err.errno === sqlite3.MISUSE);
+                done();
             });
         });
     });
 
-    beforeExit(function() {
-        assert.ok(completed);
-        assert.ok(completedSecond);
-        assert.ok(closed);
+    describe('closing with unfinalized statements', function(done) {
+        var completed = false;
+        var completedSecond = false;
+        var closed = false;
+
+        var db;
+        before(function() {
+            db = new sqlite3.Database(':memory:', done);
+        });
+
+        it('should create a table', function(done) {
+            db.run("CREATE TABLE foo (id INT, num INT)", done);
+        });
+
+        var stmt;
+        it('should prepare/run a statement', function(done) {
+            stmt = db.prepare('INSERT INTO foo VALUES (?, ?)');
+            stmt.run(1, 2, done);
+        });
+
+        it('should fail to close the database', function(done) {
+            db.close(function(err) {
+                assert.ok(err.message,
+                    "SQLITE_BUSY: unable to close due to unfinalised statements");
+                done();
+            });
+        });
+
+        it('should succeed to close the database after finalizing', function(done) {
+            stmt.run(3, 4, function() {
+                stmt.finalize();
+                db.close(done);
+            });
+        });
     });
-};
+});

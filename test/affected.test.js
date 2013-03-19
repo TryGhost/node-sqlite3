@@ -1,15 +1,14 @@
-var sqlite3 = require('sqlite3');
+var sqlite3 = require('..');
 var assert = require('assert');
 
-if (process.setMaxListeners) process.setMaxListeners(0);
+describe('query properties', function() {
+    var db;
+    before(function(done) {
+        db = new sqlite3.Database(':memory:');
+        db.run("CREATE TABLE foo (id INT, txt TEXT)", done);
+    });
 
-exports['test row changes and lastID'] = function(beforeExit) {
-    var db = new sqlite3.Database(':memory:');
-
-    var finished = false;
-
-    db.serialize(function() {
-        db.run("CREATE TABLE foo (id INT, txt TEXT)");
+    it('should return the correct lastID', function(done) {
         var stmt = db.prepare("INSERT INTO foo VALUES(?, ?)");
         var j = 1;
         for (var i = 0; i < 1000; i++) {
@@ -20,15 +19,14 @@ exports['test row changes and lastID'] = function(beforeExit) {
                 assert.equal(j++, this.lastID);
             });
         }
+        db.wait(done);
+    });
 
+    it('should return the correct changes count', function(done) {
         db.run("UPDATE foo SET id = id + 1 WHERE id % 2 = 0", function(err) {
             if (err) throw err;
             assert.equal(500, this.changes);
-            finished = true;
+            done();
         });
     });
-
-    beforeExit(function() {
-        assert.ok(finished);
-    })
-}
+});

@@ -1,42 +1,38 @@
-var sqlite3 = require('sqlite3');
+var sqlite3 = require('..');
 var assert = require('assert');
-var util = require('util');
 
-if (process.setMaxListeners) process.setMaxListeners(0);
-
-exports['test Statement#each'] = function(beforeExit) {
-    var db = new sqlite3.Database('test/support/big.db', sqlite3.OPEN_READONLY);
-
-    var total = 100000;
-    var retrieved = 0;
-
-    db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
-        if (err) throw err;
-        retrieved++;
+describe('each', function() {
+    var db;
+    before(function(done) {
+        db = new sqlite3.Database('test/support/big.db', sqlite3.OPEN_READONLY, done);
     });
 
-    beforeExit(function() {
-        assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
-    });
-};
+    it('retrieve 100,000 rows with Statement#each', function(done) {
+        var total = 100000;
+        var retrieved = 0;
 
-exports['test Statement#each with complete callback'] = function(beforeExit) {
-    var db = new sqlite3.Database('test/support/big.db', sqlite3.OPEN_READONLY);
+        db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
+            if (err) throw err;
+            retrieved++;
+        });
 
-    var total = 10000;
-    var retrieved = 0;
-    var completed = false;
-
-    db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
-        if (err) throw err;
-        retrieved++;
-    }, function(err, num) {
-        assert.equal(retrieved, num);
-        completed = true;
+        db.wait(function() {
+            assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
+            done();
+        });
     });
 
-    beforeExit(function() {
-        assert.ok(completed);
-        assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
+    it('Statement#each with complete callback', function(done) {
+        var total = 10000;
+        var retrieved = 0;
+
+        db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
+            if (err) throw err;
+            retrieved++;
+        }, function(err, num) {
+            assert.equal(retrieved, num);
+            assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
+            done();
+        });
     });
-};
+});
