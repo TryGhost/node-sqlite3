@@ -36,7 +36,7 @@
         "node": ">= 0.6.13 && < 0.11.0"
     },
     "scripts": {
-        "test": "make test"
+        "test": "mocha -R spec"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"
