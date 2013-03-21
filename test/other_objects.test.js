@@ -17,21 +17,25 @@ describe('data types', function() {
 
     it('should serialize Date()', function(done) {
         var date = new Date();
-        db.run("INSERT INTO int_table VALUES(?)", date);
-        db.get("SELECT int FROM int_table", function(err, row) {
+        db.run("INSERT INTO int_table VALUES(?)", date, function (err) {
             if (err) throw err;
-            assert.equal(row.int, +date);
-            done();
+            db.get("SELECT int FROM int_table", function(err, row) {
+                if (err) throw err;
+                assert.equal(row.int, +date);
+                done();
+            });
         });
     });
 
     it('should serialize RegExp()', function(done) {
         var regexp = /^f\noo/;
-        db.run("INSERT INTO txt_table VALUES(?)", regexp);
-        db.get("SELECT txt FROM txt_table", function(err, row) {
+        db.run("INSERT INTO txt_table VALUES(?)", regexp, function (err) {
             if (err) throw err;
-            assert.equal(row.txt, String(regexp));
-            done();
+            db.get("SELECT txt FROM txt_table", function(err, row) {
+                if (err) throw err;
+                assert.equal(row.txt, String(regexp));
+                done();
+            });
         });
     });
 
@@ -49,11 +53,13 @@ describe('data types', function() {
         -Infinity
     ].forEach(function(flt) {
         it('should serialize float ' + flt, function(done) {
-            db.run("INSERT INTO flt_table VALUES(?)", flt);
-            db.get("SELECT flt FROM flt_table", function(err, row) {
+            db.run("INSERT INTO flt_table VALUES(?)", flt, function (err) {
                 if (err) throw err;
-                assert.equal(row.flt, flt);
-                done();
+                db.get("SELECT flt FROM flt_table", function(err, row) {
+                    if (err) throw err;
+                    assert.equal(row.flt, flt);
+                    done();
+                });
             });
         });
     });
@@ -70,11 +76,13 @@ describe('data types', function() {
         -Infinity
     ].forEach(function(integer) {
         it('should serialize integer ' + integer, function(done) {
-            db.run("INSERT INTO int_table VALUES(?)", integer);
-            db.get("SELECT int AS integer FROM int_table", function(err, row) {
+            db.run("INSERT INTO int_table VALUES(?)", integer, function (err) {
                 if (err) throw err;
-                assert.equal(row.integer, integer);
-                done();
+                db.get("SELECT int AS integer FROM int_table", function(err, row) {
+                    if (err) throw err;
+                    assert.equal(row.integer, integer);
+                    done();
+                });
             });
         });
     });
