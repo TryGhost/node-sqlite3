@@ -11,6 +11,8 @@ db:
 	@if ! [ -f test/support/big.db ]; then                                   \
 		echo "Creating test database... This may take several minutes." ;      \
 		node test/support/createdb.js ;                                        \
+	else                                                                     \
+		echo "okay: database already created" ;                                \
 	fi
 
 test: build db
