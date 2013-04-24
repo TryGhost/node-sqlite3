@@ -37,7 +37,7 @@
     },
     "scripts": {
         "pretest":"make db",
-        "test": "mocha -R spec"
+        "test": "mocha -R spec --timeout 10000"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"
