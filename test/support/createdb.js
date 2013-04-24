@@ -11,7 +11,7 @@ function randomString() {
 
 var db = new sqlite3.Database('test/support/big.db');
 
-var count = 10000000;
+var count = 1000000;
 
 db.serialize(function() {
     db.run("CREATE TABLE foo (id INT, txt TEXT)");
