@@ -1,11 +1,11 @@
-
 build:
-	node-gyp build
+	npm install
 
 clean:
 	rm test/support/big.db*
 	rm test/tmp/*
-	node-gyp clean
+	rm -rf ./deps/sqlite-autoconf-*/
+	rm -rf ./build
 
 db:
 	@if ! [ -f test/support/big.db ]; then                                   \
@@ -15,7 +15,7 @@ db:
 		echo "okay: database already created" ;                                \
 	fi
 
-test: build db
+test: db
 	npm test
 
 .PHONY: build clean test
