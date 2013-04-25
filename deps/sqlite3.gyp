@@ -42,9 +42,9 @@
     {
       'target_name': 'sqlite3',
       'type': 'static_library',
-      'include_dirs': [ '.' ],
+      'include_dirs': [ './sqlite-autoconf-<@(sqlite_version)/' ],
       'direct_dependent_settings': {
-        'include_dirs': [ '.' ],
+        'include_dirs': [ './sqlite-autoconf-<@(sqlite_version)/' ],
         'defines': [
           'SQLITE_THREADSAFE=1',
           'SQLITE_ENABLE_FTS3',
