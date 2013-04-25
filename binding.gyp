@@ -6,11 +6,13 @@
   'conditions': [
       ['OS=="win"', {
         'variables': {
-          'copy_command%': 'copy'
+          'copy_command%': 'copy',
+          'bin_name':'call'
         },
       },{
         'variables': {
-          'copy_command%': 'cp'
+          'copy_command%': 'cp',
+          'bin_name':'node'
         },
       }]
   ],
@@ -27,7 +29,7 @@
           'outputs': [
             './deps/sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
           ],
-          'action': ['node','./node_modules/.bin/targz','deps/sqlite-autoconf-<@(sqlite_version).tar.gz','-x','deps/']
+          'action': ['<@(bin_name)','./node_modules/.bin/targz','deps/sqlite-autoconf-<@(sqlite_version).tar.gz','-x','deps/']
         }
       ]
     },
