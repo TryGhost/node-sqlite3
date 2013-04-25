@@ -25,9 +25,9 @@
             './deps/sqlite-autoconf-<@(sqlite_version).tar.gz'
           ],
           'outputs': [
-            './deps/sqlite-autoconf-<@(sqlite_version)'
+            './deps/sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
           ],
-          'action': ['./node_modules/.bin/targz','deps/sqlite-autoconf-<@(sqlite_version).tar.gz','-x','deps/']
+          'action': ['node','./node_modules/.bin/targz','deps/sqlite-autoconf-<@(sqlite_version).tar.gz','-x','deps/']
         }
       ]
     },

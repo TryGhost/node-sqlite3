@@ -57,7 +57,7 @@
         'SQLITE_ENABLE_FTS3',
         'SQLITE_ENABLE_RTREE'
       ],
-      'sources': [ './sqlite-autoconf-<@(sqlite_version)/sqlite3.c', ],
+      'sources': [ './sqlite-autoconf-<@(sqlite_version)/sqlite3.c' ],
     }
   ]
 }
