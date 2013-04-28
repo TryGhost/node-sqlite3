@@ -131,6 +131,9 @@ protected:
     static void Work_Exec(uv_work_t* req);
     static void Work_AfterExec(uv_work_t* req);
 
+    static Handle<Value> Wait(const Arguments& args);
+    static void Work_Wait(Baton* baton);
+
     static Handle<Value> Close(const Arguments& args);
     static void Work_BeginClose(Baton* baton);
     static void Work_Close(uv_work_t* req);

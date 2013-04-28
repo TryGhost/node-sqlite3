@@ -11,16 +11,11 @@ db:
 	@if ! [ -f test/support/big.db ]; then                                   \
 		echo "Creating test database... This may take several minutes." ;      \
 		node test/support/createdb.js ;                                        \
+	else                                                                     \
+		echo "okay: database already created" ;                                \
 	fi
 
-ifndef only
 test: build db
-	@rm -rf ./test/tmp && mkdir -p ./test/tmp
-	@PATH="./node_modules/.bin:${PATH}" && NODE_PATH="./lib:$(NODE_PATH)" expresso -I lib test/*.test.js
-else
-test: build db
-	@rm -rf ./test/tmp && mkdir -p ./test/tmp
-	@PATH="./node_modules/.bin:${PATH}" && NODE_PATH="./lib:$(NODE_PATH)" expresso -I lib test/${only}.test.js
-endif
+	npm test
 
 .PHONY: build clean test

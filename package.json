@@ -1,7 +1,7 @@
 {
     "name": "sqlite3",
     "description": "Asynchronous, non-blocking SQLite3 bindings",
-    "version": "2.1.6",
+    "version": "2.1.7-alpha",
     "homepage": "http://github.com/developmentseed/node-sqlite3",
     "author": {
         "name": "Development Seed",
@@ -30,13 +30,14 @@
     },
     "devDependencies": {
         "step": "0.0.4",
-        "expresso": "*"
+        "mocha": "~1.7"
     },
     "engines": {
         "node": ">= 0.6.13 && < 0.11.0"
     },
     "scripts": {
-        "test": "make test"
+        "pretest":"make db",
+        "test": "mocha -R spec"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"

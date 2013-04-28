@@ -20,6 +20,7 @@ void Database::Init(Handle<Object> target) {
 
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "exec", Exec);
+    NODE_SET_PROTOTYPE_METHOD(constructor_template, "wait", Wait);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "loadExtension", LoadExtension);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "serialize", Serialize);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "parallelize", Parallelize);
@@ -546,6 +547,36 @@ void Database::Work_AfterExec(uv_work_t* req) {
     }
 
     db->Process();
+
+    delete baton;
+}
+
+Handle<Value> Database::Wait(const Arguments& args) {
+    HandleScope scope;
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
+
+    Baton* baton = new Baton(db, callback);
+    db->Schedule(Work_Wait, baton, true);
+
+    return args.This();
+}
+
+void Database::Work_Wait(Baton* baton) {
+    HandleScope scope;
+
+    assert(baton->db->locked);
+    assert(baton->db->open);
+    assert(baton->db->handle);
+    assert(baton->db->pending == 0);
+
+    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+        Local<Value> argv[] = { Local<Value>::New(Null()) };
+        TRY_CATCH_CALL(baton->db->handle_, baton->callback, 1, argv);
+    }
+
+    baton->db->Process();
 
     delete baton;
 }

@@ -1,20 +1,21 @@
-var sqlite3 = require('sqlite3');
+var sqlite3 = require('..');
 var assert = require('assert');
 var fs = require('fs');
 
-if (process.setMaxListeners) process.setMaxListeners(0);
+describe('exec', function() {
+    var db;
+    before(function(done) {
+        db = new sqlite3.Database(':memory:', done);
+    });
 
-exports['test Database#exec'] = function(beforeExit) {
-    var db = new sqlite3.Database(':memory:');
-    var finished = false;
-    var sql = fs.readFileSync('test/support/script.sql', 'utf8');
+    it('Database#exec', function(done) {
+        var sql = fs.readFileSync('test/support/script.sql', 'utf8');
+        db.exec(sql, done);
+    });
 
-    db.exec(sql, function(err) {
-        if (err) throw err;
-
+    it('retrieve database structure', function(done) {
         db.all("SELECT type, name FROM sqlite_master ORDER BY type, name", function(err, rows) {
             if (err) throw err;
-
             assert.deepEqual(rows, [
                 { type: 'index', name: 'grid_key_lookup' },
                 { type: 'index', name: 'grid_utfgrid_lookup' },
@@ -32,12 +33,7 @@ exports['test Database#exec'] = function(beforeExit) {
                 { type: 'view', name: 'grids' },
                 { type: 'view', name: 'tiles' }
             ]);
-
-            finished = true;
+            done();
         });
     });
-
-    beforeExit(function() {
-        assert.ok(finished);
-    });
-};
+});

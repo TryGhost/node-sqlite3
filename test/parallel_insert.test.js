@@ -1,38 +1,43 @@
-var sqlite3 = require('sqlite3');
+var sqlite3 = require('..');
 var assert = require('assert');
-var util = require('util');
 var helper = require('./support/helper');
 
-if (process.setMaxListeners) process.setMaxListeners(0);
-
-exports['test parallel inserts'] = function(beforeExit) {
-    var completed = false;
-    helper.deleteFile('test/tmp/test_parallel_inserts.db');
-    var db = new sqlite3.Database('test/tmp/test_parallel_inserts.db');
+describe('parallel', function() {
+    var db;
+    before(function(done) {
+        helper.deleteFile('test/tmp/test_parallel_inserts.db');
+        db = new sqlite3.Database('test/tmp/test_parallel_inserts.db', done);
+    });
 
     var columns = [];
     for (var i = 0; i < 128; i++) {
         columns.push('id' + i);
     }
 
-    db.serialize(function() {
-        db.run("CREATE TABLE foo (" + columns + ")");
+    it('should create the table', function(done) {
+        db.run("CREATE TABLE foo (" + columns + ")", done);
     });
 
-    for (var i = 0; i < 1000; i++) {
-        for (var values = [], j = 0; j < columns.length; j++) {
-            values.push(i * j);
+    it('should insert in parallel', function(done) {
+        for (var i = 0; i < 1000; i++) {
+            for (var values = [], j = 0; j < columns.length; j++) {
+                values.push(i * j);
+            }
+            db.run("INSERT INTO foo VALUES (" + values + ")");
         }
-        db.run("INSERT INTO foo VALUES (" + values + ")");
-    }
 
-    db.close(function() {
-        completed = true;
+        db.wait(done);
     });
 
-    beforeExit(function() {
-        assert.ok(completed);
+    it('should close the database', function(done) {
+        db.close(done);
+    });
+
+    it('should verify that the database exists', function() {
         assert.fileExists('test/tmp/test_parallel_inserts.db');
+    });
+
+    after(function() {
         helper.deleteFile('test/tmp/test_parallel_inserts.db');
     });
-};
+});

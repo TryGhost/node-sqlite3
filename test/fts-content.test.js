@@ -1,17 +1,13 @@
-/*jshint strict:true node:true es5:true onevar:true laxcomma:true laxbreak:true eqeqeq:true immed:true latedef:true*/
-(function () {
-  "use strict";
+var sqlite3 = require('..');
+var assert = require('assert');
 
-  var sqlite = require('sqlite3')
-    , assert = require('assert')
-    , db
-    ;
-
-  function readyForQuery() {
-    db.exec('CREATE VIRTUAL TABLE t1 USING fts4(content="", a, b, c);', function (err) {
-      assert.ok(!err);
+describe('fts', function() {
+    var db;
+    before(function(done) {
+        db = new sqlite3.Database(':memory:', done);
     });
-  }
 
-  db = new sqlite.Database(":memory:", readyForQuery);
-}());
+    it('should create a new fts4 table', function(done) {
+        db.exec('CREATE VIRTUAL TABLE t1 USING fts4(content="", a, b, c);', done);
+    });
+});

@@ -1,17 +1,21 @@
-var sqlite3 = require('sqlite3');
+var sqlite3 = require('..');
 var assert = require('assert');
 var helper = require('./support/helper');
 
-if (process.setMaxListeners) process.setMaxListeners(0);
-
-exports['test SQLITE_OK error'] = function(beforeExit) {
-    var completed = false;
+describe('null error', function() {
     var filename = 'test/tmp/test_sqlite_ok_error.db';
-    helper.deleteFile(filename);
-    var db = new sqlite3.Database(filename);
+    var db;
 
-    db.run("CREATE TABLE febp_data (leacode TEXT, leaname TEXT, state TEXT, postcode TEXT, fips TEXT, titleistim TEXT, ideastim TEXT, ideapool TEXT, ideapoolname TEXT, localebasis TEXT, localetype2 TEXT, version TEXT, leacount_2006 TEXT, ppexpend_2005 TEXT, ppexpend_2006 TEXT, ppexpend_2007 TEXT, ppexpend_2008 TEXT, ppexpendrank_2006 TEXT, ppexpendrank_2007 TEXT, ppexpendrank_2008 TEXT, rankppexpend_2005 TEXT, opbud_2004 TEXT, opbud_2006 TEXT, opbud_2007 TEXT, opbud_2008 TEXT, titlei_2004 TEXT, titlei_2006 TEXT, titlei_2007 TEXT, titlei_2008 TEXT, titlei_2009 TEXT, titlei_2010 TEXT, idea_2004 TEXT, idea_2005 TEXT, idea_2006 TEXT, idea_2007 TEXT, idea_2008 TEXT, idea_2009 TEXT, ideaest_2010 TEXT, impact_2007 TEXT, impact_2008 TEXT, impact_2009 TEXT, impact_2010 TEXT, fedrev_2006 TEXT, fedrev_2007 TEXT, fedrev_2008 TEXT, schonut_2006 TEXT, schonut_2007 TEXT, schomeal_2006 TEXT, schomeal_2007 TEXT, schoco_2006 TEXT, schocom_2007 TEXT, medicaid_2006 TEXT, medicaid_2007 TEXT, medicaid_2008 TEXT, cenpov_2004 TEXT, cenpov_2007 TEXT, cenpov_2008 TEXT, rankcenpov_2004 TEXT, rankcenpov_2007 TEXT, rankcenpov_2008 TEXT, enroll_2006 TEXT, enroll_2007 TEXT, enroll_2008 TEXT, white_2006 TEXT, white_2007 TEXT, white_2008 TEXT, afam_2006 TEXT, afam_2007 TEXT, afam_2008 TEXT, amin_2006 TEXT, amin_2007 TEXT, amin_2008 TEXT, asian_2006 TEXT, asian_2007 TEXT, asian_2008 TEXT, hisp_2006 TEXT, hisp_2007 TEXT, hisp_2008 TEXT, frpl_2006 TEXT, frpl_2007 TEXT, frpl_2008 TEXT, ell_2006 TEXT, ell_2007 TEXT, ell_2008 TEXT, sped_2006 TEXT, sped_2007 TEXT, sped_2008 TEXT, state4read_2005 TEXT, state4read_2006 TEXT, state4read_2007 TEXT, state4read_2008 TEXT, state4read_2009 TEXT, state4math_2005 TEXT, state4math_2006 TEXT, state4math_2007 TEXT, state4math_2008 TEXT, state4math_2009 TEXT, minor_2007 TEXT, minor_2008 TEXT, state8math_2006 TEXT, state8math_2007 TEXT, state8math_2008 TEXT, state8math_2009 TEXT, state8read_2006 TEXT, state8read_2007 TEXT, state8read_2008 TEXT, state8read_2009 TEXT, statehsmath_2006 TEXT, statehsmath_2007 TEXT, statehsmath_2008 TEXT, statehsmath_2009 TEXT, statehsread_2006 TEXT, statehsread_2007 TEXT, statehsread_2008 TEXT, statehsread_2009 TEXT)", function(err) {
-        if (err) throw err;
+    before(function(done) {
+        helper.deleteFile(filename);
+        db = new sqlite3.Database(filename, done);
+    });
+
+    it('should create a table', function(done) {
+        db.run("CREATE TABLE febp_data (leacode TEXT, leaname TEXT, state TEXT, postcode TEXT, fips TEXT, titleistim TEXT, ideastim TEXT, ideapool TEXT, ideapoolname TEXT, localebasis TEXT, localetype2 TEXT, version TEXT, leacount_2006 TEXT, ppexpend_2005 TEXT, ppexpend_2006 TEXT, ppexpend_2007 TEXT, ppexpend_2008 TEXT, ppexpendrank_2006 TEXT, ppexpendrank_2007 TEXT, ppexpendrank_2008 TEXT, rankppexpend_2005 TEXT, opbud_2004 TEXT, opbud_2006 TEXT, opbud_2007 TEXT, opbud_2008 TEXT, titlei_2004 TEXT, titlei_2006 TEXT, titlei_2007 TEXT, titlei_2008 TEXT, titlei_2009 TEXT, titlei_2010 TEXT, idea_2004 TEXT, idea_2005 TEXT, idea_2006 TEXT, idea_2007 TEXT, idea_2008 TEXT, idea_2009 TEXT, ideaest_2010 TEXT, impact_2007 TEXT, impact_2008 TEXT, impact_2009 TEXT, impact_2010 TEXT, fedrev_2006 TEXT, fedrev_2007 TEXT, fedrev_2008 TEXT, schonut_2006 TEXT, schonut_2007 TEXT, schomeal_2006 TEXT, schomeal_2007 TEXT, schoco_2006 TEXT, schocom_2007 TEXT, medicaid_2006 TEXT, medicaid_2007 TEXT, medicaid_2008 TEXT, cenpov_2004 TEXT, cenpov_2007 TEXT, cenpov_2008 TEXT, rankcenpov_2004 TEXT, rankcenpov_2007 TEXT, rankcenpov_2008 TEXT, enroll_2006 TEXT, enroll_2007 TEXT, enroll_2008 TEXT, white_2006 TEXT, white_2007 TEXT, white_2008 TEXT, afam_2006 TEXT, afam_2007 TEXT, afam_2008 TEXT, amin_2006 TEXT, amin_2007 TEXT, amin_2008 TEXT, asian_2006 TEXT, asian_2007 TEXT, asian_2008 TEXT, hisp_2006 TEXT, hisp_2007 TEXT, hisp_2008 TEXT, frpl_2006 TEXT, frpl_2007 TEXT, frpl_2008 TEXT, ell_2006 TEXT, ell_2007 TEXT, ell_2008 TEXT, sped_2006 TEXT, sped_2007 TEXT, sped_2008 TEXT, state4read_2005 TEXT, state4read_2006 TEXT, state4read_2007 TEXT, state4read_2008 TEXT, state4read_2009 TEXT, state4math_2005 TEXT, state4math_2006 TEXT, state4math_2007 TEXT, state4math_2008 TEXT, state4math_2009 TEXT, minor_2007 TEXT, minor_2008 TEXT, state8math_2006 TEXT, state8math_2007 TEXT, state8math_2008 TEXT, state8math_2009 TEXT, state8read_2006 TEXT, state8read_2007 TEXT, state8read_2008 TEXT, state8read_2009 TEXT, statehsmath_2006 TEXT, statehsmath_2007 TEXT, statehsmath_2008 TEXT, statehsmath_2009 TEXT, statehsread_2006 TEXT, statehsread_2007 TEXT, statehsread_2008 TEXT, statehsread_2009 TEXT)", done);
+    });
+
+    it('should insert rows with lots of null values', function(done) {
         var stmt = db.prepare('INSERT INTO febp_data VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', function(err) {
             if (err) throw err;
 
@@ -21,15 +25,16 @@ exports['test SQLITE_OK error'] = function(beforeExit) {
 
             stmt.finalize(function(err) {
                 if (err) throw err;
-                completed = true;
+                done();
             });
         });
-
     });
 
-    beforeExit(function() {
-        assert.ok(completed);
+    it('should have created the database', function() {
         assert.fileExists(filename);
+    });
+
+    after(function() {
         helper.deleteFile(filename);
     });
-};
+});
