@@ -32,12 +32,15 @@
         "step": "0.0.4",
         "mocha": "~1.7"
     },
+    "dependencies": {
+        "tar.gz":"*"
+    },
     "engines": {
         "node": ">= 0.6.13 && < 0.11.0"
     },
     "scripts": {
         "pretest":"make db",
-        "test": "mocha -R spec"
+        "test": "mocha -R spec --timeout 10000"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"
