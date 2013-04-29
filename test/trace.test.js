@@ -63,7 +63,5 @@ describe('tracing', function() {
 
         db.run("CREATE TABLE foo (id int)");
         db.close(done);
-
-        beforeExit(function(){});
     });
 });
