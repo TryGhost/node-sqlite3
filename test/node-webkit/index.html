@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Testing node-sqlite3 in node-webkit</title>
+    <script>
+var _ = require('./underscore-min.js');
+var collectedTests = [];
+var testBusy = false;
+var rescanDelay = 250;
+var ppDelay = 2000;
+var largeDelay = 12000;
+var extraLargeDelay = 70000;
+
+function postProcessor(ppFunction){
+   setTimeout(function(){
+      ppFunction();
+      testBusy = false;
+   }, ppDelay);
+}
+function largeDelayProcessor(ppFunction){
+   setTimeout(function(){
+      ppFunction();
+      testBusy = false;
+   }, largeDelay);
+}
+function extraLargeDelayProcessor(ppFunction){
+   setTimeout(function(){
+      ppFunction();
+      testBusy = false;
+   }, extraLargeDelay);
+}
+
+function testProcessor(){
+   if (collectedTests.length < 1){
+      log.innerHTML = '<b>Tests completed!</b><br>\n' + log.innerHTML;
+      return;
+   }
+   if (testBusy){
+      setTimeout(testProcessor, rescanDelay);
+      return;
+   }
+   var nextTest = collectedTests.shift();
+   log.innerHTML = nextTest.testFunctionName + '<br>\n' + log.innerHTML;
+   testBusy = true;
+   if( nextTest.extraLargeDelay ){
+      nextTest.testFunction(extraLargeDelayProcessor);
+   } else if( nextTest.largeDelay ){
+      nextTest.testFunction(largeDelayProcessor);
+   } else {
+      nextTest.testFunction(postProcessor);
+   }
+   testProcessor();
+}
+
+function runTests(){
+   var tests = {};
+   var skipTests = [
+      'test loadExtension',
+      'test Statement#each',
+      'test Statement#each with complete callback'
+   ];
+   var largeDelayTests = [
+      'test SQLITE_OK error'
+   ];
+   var extraLargeDelayTests = [
+      'test parallel inserts'
+   ];
+
+   require('fs').readdirSync('test').forEach(function(nextFile){
+      if( /\.js$/.test(nextFile) ){
+         _(tests).extend( require('../'+nextFile) );
+      }
+   });
+
+   _(tests).each(function(testFunction, testFunctionName){
+      if( _(skipTests).contains(testFunctionName) ){
+         log.innerHTML = '<b>skipped:</b> ' + testFunctionName + '<br>\n' + log.innerHTML;
+      } else {
+         collectedTests.push({
+            testFunction:     testFunction,
+            testFunctionName: testFunctionName,
+            largeDelay: _(largeDelayTests).contains(testFunctionName),
+            extraLargeDelay: _(extraLargeDelayTests).contains(testFunctionName)
+         });
+      }
+   });
+
+   testProcessor();
+}
+
+function loadHandler(){
+   log = document.getElementById('log');
+   process.chdir('../..');
+   require('nw.gui').Window.get().showDevTools();
+   runTests();
+}
+    </script>
+  </head>
+  <body onload="loadHandler()" id="bodyID">
+    <h1 id="hw">Testing</h1>
+    <div id="log" style="font-size: 75%; font-family: sans-serif;"></div>
+  </body>
+</html>

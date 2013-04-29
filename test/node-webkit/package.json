@@ -1,0 +1,12 @@
+{
+  "name": "sqlite3_test",
+  "main": "index.html",
+  "window": {
+    "width": 600,
+    "height": 700,
+    "position": "center",
+    "toolbar": false,
+    "title": "Starting...",
+    "resizable": true
+  }
+}
