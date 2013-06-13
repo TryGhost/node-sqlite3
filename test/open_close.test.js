@@ -4,8 +4,8 @@ var fs = require('fs');
 var helper = require('./support/helper');
 
 describe('open/close', function() {
-    before(function(done) {
-        helper.ensureExists('test/tmp',done);
+    before(function() {
+        helper.ensureExists('test/tmp');
     });
 
     describe('open and close non-existant database', function() {
