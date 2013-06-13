@@ -1,5 +1,6 @@
 var assert = require('assert');
 var fs = require('fs');
+var pathExists = require('fs').exists || require('path').exists;
 
 exports.deleteFile = function(name) {
     try {
@@ -10,6 +11,17 @@ exports.deleteFile = function(name) {
         }
     }
 };
+
+exports.ensureExists = function(name,cb) {
+    pathExists(name,function(exists) {
+        if (!exists) {
+            fs.mkdir(name,function(err) {
+                return cb(err);
+            });
+        }
+        return cb(null);
+    });
+}
 
 assert.fileDoesNotExist = function(name) {
     try {

@@ -4,6 +4,10 @@ var fs = require('fs');
 var helper = require('./support/helper');
 
 describe('open/close', function() {
+    before(function(done) {
+        helper.ensureExists('test/tmp',done);
+    });
+
     describe('open and close non-existant database', function() {
         before(function() {
             helper.deleteFile('test/tmp/test_create.db');

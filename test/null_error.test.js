@@ -7,8 +7,11 @@ describe('null error', function() {
     var db;
 
     before(function(done) {
-        helper.deleteFile(filename);
-        db = new sqlite3.Database(filename, done);
+        helper.ensureExists('test/tmp',function(err) {
+            if (err) throw err;
+            helper.deleteFile(filename);
+            db = new sqlite3.Database(filename, done);
+        });
     });
 
     it('should create a table', function(done) {
