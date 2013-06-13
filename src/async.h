@@ -50,7 +50,6 @@ public:
         assert(handle->data != NULL);
         Async* async = static_cast<Async*>(handle->data);
         delete async;
-        handle->data = NULL;
     }
 
     void finish() {

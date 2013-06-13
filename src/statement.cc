@@ -647,7 +647,6 @@ void Statement::CloseCallback(uv_handle_t* handle) {
     assert(handle->data != NULL);
     Async* async = static_cast<Async*>(handle->data);
     delete async;
-    handle->data = NULL;
 }
 
 void Statement::AsyncEach(uv_async_t* handle, int status) {
