@@ -1,6 +1,6 @@
 # NAME
 
-node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [node.js](https://github.com/joyent/node) 0.2-0.4 (versions 2.0.x), **0.6.13+ and 0.8.x** (versions 2.1.x).
+node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [node.js](https://github.com/joyent/node) 0.2-0.4 (versions 2.0.x), **0.6.13+, 0.8.x, and 0.10.x** (versions 2.1.x).
 
 
 
@@ -50,31 +50,42 @@ See the [API documentation](https://github.com/developmentseed/node-sqlite3/wiki
 
 # BUILDING
 
-Make sure you have the sources for `sqlite3` installed. Mac OS X ships with these by default. If you don't have them installed, install the `-dev` package with your package manager, e.g. `apt-get install libsqlite3-dev` for Debian/Ubuntu. Make sure that you have at least `libsqlite3` >= 3.6.
+The module depends only on libqlite3, but by default will build an internal/bundled copy so an externally installed sqlite3 is not required.
 
-Bulding also requires node-gyp to be installed. You can do this with npm:
+If you wish to install against an external sqlite then you need to pass the `--sqlite` argument to node-gyp. You can do this like:
 
-    npm install -g node-gyp
+    ./configure --sqlite=/usr/local
+    make
+
+Or like this (using the node-gyp built into npm):
+
+     `npm explore npm -g -- pwd`/bin/node-gyp-bin/node-gyp --sqlite=/usr/local
+     make
+
+If building against an external sqlite3 make sure to have the development headers available. Mac OS X ships with these by default. If you don't have them installed, install the `-dev` package with your package manager, e.g. `apt-get install libsqlite3-dev` for Debian/Ubuntu. Make sure that you have at least `libsqlite3` >= 3.6.
+
+Note, if building against homebrew-installed sqlite on OS X you can do:
+
+    ./configure --sqlite=/usr/local/opt/sqlite/
+    make
 
 To obtain and build the bindings:
 
     git clone git://github.com/developmentseed/node-sqlite3.git
     cd node-sqlite3
-    ./configure
-    make
+    npm install
 
 You can also use [`npm`](https://github.com/isaacs/npm) to download and install them:
 
     npm install sqlite3
 
 
-
 # TESTS
 
-[expresso](https://github.com/visionmedia/expresso) is required to run unit tests.
+[mocha](https://github.com/visionmedia/mocha) is required to run unit tests.
 
-    npm install expresso
-    make test
+    npm install mocha
+    npm test
 
 
 
