@@ -50,7 +50,11 @@ See the [API documentation](https://github.com/developmentseed/node-sqlite3/wiki
 
 # BUILDING
 
-The module depends only on libqlite3, but by default will build an internal/bundled copy so an externally installed sqlite3 is not required.
+Unless building via `npm install` you will need `node-gyp` installed globally:
+
+    npm install node-gyp -g
+
+The module depends only on libsqlite3. However, by default, an internal/bundled copy of sqlite will be build and linked, so an externally installed sqlite3 is not required.
 
 If you wish to install against an external sqlite then you need to pass the `--sqlite` argument to node-gyp. You can do this like:
 
@@ -59,7 +63,7 @@ If you wish to install against an external sqlite then you need to pass the `--s
 
 Or like this (using the node-gyp built into npm):
 
-     `npm explore npm -g -- pwd`/bin/node-gyp-bin/node-gyp --sqlite=/usr/local
+     node-gyp --sqlite=/usr/local
      make
 
 If building against an external sqlite3 make sure to have the development headers available. Mac OS X ships with these by default. If you don't have them installed, install the `-dev` package with your package manager, e.g. `apt-get install libsqlite3-dev` for Debian/Ubuntu. Make sure that you have at least `libsqlite3` >= 3.6.
