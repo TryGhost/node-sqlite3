@@ -20,17 +20,21 @@
     {
       'target_name': 'action_before_build',
       'type': 'none',
-      'actions': [
-        {
-          'action_name': 'unpack_sqlite_dep',
-          'inputs': [
-            './deps/sqlite-autoconf-<@(sqlite_version).tar.gz'
-          ],
-          'outputs': [
-            './deps/sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
-          ],
-          'action': ['<@(bin_name)','./node_modules/.bin/targz','deps/sqlite-autoconf-<@(sqlite_version).tar.gz','-x','deps/']
-        }
+      'conditions': [
+        ['sqlite == "internal"', {
+          'actions': [
+            {
+              'action_name': 'unpack_sqlite_dep',
+              'inputs': [
+                './deps/sqlite-autoconf-<@(sqlite_version).tar.gz'
+              ],
+              'outputs': [
+                './deps/sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
+              ],
+              'action': ['<@(bin_name)','./node_modules/.bin/targz','deps/sqlite-autoconf-<@(sqlite_version).tar.gz','-x','deps/']
+            }
+          ]
+        }]
       ]
     },
     {
