@@ -1,5 +1,16 @@
 {
   'includes': [ 'common-sqlite.gypi' ],
+  'conditions': [
+      ['OS=="win"', {
+        'variables': {
+          'bin_name':'call'
+        },
+      },{
+        'variables': {
+          'bin_name':'node'
+        },
+      }]
+  ],
   'target_defaults': {
     'default_configuration': 'Debug',
     'configurations': {
@@ -40,8 +51,26 @@
 
   'targets': [
     {
+      'target_name': 'action_before_build',
+      'type': 'none',
+      'hard_dependency': 1,
+      'actions': [
+        {
+          'action_name': 'unpack_sqlite_dep',
+          'inputs': [
+            './sqlite-autoconf-<@(sqlite_version).tar.gz'
+          ],
+          'outputs': [
+            './sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
+          ],
+          'action': ['<@(bin_name)','../node_modules/.bin/targz','./sqlite-autoconf-<@(sqlite_version).tar.gz','-x','./']
+        }
+      ]
+    },
+    {
       'target_name': 'sqlite3',
       'type': 'static_library',
+      'hard_dependency': 1,
       'include_dirs': [ './sqlite-autoconf-<@(sqlite_version)/' ],
       'direct_dependent_settings': {
         'include_dirs': [ './sqlite-autoconf-<@(sqlite_version)/' ],

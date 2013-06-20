@@ -7,36 +7,14 @@
       ['OS=="win"', {
         'variables': {
           'copy_command%': 'copy',
-          'bin_name':'call'
         },
       },{
         'variables': {
           'copy_command%': 'cp',
-          'bin_name':'node'
         },
       }]
   ],
   'targets': [
-    {
-      'target_name': 'action_before_build',
-      'type': 'none',
-      'conditions': [
-        ['sqlite == "internal"', {
-          'actions': [
-            {
-              'action_name': 'unpack_sqlite_dep',
-              'inputs': [
-                './deps/sqlite-autoconf-<@(sqlite_version).tar.gz'
-              ],
-              'outputs': [
-                './deps/sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
-              ],
-              'action': ['<@(bin_name)','./node_modules/.bin/targz','deps/sqlite-autoconf-<@(sqlite_version).tar.gz','-x','deps/']
-            }
-          ]
-        }]
-      ]
-    },
     {
       'target_name': 'node_sqlite3',
       'conditions': [
@@ -49,7 +27,7 @@
         },
         {
             'dependencies': [
-              'action_before_build',
+              'deps/sqlite3.gyp:action_before_build',
               'deps/sqlite3.gyp:sqlite3'
             ]
         }
