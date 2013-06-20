@@ -2,10 +2,11 @@ build:
 	node-gyp build
 
 clean:
-	rm test/support/big.db*
-	rm test/tmp/*
+	rm -f test/support/big.db*
+	rm -f test/tmp/*
 	rm -rf ./deps/sqlite-autoconf-*/
 	rm -rf ./build
+	rm -rf ./out
 
 db:
 	@if ! [ -f test/support/big.db ]; then                                   \
