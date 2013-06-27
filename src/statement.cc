@@ -1,6 +1,7 @@
 #include <string.h>
 #include <node.h>
 #include <node_buffer.h>
+#include <node_version.h>
 
 #include "macros.h"
 #include "database.h"
@@ -760,8 +761,11 @@ Local<Object> Statement::RowToJS(Row* row) {
                 value = Local<Value>(String::New(((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size()));
             } break;
             case SQLITE_BLOB: {
-                Buffer *buffer = Buffer::New(((Values::Blob*)field)->value, ((Values::Blob*)field)->length);
-                value = Local<Value>::New(buffer->handle_);
+#if NODE_VERSION_AT_LEAST(0, 11, 3)
+                value = Local<Value>::New(Buffer::New(((Values::Blob*)field)->value, ((Values::Blob*)field)->length));
+#else
+                value = Local<Value>::New(Buffer::New(((Values::Blob*)field)->value, ((Values::Blob*)field)->length)->handle_);
+#endif
             } break;
             case SQLITE_NULL: {
                 value = Local<Value>::New(Null());
