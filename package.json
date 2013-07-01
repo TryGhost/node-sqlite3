@@ -35,6 +35,7 @@
     "dependencies": {
         "tar.gz":"*"
     },
+    "bundledDependencies": ["tar.gz"],
     "engines": {
         "node": ">= 0.6.13 && < 0.11.0"
     },
