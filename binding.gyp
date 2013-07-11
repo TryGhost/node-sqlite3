@@ -27,7 +27,6 @@
         },
         {
             'dependencies': [
-              'deps/sqlite3.gyp:action_before_build',
               'deps/sqlite3.gyp:sqlite3'
             ]
         }

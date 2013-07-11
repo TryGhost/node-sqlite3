@@ -1,16 +1,5 @@
 {
   'includes': [ 'common-sqlite.gypi' ],
-  'conditions': [
-      ['OS=="win"', {
-        'variables': {
-          'bin_name':'call'
-        },
-      },{
-        'variables': {
-          'bin_name':'node'
-        },
-      }]
-  ],
   'target_defaults': {
     'default_configuration': 'Debug',
     'configurations': {
@@ -61,17 +50,27 @@
             './sqlite-autoconf-<@(sqlite_version).tar.gz'
           ],
           'outputs': [
-            './sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
+            '<(SHARED_INTERMEDIATE_DIR)/sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
           ],
-          'action': ['python','./extract.py','./sqlite-autoconf-<@(sqlite_version).tar.gz']
+          'action': ['python','./extract.py','./sqlite-autoconf-<@(sqlite_version).tar.gz','<(SHARED_INTERMEDIATE_DIR)']
         }
-      ]
+      ],
+      'direct_dependent_settings': {
+        'include_dirs': [
+          '<(SHARED_INTERMEDIATE_DIR)',
+        ],
+        'sources': [
+          '<(SHARED_INTERMEDIATE_DIR)/sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
+        ]
+      },
     },
     {
       'target_name': 'sqlite3',
       'type': 'static_library',
-      'hard_dependency': 1,
       'include_dirs': [ './sqlite-autoconf-<@(sqlite_version)/' ],
+      'dependencies': [
+        'action_before_build'
+      ],
       'direct_dependent_settings': {
         'include_dirs': [ './sqlite-autoconf-<@(sqlite_version)/' ],
         'defines': [
@@ -86,7 +85,9 @@
         'SQLITE_ENABLE_FTS3',
         'SQLITE_ENABLE_RTREE'
       ],
-      'sources': [ './sqlite-autoconf-<@(sqlite_version)/sqlite3.c' ],
+      'export_dependent_settings': [
+        'action_before_build',
+      ]
     }
   ]
 }
