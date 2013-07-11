@@ -2,7 +2,8 @@ import sys
 import tarfile
 import os
 
-tarball = sys.argv[1]
-
-if not os.path.exists(tarball.replace('.tar.gz','')):
-    tarfile.open().extractall('.')
+tarball = os.path.abspath(sys.argv[1])
+dirname = os.path.dirname(tarball)
+tfile = tarfile.open(tarball,'r:gz');
+tfile.extractall(dirname)
+sys.exit(0)
