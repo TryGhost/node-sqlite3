@@ -63,7 +63,7 @@
           'outputs': [
             './sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
           ],
-          'action': ['<@(bin_name)','../node_modules/.bin/targz','./sqlite-autoconf-<@(sqlite_version).tar.gz','-x','./']
+          'action': ['python','./extract.py','./sqlite-autoconf-<@(sqlite_version).tar.gz']
         }
       ]
     },

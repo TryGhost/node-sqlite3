@@ -30,12 +30,8 @@
     },
     "devDependencies": {
         "step": "0.0.4",
-        "mocha": "~1.7"
+        "mocha": "1.12.x"
     },
-    "dependencies": {
-        "tar.gz":"*"
-    },
-    "bundledDependencies": ["tar.gz"],
     "engines": {
         "node": ">= 0.6.13 && < 0.11.0"
     },
