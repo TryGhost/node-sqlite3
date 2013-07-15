@@ -29,7 +29,6 @@
         "url": "git://github.com/developmentseed/node-sqlite3.git"
     },
     "devDependencies": {
-        "step": "0.0.4",
         "mocha": "1.12.x"
     },
     "engines": {
