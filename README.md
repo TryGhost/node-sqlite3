@@ -107,6 +107,7 @@ You can also use [`npm`](https://github.com/isaacs/npm) to download and install 
 * [Carter Thaxton](https://github.com/carter-thaxton)
 * [Audrius Kažukauskas](https://github.com/audriusk)
 * [Johannes Schauer](https://github.com/pyneo)
+* [Mithgol](https://github.com/Mithgol)
 
 
 
