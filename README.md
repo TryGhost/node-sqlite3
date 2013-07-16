@@ -2,7 +2,7 @@
 
 node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [node.js](https://github.com/joyent/node) 0.2-0.4 (versions 2.0.x), **0.6.13+, 0.8.x, and 0.10.x** (versions 2.1.x).
 
-[![Build Status](https://secure.travis-ci.org/developmentseed/node-sqlite3.png)](http://travis-ci.org/developmentseed/node-sqlite3)
+[![Build Status](https://travis-ci.org/developmentseed/node-sqlite3.png?branch=master)](https://travis-ci.org/developmentseed/node-sqlite3)
 
 
 # USAGE
