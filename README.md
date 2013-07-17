@@ -50,13 +50,27 @@ db.close();
 See the [API documentation](https://github.com/developmentseed/node-sqlite3/wiki) in the wiki.
 
 
+# INSTALLING
+
+You can use [`npm`](https://github.com/isaacs/npm) to download and install:
+
+* The latest `sqlite3` package: `npm install sqlite`
+
+* GitHub's `master` branch: `npm install https://github.com/developmentseed/node-sqlite3/tarball/master`
+
+In both cases the module is automatically built with npm's internal version of `node-gyp`,
+and thus your system must meet [node-gyp's requirements](https://github.com/TooTallNate/node-gyp#installation).
+
+You can also make your own build of `sqlite3` from the source (see the next section for details).
+
+
 # BUILDING
 
-Unless building via `npm install` you will need `node-gyp` installed globally:
+Unless building via `npm install` (which uses its own `node-gyp`) you will need `node-gyp` installed globally:
 
     npm install node-gyp -g
 
-The module depends only on libsqlite3. However, by default, an internal/bundled copy of sqlite will be built and statically linked, so an externally installed sqlite3 is not required.
+The sqlite3 module depends only on libsqlite3. However, by default, an internal/bundled copy of sqlite will be built and statically linked, so an externally installed sqlite3 is not required.
 
 If you wish to install against an external sqlite then you need to pass the `--sqlite` argument to `node-gyp`, `npm install` or the `configure` wrapper.
 
@@ -79,20 +93,12 @@ Note, if building against homebrew-installed sqlite on OS X you can do:
     ./configure --sqlite=/usr/local/opt/sqlite/
     make
 
-To obtain and build the bindings:
 
-    git clone git://github.com/developmentseed/node-sqlite3.git
-    cd node-sqlite3
-    npm install
-
-You can also use [`npm`](https://github.com/isaacs/npm) to download and install them:
-
-    npm install sqlite3
-
-
-# TESTS
+# TESTING
 
 [mocha](https://github.com/visionmedia/mocha) is required to run unit tests.
+
+In sqlite3's directory (where its `package.json` resides) run the following:
 
     npm install mocha
     npm test
