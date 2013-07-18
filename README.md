@@ -1,6 +1,6 @@
 # NAME
 
-node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [node.js](https://github.com/joyent/node) 0.2-0.4 (versions 2.0.x), **0.6.13+, 0.8.x, and 0.10.x** (versions 2.1.x).
+node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](http://nodejs.org/) 0.2-0.4 (versions 2.0.x), **0.6.13+, 0.8.x, and 0.10.x** (versions 2.1.x).
 
 [![Build Status](https://travis-ci.org/developmentseed/node-sqlite3.png?branch=master)](https://travis-ci.org/developmentseed/node-sqlite3)
 [![npm package version](https://badge.fury.io/js/sqlite3.png)](https://npmjs.org/package/sqlite3)
@@ -8,7 +8,7 @@ node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings
 
 # USAGE
 
-Install with `npm install sqlite3`.
+**Note:**   the module must be [installed](#installing) before use.
 
 ``` js
 var sqlite3 = require('sqlite3').verbose();
