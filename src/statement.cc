@@ -191,9 +191,6 @@ template <class T> Values::Field*
     else if (source->IsDate()) {
         return new Values::Float(pos, source->NumberValue());
     }
-    else if (source->IsUndefined()) {
-        return NULL;
-    }
     else {
         return NULL;
     }
