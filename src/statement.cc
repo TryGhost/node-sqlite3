@@ -258,7 +258,7 @@ bool Statement::Bind(const Parameters parameters) {
     Parameters::const_iterator it = parameters.begin();
     Parameters::const_iterator end = parameters.end();
 
-    for (; it < end; it++) {
+    for (; it < end; ++it) {
         Values::Field* field = *it;
 
         if (field != NULL) {
@@ -542,7 +542,7 @@ void Statement::Work_AfterAll(uv_work_t* req) {
                 Local<Array> result(Array::New(baton->rows.size()));
                 Rows::const_iterator it = baton->rows.begin();
                 Rows::const_iterator end = baton->rows.end();
-                for (int i = 0; it < end; it++, i++) {
+                for (int i = 0; it < end; ++it, i++) {
                     result->Set(i, RowToJS(*it));
                     delete *it;
                 }
@@ -668,7 +668,7 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
 
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
-            for (int i = 0; it < end; it++, i++) {
+            for (int i = 0; it < end; ++it, i++) {
                 argv[1] = RowToJS(*it);
                 async->retrieved++;
                 TRY_CATCH_CALL(async->stmt->handle_, async->item_cb, 2, argv);
@@ -742,7 +742,7 @@ Local<Object> Statement::RowToJS(Row* row) {
 
     Row::const_iterator it = row->begin();
     Row::const_iterator end = row->end();
-    for (int i = 0; it < end; it++, i++) {
+    for (int i = 0; it < end; ++it, i++) {
         Values::Field* field = *it;
 
         Local<Value> value;
