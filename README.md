@@ -54,7 +54,7 @@ See the [API documentation](https://github.com/developmentseed/node-sqlite3/wiki
 
 You can use [`npm`](https://github.com/isaacs/npm) to download and install:
 
-* The latest `sqlite3` package: `npm install sqlite`
+* The latest `sqlite3` package: `npm install sqlite3`
 
 * GitHub's `master` branch: `npm install https://github.com/developmentseed/node-sqlite3/tarball/master`
 
