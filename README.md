@@ -2,6 +2,8 @@
 
 node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](http://nodejs.org/) 0.2-0.4 (versions 2.0.x), **0.6.13+, 0.8.x, and 0.10.x** (versions 2.1.x).
 
+(Can also run in [node-webkit](https://github.com/rogerwang/node-webkit) if it uses a supported version of Node's engine.)
+
 [![Build Status](https://travis-ci.org/developmentseed/node-sqlite3.png?branch=master)](https://travis-ci.org/developmentseed/node-sqlite3)
 [![npm package version](https://badge.fury.io/js/sqlite3.png)](https://npmjs.org/package/sqlite3)
 
@@ -61,10 +63,33 @@ You can use [`npm`](https://github.com/isaacs/npm) to download and install:
 In both cases the module is automatically built with npm's internal version of `node-gyp`,
 and thus your system must meet [node-gyp's requirements](https://github.com/TooTallNate/node-gyp#installation).
 
-You can also make your own build of `sqlite3` from the source (see the next section for details).
+It is also possible to make your own build of `sqlite3` from its source instead of its npm package ([see below](#building-from-the-source)).
+
+It is possible to use the installed package in [node-webkit](https://github.com/rogerwang/node-webkit) instead of the vanilla Node.js, but a rebuild is required before use (see the next section).
 
 
-# BUILDING
+# REBUILDING FOR NODE-WEBKIT
+
+Because of ABI differences, only a rebuilt version of `sqlite3` can be used in [node-webkit](https://github.com/rogerwang/node-webkit).
+
+After the `sqlite3` module is installed (according to the previous section), do the following:
+
+1. Install [`nw-gyp`](https://github.com/rogerwang/nw-gyp) globally: `npm install nw-gyp -g` *(unless already installed)*
+
+2. Use `nw-gyp` to rebuild the module: `nw-gyp rebuild --target=0.6.2`
+
+Remember the following:
+
+* In the `nw-gyp rebuild` command, specify the actual target version of your node-webkit. The command must be run in sqlite3's directory (where its `package.json` resides).
+
+* After the `sqlite3` package is rebuilt for node-webkit it cannot run in the vanilla Node.js (and vice versa).
+   * For example, `npm test` of the node-webkit's package would fail.
+   * If you need `sqlite3` package both for Node.js and node-webkit, then you should make two separate installations of `sqlite3` (in different directories) and rebuild only one of them for node-webkit.
+
+Visit the “[Using Node modules](https://github.com/rogerwang/node-webkit/wiki/Using-Node-modules)” article in the node-webkit's wiki for more details.
+
+
+# BUILDING FROM THE SOURCE
 
 Unless building via `npm install` (which uses its own `node-gyp`) you will need `node-gyp` installed globally:
 
