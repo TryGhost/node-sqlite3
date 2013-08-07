@@ -16,5 +16,6 @@ gyp-mac-tool
 .dirstamp
 npm-debug.log
 test/support/big.db
+lib/node_sqlite3.node
 test/tmp
 .DS_Store
