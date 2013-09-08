@@ -5,6 +5,8 @@
 *.lo
 *.Makefile
 *.target.gyp.mk
+stage
+lib/binding
 build
 out
 Release
