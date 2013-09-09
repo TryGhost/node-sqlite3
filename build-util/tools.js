@@ -1,47 +1,46 @@
 var ProgressBar = require('progress');
 var http = require('http');
 var url = require('url');
-var fs = require('fs');
 
-function download(from,to,callback) {
+function download(from,options,callback) {
+    var options = options || {};
     var uri = url.parse(from);
     var req = http.request(uri);
     req.on('response', function(res){
         // needed for end to be called
         res.resume();
         if (res.statusCode !== 200) {
-            return callback(new Error('Server returned '+ res.statusCode),false);
+            return callback(new Error('Server returned '+ res.statusCode));
         }
-        var len = parseInt(res.headers['content-length'], 10);
-        console.log();
-        var bar = new ProgressBar('  downloading [:bar] :percent :etas', {
-          complete: '='
-        , incomplete: ' '
-        , width: 40
-        , total: len
-        });
+        if (options.progress) {
+            var len = parseInt(res.headers['content-length'], 10);
+            console.log();
+            var bar = new ProgressBar('Downloading [:bar] :percent :etas', {
+              complete: '='
+            , incomplete: ' '
+            , width: 40
+            , total: len
+            });
+        }
         function returnBuffer() {
-            for (var length = 0, i = 0; i < out.length; i++) {
+            // todo - use http://nodejs.org/api/buffer.html#buffer_class_method_buffer_concat_list_totallength
+            for (var length = 0, i = 0; i < out.length; ++i) {
                 length += out[i].length;
             }
             var result = new Buffer(length);
-            for (var pos = 0, j = 0; j < out.length; j++) {
+            for (var pos = 0, j = 0; j < out.length; ++j) {
                 out[j].copy(result, pos);
                 pos += out[j].length;
             }
-            fs.writeFile(to,result,function(err) {
-                if (err) return callback(err,true);
-                return callback(null,true);
-            });
+            return callback(null,result);
         }
         var out = [];
         res.on('data', function(chunk) {
-            bar.tick(chunk.length);
+            if (options.progress) bar.tick(chunk.length);
             out.push(chunk);
-            found_remote = true;
         });
         res.on('end', function(){
-            console.log('\n');
+            if (options.progress) console.log('\n');
             returnBuffer();
         });
         res.on('close', function(){
@@ -49,7 +48,7 @@ function download(from,to,callback) {
         });
     });
     req.on('error', function(err){
-        callback(err,false);
+        callback(err);
     });
     req.end();
 }

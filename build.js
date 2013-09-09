@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 
 /*
-
 TODO
-
-Really should do:
- - checksumming
-
-Future:
+ - verbose/quiet mode
  - travis/nvm/32bit auto-build and post to s3 for linux
+ - cloudfront + logging
  - script to check for acl-public
  - use require() to support node_modules location of binary?
 */
@@ -24,6 +20,10 @@ var cp = require('child_process');
 var fs = require('fs');
 var path = require('path');
 var os = require('os');
+var crypto = require('crypto');
+
+var cloudfront_url = 'http://dei9kzb8scfgo.cloudfront.net/';
+var s3_url = 'http://node-sqlite3.s3.amazonaws.com/';
 
 var opts = {
     name: 'node_sqlite3',
@@ -32,7 +32,7 @@ var opts = {
     configuration: 'Release',
     target_arch: process.arch,
     platform: process.platform,
-    uri: 'http://dei9kzb8scfgo.cloudfront.net/',
+    uri: s3_url,
     paths: {}
 }
 
@@ -129,7 +129,13 @@ function tarball(opts,callback) {
     new targz(9).compress(source, opts.paths.tarball_path, function(err) {
         if (err) return callback(err);
         log('Versioned binary staged for upload at ' + opts.paths.tarball_path);
-        return callback();
+        var sha1 = crypto.createHash('sha1');
+        fs.readFile(opts.paths.tarball_path,function(err,buffer) {
+            if (err) return callback(err);
+            sha1.update(buffer);
+            log('Writing shasum at ' + opts.paths.tarball_shasum);
+            fs.writeFile(opts.paths.tarball_shasum,sha1.digest('hex'),callback);
+        });
     });
 }
 
@@ -183,6 +189,7 @@ var staged_module_path = path.join(__dirname, 'stage', opts.binary.getModuleAbi(
 opts.paths.staged_module_file_name = rel(path.join(staged_module_path,opts.binary.filename()));
 opts.paths.build_module_path = rel(path.join(__dirname, 'build', opts.binary.configuration, opts.binary.filename()));
 opts.paths.tarball_path = rel(path.join(__dirname, 'stage', opts.binary.configuration, opts.binary.getArchivePath()));
+opts.paths.tarball_shasum = opts.paths.tarball_path.replace(opts.binary.compression(),'.sha1.txt');
 
 if (!{ia32: true, x64: true, arm: true}.hasOwnProperty(opts.target_arch)) {
     return done(new Error('Unsupported (?) architecture: '+ opts.target_arch+ ''));
@@ -206,28 +213,52 @@ if (opts.force) {
                 log_debug(err);
             }
         }
-        var tmpfile = path.join(tmpdir,path.basename(from));
-        util.download(from,tmpfile,function(err,found_remote) {
+
+        log('Checking for ' + from);
+        util.download(from,{progress:true}, function(err,buffer) {
             if (err) {
-                if (!found_remote) {
-                    log(from + ' not found, falling back to source compile (' + err + ')');
-                    build(opts,done);
-                } else {
-                    return done(err);
-                }
-            } else {
-                log('downloaded to temp location: '+ tmpfile);
-                new targz().extract(tmpfile, opts.paths.runtime_folder, function(err) {
-                    if (err) return done(err);
-                    try {
-                        test(opts,true,done);
-                    } catch (ex) {
-                        // Stat failed
-                        log(opts.paths.runtime_folder + ' not found, falling back to source compile');
-                        build(opts,done);
+                log(from + ' not found, falling back to source compile (' + err + ')');
+                return build(opts,done);
+            }
+            // calculate shasum of tarball
+            var sha1 = crypto.createHash('sha1');
+            sha1.update(buffer);
+            var actual_shasum = sha1.digest('hex');
+
+            // write local tarball now to make debugging easier if following checks fail
+            var tmpfile = path.join(tmpdir,path.basename(from));
+            fs.writeFile(tmpfile,buffer,function(err) {
+                if (err) return done(err);
+                log('Downloaded to: '+ tmpfile);
+                // fetch shasum expected value
+                var from_shasum = from.replace(opts.binary.compression(),'.sha1.txt');
+                log('Checking for ' + from_shasum);
+                util.download(from_shasum,{progress:false},function(err,expected_shasum_buffer) {
+                    if (err) {
+                        log(from_shasum + ' not found, skipping shasum check (' + err + ')');
+                    } else {
+                        // now check shasum match
+                        var expected = expected_shasum_buffer.toString().trim();
+                        if (expected !== actual_shasum) {
+                            return done(new Error("shasum does not match between remote and local: " + expected + ' ' + actual_shasum));
+                        } else {
+                            log('Sha1sum matches! ' + expected);
+                        }
+                        // we are good: continue
+                        log('Extracting to ' + opts.paths.runtime_folder);
+                        new targz().extract(tmpfile, opts.paths.runtime_folder, function(err) {
+                            if (err) return done(err);
+                            try {
+                                return test(opts,true,done);
+                            } catch (ex) {
+                                // Stat failed
+                                log(opts.paths.runtime_folder + ' not found, falling back to source compile');
+                                return build(opts,done);
+                            }
+                        });
                     }
                 });
-            }        
+            });
         });
     }
 }
