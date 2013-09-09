@@ -215,7 +215,7 @@ if (opts.force) {
         }
 
         log('Checking for ' + from);
-        util.download(from,{progress:true}, function(err,buffer) {
+        util.download(from,{progress:false}, function(err,buffer) {
             if (err) {
                 log(from + ' not found, falling back to source compile (' + err + ')');
                 return build(opts,done);
