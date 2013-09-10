@@ -7,23 +7,20 @@ TODO
  - cloudfront + logging
  - script to check for acl-public
  - use require() to support node_modules location of binary?
+ - consider json config for configuring build and for handling routing remotely
+ - drop tar.gz - use node-tar directly - https://github.com/isaacs/node-tar/issues/11
 */
 
 var package_json = require('./package.json');
 var Binary = require('./lib/binary_name.js').Binary;
 var util = require('./build-util/tools.js');
 var mkdirp = require('mkdirp');
-// https://github.com/isaacs/node-tar/issues/11
-//var tar = require('tar');
 var targz = require('tar.gz');
 var cp = require('child_process');
 var fs = require('fs');
 var path = require('path');
 var os = require('os');
 var crypto = require('crypto');
-
-var cloudfront_url = 'http://dei9kzb8scfgo.cloudfront.net/';
-var s3_url = 'http://node-sqlite3.s3.amazonaws.com/';
 
 var opts = {
     name: 'node_sqlite3',
@@ -32,7 +29,7 @@ var opts = {
     configuration: 'Release',
     target_arch: process.arch,
     platform: process.platform,
-    uri: s3_url,
+    uri: 'http://node-sqlite3.s3.amazonaws.com/',
     paths: {}
 }
 
@@ -202,16 +199,15 @@ if (opts.force) {
         test(opts,true,done);
     } catch (ex) {
         var from = opts.binary.getRemotePath();
-        var tmpdir;
+        var tmpdirbase = '/tmp/';
         if (os.tmpdir) {
-            tmpdir = os.tmpdir();
-        } else {
-            var tmpdir = '/tmp/node-sqlite3-' + opts.binary.configuration;
-            try {
-                mkdirp.sync(tmpdir);
-            } catch (err) {
-                log_debug(err);
-            }
+            tmpdirbase = os.tmpdir();
+        }
+        var tmpdir = path.join(tmpdirbase,'node-sqlite3-'+opts.binary.configuration);
+        try {
+            mkdirp.sync(tmpdir);
+        } catch (err) {
+            log_debug(err);
         }
 
         log('Checking for ' + from);
