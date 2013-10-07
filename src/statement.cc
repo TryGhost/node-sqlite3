@@ -215,7 +215,7 @@ template <class T> T* Statement::Bind(const Arguments& args, int start, int last
                 baton->parameters.push_back(BindParameter(array->Get(i), pos));
             }
         }
-        else if (!args[start]->IsObject() || args[start]->IsRegExp() || args[start]->IsDate()) {
+        else if (!args[start]->IsObject() || args[start]->IsRegExp() || args[start]->IsDate() || Buffer::HasInstance(args[start])) {
             // Parameters directly in array.
             // Note: bind parameters start with 1.
             for (int i = start, pos = 1; i < last; i++, pos++) {
