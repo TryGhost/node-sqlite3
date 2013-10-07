@@ -6,6 +6,7 @@ describe('parallel', function() {
     var db;
     before(function(done) {
         helper.deleteFile('test/tmp/test_parallel_inserts.db');
+        helper.ensureExists('test/tmp');
         db = new sqlite3.Database('test/tmp/test_parallel_inserts.db', done);
     });
 

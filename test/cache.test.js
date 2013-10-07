@@ -3,6 +3,10 @@ var assert = require('assert');
 var helper = require('./support/helper');
 
 describe('cache', function() {
+    before(function() {
+        helper.ensureExists('test/tmp');
+    });
+
     it('should cache Database objects while opening', function(done) {
         var filename = 'test/tmp/test_cache.db';
         helper.deleteFile(filename);

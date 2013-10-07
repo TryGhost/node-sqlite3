@@ -1,7 +1,8 @@
 {
     "name": "sqlite3",
     "description": "Asynchronous, non-blocking SQLite3 bindings",
-    "version": "2.1.7",
+    "version": "2.1.17",
+    "abi":"a",
     "homepage": "http://github.com/developmentseed/node-sqlite3",
     "author": {
         "name": "Development Seed",
@@ -22,21 +23,26 @@
         "Audrius Kažukauskas <audrius@neutrino.lt>",
         "Johannes Schauer <josch@pyneo.org>",
         "Nathan Rajlich <nathan@tootallnate.net>",
-        "AJ ONeal <coolaj86@gmail.com>"
+        "AJ ONeal <coolaj86@gmail.com>",
+        "Mithgol"
     ],
     "repository": {
         "type": "git",
         "url": "git://github.com/developmentseed/node-sqlite3.git"
     },
-    "devDependencies": {
-        "step": "0.0.4",
-        "mocha": "~1.7"
+    "dependencies": {
+        "progress":"~1.0.1",
+        "mkdirp":"~0.3.5",
+        "tar.gz": "~0.1.1"
     },
+    "bundledDependencies":["mkdirp","tar.gz","progress"],
     "engines": {
-        "node": ">= 0.6.13 && < 0.11.0"
+        "node": ">= 0.6.13 < 0.11.0"
     },
     "scripts": {
-        "test": "mocha -R spec"
+        "install": "node build.js",
+        "pretest": "node test/support/createdb.js",
+        "test": "mocha -R spec --timeout 200000"
     },
     "licenses": [{ "type": "BSD" }],
     "main": "./lib/sqlite3"

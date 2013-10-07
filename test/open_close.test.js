@@ -4,6 +4,10 @@ var fs = require('fs');
 var helper = require('./support/helper');
 
 describe('open/close', function() {
+    before(function() {
+        helper.ensureExists('test/tmp');
+    });
+
     describe('open and close non-existant database', function() {
         before(function() {
             helper.deleteFile('test/tmp/test_create.db');
@@ -27,10 +31,10 @@ describe('open/close', function() {
         });
     });
 
-    it('should be unable to open an inaccessible database', function(done) {
+    it('should not be unable to open an inaccessible database', function(done) {
         // NOTE: test assumes that the user is not allowed to create new files
         // in /usr/bin.
-        var db = new sqlite3.Database('/usr/bin/test.db', function(err) {
+        var db = new sqlite3.Database('/test/tmp/directory-does-not-exist/test.db', function(err) {
             if (err && err.errno === sqlite3.CANTOPEN) {
                 done();
             } else if (err) {

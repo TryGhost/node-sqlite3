@@ -2,6 +2,10 @@ var sqlite3 = require('..');
 var assert = require('assert');
 var exists = require('fs').existsSync || require('path').existsSync;
 
+/*
+
+// disabled because this is not a generically safe test to run on all systems
+
 var spatialite_ext = '/usr/local/lib/libspatialite.dylib';
 
 describe('loadExtension', function(done) {
@@ -18,3 +22,5 @@ describe('loadExtension', function(done) {
         it('libspatialite');
     }
 });
+
+*/

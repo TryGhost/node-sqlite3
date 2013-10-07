@@ -7,6 +7,7 @@ describe('null error', function() {
     var db;
 
     before(function(done) {
+        helper.ensureExists('test/tmp');
         helper.deleteFile(filename);
         db = new sqlite3.Database(filename, done);
     });

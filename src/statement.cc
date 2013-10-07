@@ -1,6 +1,7 @@
 #include <string.h>
 #include <node.h>
 #include <node_buffer.h>
+#include <node_version.h>
 
 #include "macros.h"
 #include "database.h"
@@ -190,9 +191,6 @@ template <class T> Values::Field*
     else if (source->IsDate()) {
         return new Values::Float(pos, source->NumberValue());
     }
-    else if (source->IsUndefined()) {
-        return NULL;
-    }
     else {
         return NULL;
     }
@@ -260,7 +258,7 @@ bool Statement::Bind(const Parameters parameters) {
     Parameters::const_iterator it = parameters.begin();
     Parameters::const_iterator end = parameters.end();
 
-    for (; it < end; it++) {
+    for (; it < end; ++it) {
         Values::Field* field = *it;
 
         if (field != NULL) {
@@ -544,7 +542,7 @@ void Statement::Work_AfterAll(uv_work_t* req) {
                 Local<Array> result(Array::New(baton->rows.size()));
                 Rows::const_iterator it = baton->rows.begin();
                 Rows::const_iterator end = baton->rows.end();
-                for (int i = 0; it < end; it++, i++) {
+                for (int i = 0; it < end; ++it, i++) {
                     result->Set(i, RowToJS(*it));
                     delete *it;
                 }
@@ -647,7 +645,6 @@ void Statement::CloseCallback(uv_handle_t* handle) {
     assert(handle->data != NULL);
     Async* async = static_cast<Async*>(handle->data);
     delete async;
-    handle->data = NULL;
 }
 
 void Statement::AsyncEach(uv_async_t* handle, int status) {
@@ -671,7 +668,7 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
 
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
-            for (int i = 0; it < end; it++, i++) {
+            for (int i = 0; it < end; ++it, i++) {
                 argv[1] = RowToJS(*it);
                 async->retrieved++;
                 TRY_CATCH_CALL(async->stmt->handle_, async->item_cb, 2, argv);
@@ -745,7 +742,7 @@ Local<Object> Statement::RowToJS(Row* row) {
 
     Row::const_iterator it = row->begin();
     Row::const_iterator end = row->end();
-    for (int i = 0; it < end; it++, i++) {
+    for (int i = 0; it < end; ++it, i++) {
         Values::Field* field = *it;
 
         Local<Value> value;
@@ -761,8 +758,11 @@ Local<Object> Statement::RowToJS(Row* row) {
                 value = Local<Value>(String::New(((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size()));
             } break;
             case SQLITE_BLOB: {
-                Buffer *buffer = Buffer::New(((Values::Blob*)field)->value, ((Values::Blob*)field)->length);
-                value = Local<Value>::New(buffer->handle_);
+#if NODE_VERSION_AT_LEAST(0, 11, 3)
+                value = Local<Value>::New(Buffer::New(((Values::Blob*)field)->value, ((Values::Blob*)field)->length));
+#else
+                value = Local<Value>::New(Buffer::New(((Values::Blob*)field)->value, ((Values::Blob*)field)->length)->handle_);
+#endif
             } break;
             case SQLITE_NULL: {
                 value = Local<Value>::New(Null());

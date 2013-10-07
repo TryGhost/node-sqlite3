@@ -8,11 +8,11 @@
 
     #define NODE_SQLITE3_MUTEX_t HANDLE mutex;
 
-    #define NODE_SQLITE3_MUTEX_INIT CreateMutex(NULL, FALSE, NULL);
+    #define NODE_SQLITE3_MUTEX_INIT mutex = CreateMutex(NULL, FALSE, NULL);
 
-    #define NODE_SQLITE3_MUTEX_LOCK(m) WaitForSingleObject(m, INFINITE);
+    #define NODE_SQLITE3_MUTEX_LOCK(m) WaitForSingleObject(*m, INFINITE);
 
-    #define NODE_SQLITE3_MUTEX_UNLOCK(m) ReleaseMutex(m);
+    #define NODE_SQLITE3_MUTEX_UNLOCK(m) ReleaseMutex(*m);
 
     #define NODE_SQLITE3_MUTEX_DESTROY CloseHandle(mutex);
 
