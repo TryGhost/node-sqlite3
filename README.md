@@ -4,13 +4,13 @@ node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings
 
 (Can also run in [node-webkit](https://github.com/rogerwang/node-webkit) if it uses a supported version of Node's engine.)
 
-[![Build Status](https://travis-ci.org/developmentseed/node-sqlite3.png?branch=master)](https://travis-ci.org/developmentseed/node-sqlite3)
+[![Build Status](https://travis-ci.org/mapbox/node-sqlite3.png?branch=master)](https://travis-ci.org/mapbox/node-sqlite3)
 [![npm package version](https://badge.fury.io/js/sqlite3.png)](https://npmjs.org/package/sqlite3)
 
 
 # USAGE
 
-**Note:**   the module must be [installed](#installing) before use.
+**Note:** the module must be [installed](#installing) before use.
 
 ``` js
 var sqlite3 = require('sqlite3').verbose();
@@ -39,9 +39,9 @@ db.close();
 
 * Straightforward query and parameter binding interface
 * Full Buffer/Blob support
-* Extensive [debugging support](https://github.com/developmentseed/node-sqlite3/wiki/Debugging)
-* [Query serialization](https://github.com/developmentseed/node-sqlite3/wiki/Control-Flow) API
-* [Extension support](https://github.com/developmentseed/node-sqlite3/wiki/Extensions)
+* Extensive [debugging support](https://github.com/mapbox/node-sqlite3/wiki/Debugging)
+* [Query serialization](https://github.com/mapbox/node-sqlite3/wiki/Control-Flow) API
+* [Extension support](https://github.com/mapbox/node-sqlite3/wiki/Extensions)
 * Big test suite
 * Written in modern C++ and tested for memory leaks
 
@@ -49,7 +49,7 @@ db.close();
 
 # API
 
-See the [API documentation](https://github.com/developmentseed/node-sqlite3/wiki) in the wiki.
+See the [API documentation](https://github.com/mapbox/node-sqlite3/wiki) in the wiki.
 
 
 # INSTALLING
@@ -58,7 +58,7 @@ You can use [`npm`](https://github.com/isaacs/npm) to download and install:
 
 * The latest `sqlite3` package: `npm install sqlite3`
 
-* GitHub's `master` branch: `npm install https://github.com/developmentseed/node-sqlite3/tarball/master`
+* GitHub's `master` branch: `npm install https://github.com/mapbox/node-sqlite3/tarball/master`
 
 In both cases the module is automatically built with npm's internal version of `node-gyp`,
 and thus your system must meet [node-gyp's requirements](https://github.com/TooTallNate/node-gyp#installation).
@@ -154,9 +154,9 @@ Thanks to [Orlando Vazquez](https://github.com/orlandov),
 [Eric Fredricksen](https://github.com/grumdrig) and
 [Ryan Dahl](https://github.com/ry) for their SQLite bindings for node, and to mraleph on Freenode's #v8 for answering questions.
 
-Development of this module is sponsored by [Development Seed](http://developmentseed.org/).
+Development of this module is sponsored by [MapBox](http://mapbox.org/).
 
 
 # LICENSE
 
-`node-sqlite3` is [BSD licensed](https://github.com/developmentseed/node-sqlite3/raw/master/LICENSE).
+`node-sqlite3` is [BSD licensed](https://github.com/mapbox/node-sqlite3/raw/master/LICENSE).
