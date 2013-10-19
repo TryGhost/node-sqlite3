@@ -30,6 +30,7 @@ var opts = {
     target_arch: process.arch,
     platform: process.platform,
     uri: 'http://node-sqlite3.s3.amazonaws.com/',
+    tool: 'node-gyp',
     paths: {}
 }
 
@@ -87,34 +88,15 @@ function test(opts,try_build,callback) {
 }
 
 function build(opts,callback) {
-    var shell_cmd = process.platform === 'win32' ? 'node-gyp.cmd' : 'node-gyp';
+    var shell_cmd = opts.tool;
+    if (opts.tool == 'node-gyp' && process.platform === 'win32') {
+        shell_cmd = 'node-gyp.cmd';
+    }
     var shell_args = ['rebuild'].concat(opts.args);
-    var cmd = cp.spawn(shell_cmd,shell_args);
-    cmd.on('error', function(err) {
+    var cmd = cp.spawn(shell_cmd,shell_args, {cwd: undefined, env: process.env, customFds: [ 0, 1, 2]});
+    cmd.on('close', function (err, stdout, stderr) {
         if (err) {
             return callback(new Error("Failed to execute '" + shell_cmd + ' ' + shell_args.join(' ') + "' (" + err + ")"));
-        }
-    });
-    cmd.stdout.on('data',function(data) {
-        console.log(data.slice(0,data.length-1).toString());
-    })
-    // TODO - this node-gyp output comes through formatted poorly, hence disabled
-    /*
-    cmd.stderr.on('data',function(data) {
-        console.error(data.slice(0,data.length-1).toString());
-    })
-    */
-    cmd.on('exit', function(err) {
-        if (err) {
-            if (err === 127) {
-                console.error(
-                    'node-gyp not found! Please upgrade your install of npm! You need at least 1.1.5 (I think) '+
-                    'and preferably 1.1.30.'
-                );
-            } else {
-                console.error('Build failed');
-            }
-            return callback(err);
         }
         move(opts,callback);
     });
@@ -122,7 +104,7 @@ function build(opts,callback) {
 
 function tarball(opts,callback) {
     var source = path.dirname(opts.paths.staged_module_file_name);
-    log('compressing: ' + source + ' to ' + opts.paths.tarball_path);
+    log('Compressing: ' + source + ' to ' + opts.paths.tarball_path);
     new targz(9).compress(source, opts.paths.tarball_path, function(err) {
         if (err) return callback(err);
         log('Versioned binary staged for upload at ' + opts.paths.tarball_path);
