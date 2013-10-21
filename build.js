@@ -94,6 +94,11 @@ function build(opts,callback) {
     }
     var shell_args = ['rebuild'].concat(opts.args);
     var cmd = cp.spawn(shell_cmd,shell_args, {cwd: undefined, env: process.env, customFds: [ 0, 1, 2]});
+    cmd.on('error', function (err) {
+        if (err) {
+            return callback(new Error("Failed to execute '" + shell_cmd + ' ' + shell_args.join(' ') + "' (" + err + ")"));
+        }
+    });
     cmd.on('close', function (err, stdout, stderr) {
         if (err) {
             return callback(new Error("Failed to execute '" + shell_cmd + ' ' + shell_args.join(' ') + "' (" + err + ")"));
@@ -214,6 +219,7 @@ if (opts.force) {
                 util.download(from_shasum,{progress:false},function(err,expected_shasum_buffer) {
                     if (err) {
                         log(from_shasum + ' not found, skipping shasum check (' + err + ')');
+                        return done();
                     } else {
                         // now check shasum match
                         var expected = expected_shasum_buffer.toString().trim();
@@ -221,19 +227,19 @@ if (opts.force) {
                             return done(new Error("shasum does not match between remote and local: " + expected + ' ' + actual_shasum));
                         } else {
                             log('Sha1sum matches! ' + expected);
+                            // we are good: continue
+                            log('Extracting to ' + opts.paths.runtime_folder);
+                            new targz().extract(tmpfile, opts.paths.runtime_folder, function(err) {
+                                if (err) return done(err);
+                                try {
+                                    return test(opts,true,done);
+                                } catch (ex) {
+                                    // Stat failed
+                                    log(opts.paths.runtime_folder + ' not found, falling back to source compile');
+                                    return build(opts,done);
+                                }
+                            });
                         }
-                        // we are good: continue
-                        log('Extracting to ' + opts.paths.runtime_folder);
-                        new targz().extract(tmpfile, opts.paths.runtime_folder, function(err) {
-                            if (err) return done(err);
-                            try {
-                                return test(opts,true,done);
-                            } catch (ex) {
-                                // Stat failed
-                                log(opts.paths.runtime_folder + ' not found, falling back to source compile');
-                                return build(opts,done);
-                            }
-                        });
                     }
                 });
             });
