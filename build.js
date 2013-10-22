@@ -99,9 +99,10 @@ function build(opts,callback) {
             return callback(new Error("Failed to execute '" + shell_cmd + ' ' + shell_args.join(' ') + "' (" + err + ")"));
         }
     });
-    cmd.on('close', function (err, stdout, stderr) {
-        if (err) {
-            return callback(new Error("Failed to execute '" + shell_cmd + ' ' + shell_args.join(' ') + "' (" + err + ")"));
+    // exit not close to support node v0.6.x
+    cmd.on('exit', function (code) {
+        if (code !== 0) {
+            return callback(new Error("Failed to execute '" + shell_cmd + ' ' + shell_args.join(' ') + "' (" + code + ")"));
         }
         move(opts,callback);
     });
