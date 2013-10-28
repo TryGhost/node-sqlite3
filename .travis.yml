@@ -30,7 +30,7 @@ script:
  - if [[ "$NVER" != v0.6* ]]; then ldd lib/binding/*/*/*node; fi
  - if [[ "$NVER" != v0.6* ]]; then npm test; fi
  - if [[ "$NVER" != v0.6* ]]; then make clean; fi
- - if [[ "$NVER" != v0.6* ]]; then sudo apt-get -y install sqlite3:i386 binutils:i386 cpp:i386 gcc-4.6:i386 g++-4.6:i386 libstdc++6-4.6-dev:i386 | true; fi
+ - if [[ "$NVER" != v0.6* ]]; then sudo apt-get -y install libsqlite3-dev:i386 binutils:i386 cpp:i386 gcc-4.6:i386 g++-4.6:i386 libstdc++6-4.6-dev:i386 | true; fi
  - if [[ "$NVER" != v0.6* ]]; then CC=gcc-4.6 CXX=g++-4.6 npm install --target_arch=ia32 --sqlite=/usr; fi
  - if [[ "$NVER" != v0.6* ]]; then ldd lib/binding/*/*/*node; fi
  - if [[ "$NVER" != v0.6* ]]; then npm test; fi
