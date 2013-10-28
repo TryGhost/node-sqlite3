@@ -5,6 +5,9 @@ node_js:
  - "0.8"
  - "0.6"
 
+before_install:
+ - sudo apt-get -qq update
+
 install:
  - npm install
  - npm install mocha
