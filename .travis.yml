@@ -9,6 +9,7 @@ before_install:
  - sudo apt-get -qq update
 
 install:
+ # test installing from a binary
  - npm install
  - npm install mocha
  - npm test
@@ -17,24 +18,31 @@ before_script:
  - make clean
 
 script:
+ # test source compile with internal libsqlite3
  - npm install --stage
  - npm test
  - sudo apt-get -qq install libsqlite3-dev
  - make clean
+ # test source compile against external libsqlite3
  - npm install --build-from-source --sqlite=/usr
+ # output linking details for debugging
  - ldd lib/binding/*/*/*node
  - npm test
  - make clean
+ # node v0.8 and above provide pre-built 32 bit and 64 bit linux binaries
+ # so here we use the 32 bit ones to also test 32 bit builds
  - export NVER=`node -v`
  - if [[ "$NVER" != v0.6* ]]; then wget http://nodejs.org/dist/${NVER}/node-${NVER}-linux-x86.tar.gz; fi
  - if [[ "$NVER" != v0.6* ]]; then tar xf node-${NVER}-linux-x86.tar.gz; fi
  - if [[ "$NVER" != v0.6* ]]; then export PATH=$(pwd)/node-${NVER}-linux-x86/bin:$PATH; fi
  - if [[ "$NVER" != v0.6* ]]; then sudo apt-get -y install binutils:i386 cpp:i386 gcc-4.6:i386 g++-4.6:i386 libstdc++6-4.6-dev:i386 | true; fi
+ # test source compile in 32 bit mode with internal libsqlite3
  - if [[ "$NVER" != v0.6* ]]; then CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source; fi
  - if [[ "$NVER" != v0.6* ]]; then ldd lib/binding/*/*/*node; fi
  - if [[ "$NVER" != v0.6* ]]; then npm test; fi
  - if [[ "$NVER" != v0.6* ]]; then make clean; fi
  - if [[ "$NVER" != v0.6* ]]; then sudo apt-get -y install libsqlite3-dev:i386; fi
+ # test source compile in 32 bit mode against external libsqlite3
  - if [[ "$NVER" != v0.6* ]]; then CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source --sqlite=/usr; fi
  - if [[ "$NVER" != v0.6* ]]; then ldd lib/binding/*/*/*node; fi
  - if [[ "$NVER" != v0.6* ]]; then npm test; fi
