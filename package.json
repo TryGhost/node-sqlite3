@@ -30,7 +30,6 @@
         "url": "git://github.com/mapbox/node-sqlite3.git"
     },
     "dependencies": {
-        "progress":"~1.0.1",
         "mkdirp":"~0.3.5",
         "tar.gz": "~0.1.1"
     },

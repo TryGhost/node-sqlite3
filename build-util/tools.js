@@ -1,4 +1,3 @@
-var ProgressBar = require('progress');
 var http = require('http');
 var url = require('url');
 
@@ -11,16 +10,6 @@ function download(from,options,callback) {
         res.resume();
         if (res.statusCode !== 200) {
             return callback(new Error('Server returned '+ res.statusCode));
-        }
-        if (options.progress) {
-            var len = parseInt(res.headers['content-length'], 10);
-            console.log();
-            var bar = new ProgressBar('Downloading [:bar] :percent :etas', {
-              complete: '='
-            , incomplete: ' '
-            , width: 40
-            , total: len
-            });
         }
         function returnBuffer() {
             // todo - use http://nodejs.org/api/buffer.html#buffer_class_method_buffer_concat_list_totallength
@@ -36,11 +25,9 @@ function download(from,options,callback) {
         }
         var out = [];
         res.on('data', function(chunk) {
-            if (options.progress) bar.tick(chunk.length);
             out.push(chunk);
         });
         res.on('end', function(){
-            if (options.progress) console.log('\n');
             returnBuffer();
         });
         res.on('close', function(){
