@@ -188,7 +188,9 @@ if (opts.force) {
     } catch (ex) {
         var from = opts.binary.getRemotePath();
         var tmpdirbase = '/tmp/';
-        if (os.tmpdir) {
+        if (process.env.npm_config_tmp) {
+            tmpdirbase = process.env.npm_config_tmp
+        } else if (os.tmpdir) {
             tmpdirbase = os.tmpdir();
         }
         var tmpdir = path.join(tmpdirbase,'node-sqlite3-'+opts.binary.configuration);
