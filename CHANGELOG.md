@@ -1,8 +1,15 @@
 # Changlog
 
+## 2.1.19
+
+Released October 31st, 2013
+
+ - Started respecting `process.env.npm_config_tmp` as location to download binaries
+ - Removed uneeded `progress` dependency
+
 ## 2.1.18
 
-Released October 22nd, 2012
+Released October 22nd, 2013
 
  - `node-sqlite3` moved to mapbox github group
  - Fixed reporting of node-gyp errors
