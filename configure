@@ -1,3 +1,3 @@
 #!/bin/sh
 
-node-gyp configure $@
+`npm explore npm -g -- pwd`/bin/node-gyp-bin/node-gyp configure $@
