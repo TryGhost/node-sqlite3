@@ -12,7 +12,8 @@
                '-L<@(sqlite)/lib',
                '-lsqlite3'
             ],
-            'include_dirs': [ '<@(sqlite)/include' ]
+            'include_dirs': [ '<@(sqlite)/include' ],
+            'conditions': [ [ 'OS=="linux"', {'libraries+':['-Wl,-rpath=<@(sqlite)/lib']} ] ]
         },
         {
             'dependencies': [
