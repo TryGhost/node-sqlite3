@@ -74,7 +74,7 @@ function test(opts,try_build,callback) {
     args.push('lib/sqlite3');
     cp.execFile(shell_cmd, args, function(err, stdout, stderr) {
         if (err || stderr) {
-            var output = err.message || stderr;
+            var output = err ? err.message : stderr;
             log('Testing the binary failed: "' + output + '"');
             if (try_build) {
                 log('Attempting source compile...');
