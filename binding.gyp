@@ -1,7 +1,9 @@
 {
   "includes": [ "deps/common-sqlite.gypi" ],
   "variables": {
-      "sqlite%":"internal"
+      "sqlite%":"internal",
+      "module_name":"node_sqlite3",
+      "module_path":"./lib/"
   },
   "targets": [
     {
