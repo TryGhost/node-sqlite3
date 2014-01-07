@@ -105,7 +105,8 @@ protected:
         pending(0),
         serialize(false),
         debug_trace(NULL),
-        debug_profile(NULL) {
+        debug_profile(NULL),
+        update_event(NULL) {
 
     }
 

@@ -217,7 +217,7 @@ protected:
 
     template <class T> inline Values::Field* BindParameter(const Handle<Value> source, T pos);
     template <class T> T* Bind(const Arguments& args, int start = 0, int end = -1);
-    bool Bind(const Parameters parameters);
+    bool Bind(const Parameters & parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
     static Local<Object> RowToJS(Row* row);

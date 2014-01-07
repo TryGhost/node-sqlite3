@@ -247,7 +247,7 @@ template <class T> T* Statement::Bind(const Arguments& args, int start, int last
     return baton;
 }
 
-bool Statement::Bind(const Parameters parameters) {
+bool Statement::Bind(const Parameters & parameters) {
     if (parameters.size() == 0) {
         return true;
     }
