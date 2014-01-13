@@ -79,6 +79,7 @@
           'SQLITE_ENABLE_RTREE'
         ],
       },
+      'cflags_cc': ['-Wno-unused-value'],
       'defines': [
         '_REENTRANT=1',
         'SQLITE_THREADSAFE=1',
