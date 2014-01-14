@@ -1,3 +1,4 @@
+require('set-immediate');
 var sqlite3 = require('..');
 var assert = require('assert');
 var helper = require('./support/helper');
@@ -30,7 +31,7 @@ describe('cache', function() {
         var db1, db2;
         db1 = new sqlite3.cached.Database(filename, function(err) {
             if (err) throw err;
-            process.nextTick(function() {
+            setImmediate(function() {
                 db2 = new sqlite3.cached.Database(filename, function(err) {
                     done();
 

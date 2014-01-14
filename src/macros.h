@@ -7,35 +7,27 @@ const char* sqlite_authorizer_string(int type);
 
 #define REQUIRE_ARGUMENTS(n)                                                   \
     if (args.Length() < (n)) {                                                 \
-        return ThrowException(                                                 \
-            Exception::TypeError(String::New("Expected " #n "arguments"))      \
-        );                                                                     \
+        return NanThrowTypeError("Expected " #n "arguments");                  \
     }
 
 
 #define REQUIRE_ARGUMENT_EXTERNAL(i, var)                                      \
     if (args.Length() <= (i) || !args[i]->IsExternal()) {                      \
-        return ThrowException(                                                 \
-            Exception::TypeError(String::New("Argument " #i " invalid"))       \
-        );                                                                     \
+        return NanThrowTypeError("Argument " #i " invalid");                   \
     }                                                                          \
     Local<External> var = Local<External>::Cast(args[i]);
 
 
 #define REQUIRE_ARGUMENT_FUNCTION(i, var)                                      \
     if (args.Length() <= (i) || !args[i]->IsFunction()) {                      \
-        return ThrowException(Exception::TypeError(                            \
-            String::New("Argument " #i " must be a function"))                 \
-        );                                                                     \
+        return NanThrowTypeError("Argument " #i " must be a function");        \
     }                                                                          \
     Local<Function> var = Local<Function>::Cast(args[i]);
 
 
 #define REQUIRE_ARGUMENT_STRING(i, var)                                        \
     if (args.Length() <= (i) || !args[i]->IsString()) {                        \
-        return ThrowException(Exception::TypeError(                            \
-            String::New("Argument " #i " must be a string"))                   \
-        );                                                                     \
+        return NanThrowTypeError("Argument " #i " must be a string");          \
     }                                                                          \
     String::Utf8Value var(args[i]->ToString());
 
@@ -44,9 +36,7 @@ const char* sqlite_authorizer_string(int type);
     Local<Function> var;                                                       \
     if (args.Length() > i && !args[i]->IsUndefined()) {                        \
         if (!args[i]->IsFunction()) {                                          \
-            return ThrowException(Exception::TypeError(                        \
-                String::New("Argument " #i " must be a function"))             \
-            );                                                                 \
+            return NanThrowTypeError("Argument " #i " must be a function");    \
         }                                                                      \
         var = Local<Function>::Cast(args[i]);                                  \
     }
@@ -61,9 +51,7 @@ const char* sqlite_authorizer_string(int type);
         var = args[i]->Int32Value();                                           \
     }                                                                          \
     else {                                                                     \
-        return ThrowException(Exception::TypeError(                            \
-            String::New("Argument " #i " must be an integer"))                 \
-        );                                                                     \
+        return NanThrowTypeError("Argument " #i " must be an integer");        \
     }
 
 
@@ -103,8 +91,8 @@ const char* sqlite_authorizer_string(int type);
         )                                                                      \
     );                                                                         \
     Local<Object> name ##_obj = name->ToObject();                              \
-    name ##_obj->Set(NODE_PSYMBOL("errno"), Integer::New(errno));              \
-    name ##_obj->Set(NODE_PSYMBOL("code"),                                     \
+    name ##_obj->Set(String::NewSymbol("errno"), Integer::New(errno));         \
+    name ##_obj->Set(String::NewSymbol("code"),                                \
         String::NewSymbol(sqlite_code_string(errno)));
 
 
@@ -121,8 +109,8 @@ const char* sqlite_authorizer_string(int type);
         FatalException(try_catch);                                             \
     }                                                                          }
 
-#define WORK_DEFINITION(name)                                                 \
-    static Handle<Value> name(const Arguments& args);                          \
+#define WORK_DEFINITION(name)                                                  \
+    static NAN_METHOD(name);                                                   \
     static void Work_Begin##name(Baton* baton);                                \
     static void Work_##name(uv_work_t* req);                                   \
     static void Work_After##name(uv_work_t* req);
@@ -164,4 +152,3 @@ const char* sqlite_authorizer_string(int type);
     }
 
 #endif
-

@@ -7,6 +7,7 @@
 #include <queue>
 
 #include <sqlite3.h>
+#include "nan.h"
 #include "async.h"
 
 using namespace v8;
@@ -25,7 +26,7 @@ public:
     static inline bool HasInstance(Handle<Value> val) {
         if (!val->IsObject()) return false;
         Local<Object> obj = val->ToObject();
-        return constructor_template->HasInstance(obj);
+        return NanPersistentToLocal(constructor_template)->HasInstance(obj);
     }
 
     struct Baton {
@@ -39,7 +40,7 @@ public:
                 db(db_), status(SQLITE_OK) {
             db->Ref();
             request.data = this;
-            callback = Persistent<Function>::New(cb_);
+            NanAssignPersistent(Function, callback, cb_);
         }
         virtual ~Baton() {
             db->Unref();
@@ -99,7 +100,7 @@ public:
 
 protected:
     Database() : ObjectWrap(),
-        handle(NULL),
+        _handle(NULL),
         open(false),
         locked(false),
         pending(0),
@@ -112,43 +113,43 @@ protected:
 
     ~Database() {
         RemoveCallbacks();
-        sqlite3_close(handle);
-        handle = NULL;
+        sqlite3_close(_handle);
+        _handle = NULL;
         open = false;
     }
 
-    static Handle<Value> New(const Arguments& args);
+    static NAN_METHOD(New);
     static void Work_BeginOpen(Baton* baton);
     static void Work_Open(uv_work_t* req);
     static void Work_AfterOpen(uv_work_t* req);
 
-    static Handle<Value> OpenGetter(Local<String> str, const AccessorInfo& accessor);
+    static NAN_GETTER(OpenGetter);
 
     void Schedule(Work_Callback callback, Baton* baton, bool exclusive = false);
     void Process();
 
-    static Handle<Value> Exec(const Arguments& args);
+    static NAN_METHOD(Exec);
     static void Work_BeginExec(Baton* baton);
     static void Work_Exec(uv_work_t* req);
     static void Work_AfterExec(uv_work_t* req);
 
-    static Handle<Value> Wait(const Arguments& args);
+    static NAN_METHOD(Wait);
     static void Work_Wait(Baton* baton);
 
-    static Handle<Value> Close(const Arguments& args);
+    static NAN_METHOD(Close);
     static void Work_BeginClose(Baton* baton);
     static void Work_Close(uv_work_t* req);
     static void Work_AfterClose(uv_work_t* req);
 
-    static Handle<Value> LoadExtension(const Arguments& args);
+    static NAN_METHOD(LoadExtension);
     static void Work_BeginLoadExtension(Baton* baton);
     static void Work_LoadExtension(uv_work_t* req);
     static void Work_AfterLoadExtension(uv_work_t* req);
 
-    static Handle<Value> Serialize(const Arguments& args);
-    static Handle<Value> Parallelize(const Arguments& args);
+    static NAN_METHOD(Serialize);
+    static NAN_METHOD(Parallelize);
 
-    static Handle<Value> Configure(const Arguments& args);
+    static NAN_METHOD(Configure);
 
     static void SetBusyTimeout(Baton* baton);
 
@@ -167,7 +168,7 @@ protected:
     void RemoveCallbacks();
 
 protected:
-    sqlite3* handle;
+    sqlite3* _handle;
 
     bool open;
     bool locked;

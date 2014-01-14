@@ -12,24 +12,24 @@ using namespace node_sqlite3;
 Persistent<FunctionTemplate> Statement::constructor_template;
 
 void Statement::Init(Handle<Object> target) {
-    HandleScope scope;
+    NanScope();
 
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
 
-    constructor_template = Persistent<FunctionTemplate>::New(t);
-    constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-    constructor_template->SetClassName(String::NewSymbol("Statement"));
+    t->InstanceTemplate()->SetInternalFieldCount(1);
+    t->SetClassName(String::NewSymbol("Statement"));
 
-    NODE_SET_PROTOTYPE_METHOD(constructor_template, "bind", Bind);
-    NODE_SET_PROTOTYPE_METHOD(constructor_template, "get", Get);
-    NODE_SET_PROTOTYPE_METHOD(constructor_template, "run", Run);
-    NODE_SET_PROTOTYPE_METHOD(constructor_template, "all", All);
-    NODE_SET_PROTOTYPE_METHOD(constructor_template, "each", Each);
-    NODE_SET_PROTOTYPE_METHOD(constructor_template, "reset", Reset);
-    NODE_SET_PROTOTYPE_METHOD(constructor_template, "finalize", Finalize);
+    NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
+    NODE_SET_PROTOTYPE_METHOD(t, "get", Get);
+    NODE_SET_PROTOTYPE_METHOD(t, "run", Run);
+    NODE_SET_PROTOTYPE_METHOD(t, "all", All);
+    NODE_SET_PROTOTYPE_METHOD(t, "each", Each);
+    NODE_SET_PROTOTYPE_METHOD(t, "reset", Reset);
+    NODE_SET_PROTOTYPE_METHOD(t, "finalize", Finalize);
 
+    NanAssignPersistent(FunctionTemplate, constructor_template, t);
     target->Set(String::NewSymbol("Statement"),
-        constructor_template->GetFunction());
+        t->GetFunction());
 }
 
 void Statement::Process() {
@@ -65,39 +65,36 @@ template <class T> void Statement::Error(T* baton) {
     assert(stmt->status != 0);
     EXCEPTION(String::New(stmt->message.c_str()), stmt->status, exception);
 
-    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+    Local<Function> cb = NanPersistentToLocal(baton->callback);
+
+    if (!cb.IsEmpty() && cb->IsFunction()) {
         Local<Value> argv[] = { exception };
-        TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+        TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
     }
     else {
         Local<Value> argv[] = { String::NewSymbol("error"), exception };
-        EMIT_EVENT(stmt->handle_, 2, argv);
+        EMIT_EVENT(NanObjectWrapHandle(stmt), 2, argv);
     }
 }
 
 // { Database db, String sql, Array params, Function callback }
-Handle<Value> Statement::New(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(Statement::New) {
+    NanScope();
 
     if (!args.IsConstructCall()) {
-        return ThrowException(Exception::TypeError(
-            String::New("Use the new operator to create new Statement objects"))
-        );
+        return NanThrowTypeError("Use the new operator to create new Statement objects");
     }
 
     int length = args.Length();
 
     if (length <= 0 || !Database::HasInstance(args[0])) {
-        return ThrowException(Exception::TypeError(
-            String::New("Database object expected")));
+        return NanThrowTypeError("Database object expected");
     }
     else if (length <= 1 || !args[1]->IsString()) {
-        return ThrowException(Exception::TypeError(
-            String::New("SQL query expected")));
+        return NanThrowTypeError("SQL query expected");
     }
     else if (length > 2 && !args[2]->IsUndefined() && !args[2]->IsFunction()) {
-        return ThrowException(Exception::TypeError(
-            String::New("Callback expected")));
+        return NanThrowTypeError("Callback expected");
     }
 
     Database* db = ObjectWrap::Unwrap<Database>(args[0]->ToObject());
@@ -112,7 +109,7 @@ Handle<Value> Statement::New(const Arguments& args) {
     baton->sql = std::string(*String::Utf8Value(sql));
     db->Schedule(Work_BeginPrepare, baton);
 
-    return args.This();
+    NanReturnValue(args.This());
 }
 
 void Statement::Work_BeginPrepare(Database::Baton* baton) {
@@ -128,27 +125,27 @@ void Statement::Work_Prepare(uv_work_t* req) {
 
     // In case preparing fails, we use a mutex to make sure we get the associated
     // error message.
-    sqlite3_mutex* mtx = sqlite3_db_mutex(baton->db->handle);
+    sqlite3_mutex* mtx = sqlite3_db_mutex(baton->db->_handle);
     sqlite3_mutex_enter(mtx);
 
     stmt->status = sqlite3_prepare_v2(
-        baton->db->handle,
+        baton->db->_handle,
         baton->sql.c_str(),
         baton->sql.size(),
-        &stmt->handle,
+        &stmt->_handle,
         NULL
     );
 
     if (stmt->status != SQLITE_OK) {
-        stmt->message = std::string(sqlite3_errmsg(baton->db->handle));
-        stmt->handle = NULL;
+        stmt->message = std::string(sqlite3_errmsg(baton->db->_handle));
+        stmt->_handle = NULL;
     }
 
     sqlite3_mutex_leave(mtx);
 }
 
 void Statement::Work_AfterPrepare(uv_work_t* req) {
-    HandleScope scope;
+    NanScope();
     STATEMENT_INIT(PrepareBaton);
 
     if (stmt->status != SQLITE_OK) {
@@ -157,9 +154,10 @@ void Statement::Work_AfterPrepare(uv_work_t* req) {
     }
     else {
         stmt->prepared = true;
-        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
-            Local<Value> argv[] = { Local<Value>::New(Null()) };
-            TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        if (!cb.IsEmpty() && cb->IsFunction()) {
+            Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+            TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
         }
     }
 
@@ -196,7 +194,7 @@ template <class T> Values::Field*
     }
 }
 
-template <class T> T* Statement::Bind(const Arguments& args, int start, int last) {
+template <class T> T* Statement::Bind(_NAN_METHOD_ARGS, int start, int last) {
     if (last < 0) last = args.Length();
     Local<Function> callback;
     if (last > start && args[last - 1]->IsFunction()) {
@@ -252,8 +250,8 @@ bool Statement::Bind(const Parameters & parameters) {
         return true;
     }
 
-    sqlite3_reset(handle);
-    sqlite3_clear_bindings(handle);
+    sqlite3_reset(_handle);
+    sqlite3_clear_bindings(_handle);
 
     Parameters::const_iterator it = parameters.begin();
     Parameters::const_iterator end = parameters.end();
@@ -267,36 +265,36 @@ bool Statement::Bind(const Parameters & parameters) {
                 pos = field->index;
             }
             else {
-                pos = sqlite3_bind_parameter_index(handle, field->name.c_str());
+                pos = sqlite3_bind_parameter_index(_handle, field->name.c_str());
             }
 
             switch (field->type) {
                 case SQLITE_INTEGER: {
-                    status = sqlite3_bind_int(handle, pos,
+                    status = sqlite3_bind_int(_handle, pos,
                         ((Values::Integer*)field)->value);
                 } break;
                 case SQLITE_FLOAT: {
-                    status = sqlite3_bind_double(handle, pos,
+                    status = sqlite3_bind_double(_handle, pos,
                         ((Values::Float*)field)->value);
                 } break;
                 case SQLITE_TEXT: {
-                    status = sqlite3_bind_text(handle, pos,
+                    status = sqlite3_bind_text(_handle, pos,
                         ((Values::Text*)field)->value.c_str(),
                         ((Values::Text*)field)->value.size(), SQLITE_TRANSIENT);
                 } break;
                 case SQLITE_BLOB: {
-                    status = sqlite3_bind_blob(handle, pos,
+                    status = sqlite3_bind_blob(_handle, pos,
                         ((Values::Blob*)field)->value,
                         ((Values::Blob*)field)->length, SQLITE_TRANSIENT);
                 } break;
                 case SQLITE_NULL: {
-                    status = sqlite3_bind_null(handle, pos);
+                    status = sqlite3_bind_null(_handle, pos);
                 } break;
             }
         }
 
         if (status != SQLITE_OK) {
-            message = std::string(sqlite3_errmsg(db->handle));
+            message = std::string(sqlite3_errmsg(db->_handle));
             return false;
         }
     }
@@ -304,17 +302,17 @@ bool Statement::Bind(const Parameters & parameters) {
     return true;
 }
 
-Handle<Value> Statement::Bind(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(Statement::Bind) {
+    NanScope();
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<Baton>(args);
     if (baton == NULL) {
-        return ThrowException(Exception::Error(String::New("Data type is not supported")));
+        return NanThrowTypeError("Data type is not supported");
     }
     else {
         stmt->Schedule(Work_BeginBind, baton);
-        return args.This();
+        NanReturnValue(args.This());
     }
 }
 
@@ -325,14 +323,14 @@ void Statement::Work_BeginBind(Baton* baton) {
 void Statement::Work_Bind(uv_work_t* req) {
     STATEMENT_INIT(Baton);
 
-    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
+    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
     sqlite3_mutex_enter(mtx);
     stmt->Bind(baton->parameters);
     sqlite3_mutex_leave(mtx);
 }
 
 void Statement::Work_AfterBind(uv_work_t* req) {
-    HandleScope scope;
+    NanScope();
     STATEMENT_INIT(Baton);
 
     if (stmt->status != SQLITE_OK) {
@@ -340,9 +338,10 @@ void Statement::Work_AfterBind(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
-            Local<Value> argv[] = { Local<Value>::New(Null()) };
-            TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        if (!cb.IsEmpty() && cb->IsFunction()) {
+            Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+            TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
         }
     }
 
@@ -351,17 +350,17 @@ void Statement::Work_AfterBind(uv_work_t* req) {
 
 
 
-Handle<Value> Statement::Get(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(Statement::Get) {
+    NanScope();
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<RowBaton>(args);
     if (baton == NULL) {
-        return ThrowException(Exception::Error(String::New("Data type is not supported")));
+        return NanThrowError("Data type is not supported");
     }
     else {
         stmt->Schedule(Work_BeginGet, baton);
-        return args.This();
+        NanReturnValue(args.This());
     }
 }
 
@@ -373,14 +372,14 @@ void Statement::Work_Get(uv_work_t* req) {
     STATEMENT_INIT(RowBaton);
 
     if (stmt->status != SQLITE_DONE || baton->parameters.size()) {
-        sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
+        sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
         sqlite3_mutex_enter(mtx);
 
         if (stmt->Bind(baton->parameters)) {
-            stmt->status = sqlite3_step(stmt->handle);
+            stmt->status = sqlite3_step(stmt->_handle);
 
             if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
-                stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+                stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
             }
         }
 
@@ -388,13 +387,13 @@ void Statement::Work_Get(uv_work_t* req) {
 
         if (stmt->status == SQLITE_ROW) {
             // Acquire one result row before returning.
-            GetRow(&baton->row, stmt->handle);
+            GetRow(&baton->row, stmt->_handle);
         }
     }
 }
 
 void Statement::Work_AfterGet(uv_work_t* req) {
-    HandleScope scope;
+    NanScope();
     STATEMENT_INIT(RowBaton);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
@@ -402,15 +401,16 @@ void Statement::Work_AfterGet(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        if (!cb.IsEmpty() && cb->IsFunction()) {
             if (stmt->status == SQLITE_ROW) {
                 // Create the result array from the data we acquired.
-                Local<Value> argv[] = { Local<Value>::New(Null()), RowToJS(&baton->row) };
-                TRY_CATCH_CALL(stmt->handle_, baton->callback, 2, argv);
+                Local<Value> argv[] = { NanNewLocal<Value>(Null()), RowToJS(&baton->row) };
+                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 2, argv);
             }
             else {
-                Local<Value> argv[] = { Local<Value>::New(Null()) };
-                TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+                Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
             }
         }
     }
@@ -418,17 +418,17 @@ void Statement::Work_AfterGet(uv_work_t* req) {
     STATEMENT_END();
 }
 
-Handle<Value> Statement::Run(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(Statement::Run) {
+    NanScope();
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<RunBaton>(args);
     if (baton == NULL) {
-        return ThrowException(Exception::Error(String::New("Data type is not supported")));
+        return NanThrowError("Data type is not supported");
     }
     else {
         stmt->Schedule(Work_BeginRun, baton);
-        return args.This();
+        NanReturnValue(args.This());
     }
 }
 
@@ -439,23 +439,23 @@ void Statement::Work_BeginRun(Baton* baton) {
 void Statement::Work_Run(uv_work_t* req) {
     STATEMENT_INIT(RunBaton);
 
-    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
+    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
     sqlite3_mutex_enter(mtx);
 
     // Make sure that we also reset when there are no parameters.
     if (!baton->parameters.size()) {
-        sqlite3_reset(stmt->handle);
+        sqlite3_reset(stmt->_handle);
     }
 
     if (stmt->Bind(baton->parameters)) {
-        stmt->status = sqlite3_step(stmt->handle);
+        stmt->status = sqlite3_step(stmt->_handle);
 
         if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
-            stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+            stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
         }
         else {
-            baton->inserted_id = sqlite3_last_insert_rowid(stmt->db->handle);
-            baton->changes = sqlite3_changes(stmt->db->handle);
+            baton->inserted_id = sqlite3_last_insert_rowid(stmt->db->_handle);
+            baton->changes = sqlite3_changes(stmt->db->_handle);
         }
     }
 
@@ -463,7 +463,7 @@ void Statement::Work_Run(uv_work_t* req) {
 }
 
 void Statement::Work_AfterRun(uv_work_t* req) {
-    HandleScope scope;
+    NanScope();
     STATEMENT_INIT(RunBaton);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
@@ -471,29 +471,30 @@ void Statement::Work_AfterRun(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
-            stmt->handle_->Set(String::NewSymbol("lastID"), Local<Integer>(Integer::New(baton->inserted_id)));
-            stmt->handle_->Set(String::NewSymbol("changes"), Local<Integer>(Integer::New(baton->changes)));
+        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        if (!cb.IsEmpty() && cb->IsFunction()) {
+            NanObjectWrapHandle(stmt)->Set(String::NewSymbol("lastID"), Local<Integer>(Integer::New(baton->inserted_id)));
+            NanObjectWrapHandle(stmt)->Set(String::NewSymbol("changes"), Local<Integer>(Integer::New(baton->changes)));
 
-            Local<Value> argv[] = { Local<Value>::New(Null()) };
-            TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+            Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+            TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
         }
     }
 
     STATEMENT_END();
 }
 
-Handle<Value> Statement::All(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(Statement::All) {
+    NanScope();
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<RowsBaton>(args);
     if (baton == NULL) {
-        return ThrowException(Exception::Error(String::New("Data type is not supported")));
+        return NanThrowError("Data type is not supported");
     }
     else {
         stmt->Schedule(Work_BeginAll, baton);
-        return args.This();
+        NanReturnValue(args.This());
     }
 }
 
@@ -504,23 +505,23 @@ void Statement::Work_BeginAll(Baton* baton) {
 void Statement::Work_All(uv_work_t* req) {
     STATEMENT_INIT(RowsBaton);
 
-    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
+    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
     sqlite3_mutex_enter(mtx);
 
     // Make sure that we also reset when there are no parameters.
     if (!baton->parameters.size()) {
-        sqlite3_reset(stmt->handle);
+        sqlite3_reset(stmt->_handle);
     }
 
     if (stmt->Bind(baton->parameters)) {
-        while ((stmt->status = sqlite3_step(stmt->handle)) == SQLITE_ROW) {
+        while ((stmt->status = sqlite3_step(stmt->_handle)) == SQLITE_ROW) {
             Row* row = new Row();
-            GetRow(row, stmt->handle);
+            GetRow(row, stmt->_handle);
             baton->rows.push_back(row);
         }
 
         if (stmt->status != SQLITE_DONE) {
-            stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+            stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
         }
     }
 
@@ -528,7 +529,7 @@ void Statement::Work_All(uv_work_t* req) {
 }
 
 void Statement::Work_AfterAll(uv_work_t* req) {
-    HandleScope scope;
+    NanScope();
     STATEMENT_INIT(RowsBaton);
 
     if (stmt->status != SQLITE_DONE) {
@@ -536,7 +537,8 @@ void Statement::Work_AfterAll(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
+        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        if (!cb.IsEmpty() && cb->IsFunction()) {
             if (baton->rows.size()) {
                 // Create the result array from the data we acquired.
                 Local<Array> result(Array::New(baton->rows.size()));
@@ -547,16 +549,16 @@ void Statement::Work_AfterAll(uv_work_t* req) {
                     delete *it;
                 }
 
-                Local<Value> argv[] = { Local<Value>::New(Null()), result };
-                TRY_CATCH_CALL(stmt->handle_, baton->callback, 2, argv);
+                Local<Value> argv[] = { NanNewLocal<Value>(Null()), result };
+                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 2, argv);
             }
             else {
                 // There were no result rows.
                 Local<Value> argv[] = {
-                    Local<Value>::New(Null()),
-                    Local<Value>::New(Array::New(0))
+                    NanNewLocal<Value>(Null()),
+                    NanNewLocal<Value>(Array::New(0))
                 };
-                TRY_CATCH_CALL(stmt->handle_, baton->callback, 2, argv);
+                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 2, argv);
             }
         }
     }
@@ -564,8 +566,8 @@ void Statement::Work_AfterAll(uv_work_t* req) {
     STATEMENT_END();
 }
 
-Handle<Value> Statement::Each(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(Statement::Each) {
+    NanScope();
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     int last = args.Length();
@@ -577,12 +579,12 @@ Handle<Value> Statement::Each(const Arguments& args) {
 
     EachBaton* baton = stmt->Bind<EachBaton>(args, 0, last);
     if (baton == NULL) {
-        return ThrowException(Exception::Error(String::New("Data type is not supported")));
+        return NanThrowError("Data type is not supported");
     }
     else {
-        baton->completed = Persistent<Function>::New(completed);
+        NanAssignPersistent(Function, baton->completed, completed);
         stmt->Schedule(Work_BeginEach, baton);
-        return args.This();
+        NanReturnValue(args.This());
     }
 }
 
@@ -591,8 +593,8 @@ void Statement::Work_BeginEach(Baton* baton) {
     // the event loop. This prevents dangling events.
     EachBaton* each_baton = static_cast<EachBaton*>(baton);
     each_baton->async = new Async(each_baton->stmt, AsyncEach);
-    each_baton->async->item_cb = Persistent<Function>::New(each_baton->callback);
-    each_baton->async->completed_cb = Persistent<Function>::New(each_baton->completed);
+    NanAssignPersistent(Function, each_baton->async->item_cb, each_baton->callback);
+    NanAssignPersistent(Function, each_baton->async->completed_cb, each_baton->completed);
 
     STATEMENT_BEGIN(Each);
 }
@@ -602,23 +604,23 @@ void Statement::Work_Each(uv_work_t* req) {
 
     Async* async = baton->async;
 
-    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->handle);
+    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
 
     int retrieved = 0;
 
     // Make sure that we also reset when there are no parameters.
     if (!baton->parameters.size()) {
-        sqlite3_reset(stmt->handle);
+        sqlite3_reset(stmt->_handle);
     }
 
     if (stmt->Bind(baton->parameters)) {
         while (true) {
             sqlite3_mutex_enter(mtx);
-            stmt->status = sqlite3_step(stmt->handle);
+            stmt->status = sqlite3_step(stmt->_handle);
             if (stmt->status == SQLITE_ROW) {
                 sqlite3_mutex_leave(mtx);
                 Row* row = new Row();
-                GetRow(row, stmt->handle);
+                GetRow(row, stmt->_handle);
                 NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
                 async->data.push_back(row);
                 retrieved++;
@@ -628,7 +630,7 @@ void Statement::Work_Each(uv_work_t* req) {
             }
             else {
                 if (stmt->status != SQLITE_DONE) {
-                    stmt->message = std::string(sqlite3_errmsg(stmt->db->handle));
+                    stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
                 }
                 sqlite3_mutex_leave(mtx);
                 break;
@@ -648,7 +650,7 @@ void Statement::CloseCallback(uv_handle_t* handle) {
 }
 
 void Statement::AsyncEach(uv_async_t* handle, int status) {
-    HandleScope scope;
+    NanScope();
     Async* async = static_cast<Async*>(handle->data);
 
     while (true) {
@@ -662,36 +664,38 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
             break;
         }
 
-        if (!async->item_cb.IsEmpty() && async->item_cb->IsFunction()) {
+        Local<Function> cb = NanPersistentToLocal(async->item_cb);
+        if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[2];
-            argv[0] = Local<Value>::New(Null());
+            argv[0] = NanNewLocal<Value>(Null());
 
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
             for (int i = 0; it < end; ++it, i++) {
                 argv[1] = RowToJS(*it);
                 async->retrieved++;
-                TRY_CATCH_CALL(async->stmt->handle_, async->item_cb, 2, argv);
+                TRY_CATCH_CALL(NanObjectWrapHandle(async->stmt), cb, 2, argv);
                 delete *it;
             }
         }
     }
 
+    Local<Function> cb = NanPersistentToLocal(async->completed_cb);
     if (async->completed) {
-        if (!async->completed_cb.IsEmpty() &&
-                async->completed_cb->IsFunction()) {
+        if (!cb.IsEmpty() &&
+                cb->IsFunction()) {
             Local<Value> argv[] = {
-                Local<Value>::New(Null()),
+                NanNewLocal<Value>(Null()),
                 Integer::New(async->retrieved)
             };
-            TRY_CATCH_CALL(async->stmt->handle_, async->completed_cb, 2, argv);
+            TRY_CATCH_CALL(NanObjectWrapHandle(async->stmt), cb, 2, argv);
         }
         uv_close((uv_handle_t*)handle, CloseCallback);
     }
 }
 
 void Statement::Work_AfterEach(uv_work_t* req) {
-    HandleScope scope;
+    NanScope();
     STATEMENT_INIT(EachBaton);
 
     if (stmt->status != SQLITE_DONE) {
@@ -701,8 +705,8 @@ void Statement::Work_AfterEach(uv_work_t* req) {
     STATEMENT_END();
 }
 
-Handle<Value> Statement::Reset(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(Statement::Reset) {
+    NanScope();
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
@@ -710,7 +714,7 @@ Handle<Value> Statement::Reset(const Arguments& args) {
     Baton* baton = new Baton(stmt, callback);
     stmt->Schedule(Work_BeginReset, baton);
 
-    return args.This();
+    NanReturnValue(args.This());
 }
 
 void Statement::Work_BeginReset(Baton* baton) {
@@ -720,18 +724,19 @@ void Statement::Work_BeginReset(Baton* baton) {
 void Statement::Work_Reset(uv_work_t* req) {
     STATEMENT_INIT(Baton);
 
-    sqlite3_reset(stmt->handle);
+    sqlite3_reset(stmt->_handle);
     stmt->status = SQLITE_OK;
 }
 
 void Statement::Work_AfterReset(uv_work_t* req) {
-    HandleScope scope;
+    NanScope();
     STATEMENT_INIT(Baton);
 
     // Fire callbacks.
-    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
-        Local<Value> argv[] = { Local<Value>::New(Null()) };
-        TRY_CATCH_CALL(stmt->handle_, baton->callback, 1, argv);
+    Local<Function> cb = NanPersistentToLocal(baton->callback);
+    if (!cb.IsEmpty() && cb->IsFunction()) {
+        Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+        TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
     }
 
     STATEMENT_END();
@@ -758,14 +763,10 @@ Local<Object> Statement::RowToJS(Row* row) {
                 value = Local<Value>(String::New(((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size()));
             } break;
             case SQLITE_BLOB: {
-#if NODE_VERSION_AT_LEAST(0, 11, 3)
-                value = Local<Value>::New(Buffer::New(((Values::Blob*)field)->value, ((Values::Blob*)field)->length));
-#else
-                value = Local<Value>::New(Buffer::New(((Values::Blob*)field)->value, ((Values::Blob*)field)->length)->handle_);
-#endif
+                value = NanNewLocal<Value>(NanNewBufferHandle(((Values::Blob*)field)->value, ((Values::Blob*)field)->length));
             } break;
             case SQLITE_NULL: {
-                value = Local<Value>::New(Null());
+                value = NanNewLocal<Value>(Null());
             } break;
         }
 
@@ -809,23 +810,24 @@ void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
     }
 }
 
-Handle<Value> Statement::Finalize(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(Statement::Finalize) {
+    NanScope();
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     Baton* baton = new Baton(stmt, callback);
     stmt->Schedule(Finalize, baton);
 
-    return stmt->db->handle_;
+    NanReturnValue(NanObjectWrapHandle(stmt->db));
 }
 
 void Statement::Finalize(Baton* baton) {
     baton->stmt->Finalize();
 
     // Fire callback in case there was one.
-    if (!baton->callback.IsEmpty() && baton->callback->IsFunction()) {
-        TRY_CATCH_CALL(baton->stmt->handle_, baton->callback, 0, NULL);
+    Local<Function> cb = NanPersistentToLocal(baton->callback);
+    if (!cb.IsEmpty() && cb->IsFunction()) {
+        TRY_CATCH_CALL(NanObjectWrapHandle(baton->stmt), cb, 0, NULL);
     }
 
     delete baton;
@@ -837,8 +839,8 @@ void Statement::Finalize() {
     CleanQueue();
     // Finalize returns the status code of the last operation. We already fired
     // error events in case those failed.
-    sqlite3_finalize(handle);
-    handle = NULL;
+    sqlite3_finalize(_handle);
+    _handle = NULL;
     db->Unref();
 }
 
@@ -855,9 +857,11 @@ void Statement::CleanQueue() {
             Call* call = queue.front();
             queue.pop();
 
-            if (prepared && !call->baton->callback.IsEmpty() &&
-                call->baton->callback->IsFunction()) {
-                TRY_CATCH_CALL(handle_, call->baton->callback, 1, argv);
+            Local<Function> cb = NanPersistentToLocal(call->baton->callback);
+
+            if (prepared && !cb.IsEmpty() &&
+                cb->IsFunction()) {
+                TRY_CATCH_CALL(NanObjectWrapHandle(this), cb, 1, argv);
                 called = true;
             }
 
@@ -871,7 +875,7 @@ void Statement::CleanQueue() {
         // Statement object.
         if (!called) {
             Local<Value> args[] = { String::NewSymbol("error"), exception };
-            EMIT_EVENT(handle_, 2, args);
+            EMIT_EVENT(NanObjectWrapHandle(this), 2, args);
         }
     }
     else while (!queue.empty()) {
