@@ -1,5 +1,15 @@
 # Changlog
 
+## 2.2.0
+
+Released Jan 13th, 2014
+
+ - updated internal libsqlite3 from 3.7.17 -> 3.8.2 (http://www.sqlite.org/news.html) which includes the next-generation query planner http://www.sqlite.org/queryplanner-ng.html
+ - improved binary deploy system using https://github.com/springmeyer/node-pre-gyp
+ - binary install now supports http proxies
+ - source compile now supports freebsd
+ - fixed support for node-webkit
+
 ## 2.1.19
 
 Released October 31st, 2013
