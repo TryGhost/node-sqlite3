@@ -76,7 +76,12 @@ After the `sqlite3` module is installed (according to the previous section), d
 
 1. Install [`nw-gyp`](https://github.com/rogerwang/nw-gyp) globally: `npm install nw-gyp -g` *(unless already installed)*
 
-2. Use `nw-gyp` to rebuild the module: `nw-gyp rebuild --target=0.6.2`
+2. Use `nw-gyp` to rebuild the module:
+
+```
+NODE_WEBKIT_VERSION="0.8.4" # see latest version at https://github.com/rogerwang/node-webkit#downloads
+nw-gyp rebuild --target=${NODE_WEBKIT_VERSION}
+```
 
 Remember the following:
 

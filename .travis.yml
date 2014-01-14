@@ -1,47 +1,67 @@
-language: node_js
+language: cpp
 
-node_js:
- - "0.10"
- - "0.8"
+env:
+  matrix:
+   - export NODE_VERSION="0.8"
+   - export NODE_VERSION="0.10"
+  global:
+    - secure: QhuP5E/kYL1j1KDkHGJtk6DSJr1RH4DR/JrC62Viuf5Du8jE+i0kPWfF2MxtuEmKo35orhpu8t8mzKygWfuO63WPuuIE9qd/+V/y99Lqcj0tEN6wJ5RnywktbTJWg23zphjhmYq3Xj8DLVEikCZBwHtlbygkO9Q60cn1PK+bnPg=
+    - secure: HxCS2dQAWI0KmCFnFNNZoucG4FeAW+itG7+Hp0dNtwmxZzGOZYFO2bZcGvTAMNfVN++oqLxTebYQI1oB5yUl5mPJjrjthaGS6Zq3S6rfJcXiv+icYgEXlR6ejQ97dsHw1Jeg8nedCQlI4kHfvG6pgBLhq9hnugxH1Cjhdt14E9U=
 
 before_install:
- - sudo apt-get -qq update
+# put node-pre-gyp on path
+- export PATH=./node_modules/.bin/:$PATH
+- echo $NODE_VERSION
+- git clone https://github.com/creationix/nvm.git ../.nvm
+- source ../.nvm/nvm.sh
+- nvm install $NODE_VERSION
+- nvm use $NODE_VERSION
+- node --version
+- npm --version
+- npm install mocha
+- platform=$(uname -s | sed "y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/")
 
 install:
- # test installing from a binary
- - npm install
- - npm install mocha
- - npm test
+# test installing from source
+- npm install --build-from-source
+- npm test
 
 before_script:
- - make clean
+# test publishing
+- echo $TRAVIS_BRANCH
+- echo $TRAVIS_COMMIT
+- echo `git describe --tags --always HEAD`
+- PUBLISH=false
+- if [ "[publish]" = `git show -s --format=%B $TRAVIS_COMMIT | tr -d '\n'` ]; then echo yes;PUBLISH=true; fi;
+- if [[ `git describe --contains $( git rev-parse HEAD )` ]]; then echo yes;PUBLISH=true; fi;
+- if [[ $PUBLISH == true ]]; then node-pre-gyp package publish; fi
 
 script:
- # test source compile with internal libsqlite3
- - npm install --stage
- - npm test
- - sudo apt-get -qq install libsqlite3-dev
- - make clean
- # test source compile against external libsqlite3
- - npm install --build-from-source --sqlite=/usr
- # output linking details for debugging
- - ldd lib/binding/*/*/*node
- - npm test
- - make clean
- # node v0.8 and above provide pre-built 32 bit and 64 bit linux binaries
- # so here we use the 32 bit ones to also test 32 bit builds
- - export NVER=`node -v`
- - if [[ "$NVER" != v0.6* ]]; then wget http://nodejs.org/dist/${NVER}/node-${NVER}-linux-x86.tar.gz; fi
- - if [[ "$NVER" != v0.6* ]]; then tar xf node-${NVER}-linux-x86.tar.gz; fi
- - if [[ "$NVER" != v0.6* ]]; then export PATH=$(pwd)/node-${NVER}-linux-x86/bin:$PATH; fi
- - if [[ "$NVER" != v0.6* ]]; then sudo apt-get -y install binutils:i386 cpp:i386 gcc-4.6:i386 g++-4.6:i386 libstdc++6-4.6-dev:i386 | true; fi
- # test source compile in 32 bit mode with internal libsqlite3
- - if [[ "$NVER" != v0.6* ]]; then CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source; fi
- - if [[ "$NVER" != v0.6* ]]; then ldd lib/binding/*/*/*node; fi
- - if [[ "$NVER" != v0.6* ]]; then npm test; fi
- - if [[ "$NVER" != v0.6* ]]; then make clean; fi
- - if [[ "$NVER" != v0.6* ]]; then sudo apt-get -y install libsqlite3-dev:i386; fi
- # test source compile in 32 bit mode against external libsqlite3
- - if [[ "$NVER" != v0.6* ]]; then CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source --sqlite=/usr; fi
- - if [[ "$NVER" != v0.6* ]]; then ldd lib/binding/*/*/*node; fi
- - if [[ "$NVER" != v0.6* ]]; then npm test; fi
+# test install from published binary
+- make clean
+- npm install
+- npm test
+- make clean
+# test source compile against system libsqlite3
+- if [[ "$platform" == 'linux' ]]; then sudo apt-get -qq update; sudo apt-get -qq install libsqlite3-dev; fi
+- make clean
+- npm install --build-from-source --sqlite=/usr
+- npm test
+- make clean
+# node v0.8 and above provide pre-built 32 bit and 64 bit binaries
+# so here we use the 32 bit ones to also test 32 bit builds
+- NVER=`node -v`
+- wget http://nodejs.org/dist/${NVER}/node-${NVER}-${platform}-x86.tar.gz
+- tar xf node-${NVER}-${platform}-x86.tar.gz
+# enable 32 bit node
+- export PATH=$(pwd)/node-${NVER}-${platform}-x86/bin:$PATH
+# install 32 bit compiler toolchain
+- if [[ "$platform" == 'linux' ]]; then sudo apt-get -y install gcc-multilib g++-multilib; fi
+# test source compile in 32 bit mode with internal libsqlite3
+- if [[ "$platform" == 'linux' ]]; then CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source; else npm install --build-from-source; fi
+- npm test
+# publish 32 bit build
+- if [[ $PUBLISH == true ]]; then node-pre-gyp package publish; fi;
+- make clean
+# test source compile in 32 bit mode against external libsqlite3
+- if [[ "$platform" == 'linux' ]]; then sudo apt-get -y install libsqlite3-dev:i386; CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source --sqlite=/usr; npm test; fi

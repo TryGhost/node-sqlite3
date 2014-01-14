@@ -1,12 +1,17 @@
 {
     "name": "sqlite3",
     "description": "Asynchronous, non-blocking SQLite3 bindings",
-    "version": "2.1.19",
-    "abi":"a",
+    "version": "2.2.0-alpha",
     "homepage": "http://github.com/mapbox/node-sqlite3",
     "author": {
         "name": "MapBox",
         "url": "https://mapbox.com/"
+    },
+    "binary": {
+        "module_name": "node_sqlite3",
+        "module_path": "./lib",
+        "remote_uri": "http://node-sqlite3.s3.amazonaws.com",
+        "template": "{configuration}/{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz"
     },
     "contributors": [
         "Konstantin Käfer <mail@kkaefer.com>",
@@ -30,18 +35,23 @@
         "url": "git://github.com/mapbox/node-sqlite3.git"
     },
     "dependencies": {
-        "mkdirp":"~0.3.5",
-        "tar.gz": "~0.1.1"
+        "node-pre-gyp": "~0.2.5"
     },
-    "bundledDependencies":["mkdirp","tar.gz","progress"],
+    "bundledDependencies": [
+        "node-pre-gyp"
+    ],
     "engines": {
-        "node": ">= 0.6.13 < 0.11.0"
+        "node": ">= 0.8.0 < 0.11.0"
     },
     "scripts": {
-        "install": "node build.js",
+        "install": "node-pre-gyp install --fallback-to-build",
         "pretest": "node test/support/createdb.js",
         "test": "mocha -R spec --timeout 200000"
     },
-    "licenses": [{ "type": "BSD" }],
+    "licenses": [
+        {
+            "type": "BSD"
+        }
+    ],
     "main": "./lib/sqlite3"
 }
