@@ -47,6 +47,12 @@ script:
 - make clean
 - npm install --build-from-source --sqlite=/usr
 - npm test
+# on Linux install nw-gyp for 64 bit if NODE_WEBKIT is not empty
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then npm install nw-gyp -g; fi; fi
+# on Linux rebuild node-sqlite3 for 64 bit node-webkit target (if NODE_WEBKIT is not empty)
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then nw-gyp rebuild --target=$NODE_WEBKIT --build-from-source; fi; fi
+# on Linux uninstall nw-gyp for 64 bit if NODE_WEBKIT is not empty
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then npm uninstall nw-gyp -g; fi; fi
 - make clean
 # node v0.8 and above provide pre-built 32 bit and 64 bit binaries
 # so here we use the 32 bit ones to also test 32 bit builds
