@@ -1,107 +1,99 @@
-var sqlite3 = require('sqlite3');
+var sqlite3 = require('..');
 var assert = require('assert');
-var shouldSkip = false;
 var domain;
 
 try {
   domain = require('domain');
 } catch (e) {
-  shouldSkip = true;
-}
-
-
-if(shouldSkip) {
-  exports['skipping domain tests'] = function(beforeExit) {
-    beforeExit(function() {
-
-    });
-  };
   return;
 }
 
-if (process.setMaxListeners) process.setMaxListeners(0);
+function testThrowException(dom,done) {
+  var expectedException = 'THIS IS AN EXPECTED EXCEPTION';
+  var oldListeners;
+  function handleExceptionListeners() {
+    // Detatch existing exception listeners (of Mocha)
+    oldListeners = process.listeners('uncaughtException').slice(0);
+    oldListeners.forEach(function(fn) {
+      process.removeListener('uncaughtException',fn);
+    });
+    // Attach exception listeners of this test.
+    process.on('uncaughtException',processExceptionCallback);
+    dom.on('error',domainExceptionCallback);
+  }
+  function unhandleExceptionListeners() {
+    // Detach exception listeners of this test.
+    process.removeListener('uncaughtException',processExceptionCallback);
+    dom.removeListener('error',domainExceptionCallback);
+    // Reattach the existing exception listeners (of Mocha)
+    oldListeners.forEach(function(fn) {
+      process.on('uncaughtException',fn);
+    });
+  }
+  function processExceptionCallback(e) {
+    unhandleExceptionListeners();
+    done('Exception was not caught by domain:',e);
+  }
+  function domainExceptionCallback(e) {
+    unhandleExceptionListeners();
+    assert.equal(expectedException,e);
 
-var protect = function(fn) {
-  return function(beforeExit) {
-    var oldListeners = process.listeners('uncaughtException').splice(0);
+    done();
+  }
 
-    oldListeners.filter(function(fn) {
-      // XXX: This is a bit of a hack:
-      // we know the name of the function that
-      // the domain module adds as a listener
-      // for `uncaughtException`, and we want
-      // that to remain available -- but we
-      // don't want expresso's uncaughtHandler
-      // to be fired as well.
-      return fn.name === 'uncaughtHandler'
-    }).forEach(function(fn) {
-      process.on('uncaughtException', fn)
-    })
+  handleExceptionListeners();
 
-    var realBeforeExit;
-    var injectBeforeExit = function(fn) {
-          realBeforeExit = fn;
-        };
-
-    beforeExit(function() {
-      var listeners = process.listeners('uncaughtException');
-
-      // put expresso's uncaughtException handler
-      // back in place.
-      listeners.splice.apply(
-        listeners, [0, listeners.length].concat(oldListeners)
-      ); 
-
-      // call the real `beforeExit` function defined
-      // by the test, if any.
-      if (realBeforeExit) {
-        realBeforeExit();
-      }
-    })
-
-    fn(injectBeforeExit);
-  };
+  throw expectedException;
 }
 
-var testStatementMethod = function(method) {
-  return function(beforeExit) {
-    var dom = domain.create();
-    var db = new sqlite3.Database(':memory:');
-    var caughtCount = 0;
-    var expected = 1 + ~~(Math.random() * 10);
-
-    dom.on('error', function(err) {
-      ++caughtCount;
+describe('domain',function() {
+  describe('on database creation',function() {
+    var dom;
+    before(function() {
+      dom = domain.create();
     });
 
-    dom.run(function() {
-      db[method]('garbled nonsense', function(err) {
-        // set a timeout, so that we ensure that the
-        // domain chain gets passed along.
+    it('should work for open',function(done) {
+      dom.run(function() {
+        var db = new sqlite3.Database(':memory:',function() {
+          assert.equal(process.domain, dom);
+          testThrowException(dom,done);
+        });
+      });
+    });
+  });
 
-        for (var i = 0; i < expected; ++i) {
-          setTimeout(function() {
-            if (err) {
-              throw err;
-            }
-          }, 0);
-        }
+  describe('on individual calls',function() {
+    var db,dom;
+    beforeEach(function(done) {
+      dom = domain.create();
+      db = new sqlite3.Database(':memory:',function() {
+        done();
       });
     });
 
-    beforeExit(function() {
-      assert.equal(caughtCount, expected);
+    function testFn(functionName) {
+      it('should work for Database#'+functionName,function(done) {
+        dom.run(function() {
+          db[functionName]('select 0',function() {
+            assert.equal(process.domain,dom);
+            testThrowException(dom,done);
+          });
+        });
+      });
+    }
+
+    testFn('run');
+    testFn('exec');
+    testFn('prepare');
+    testFn('get');
+    testFn('map');
+    testFn('each');
+
+    afterEach(function(done) {
+      dom.dispose();
+      done();
     });
-  };
-}
-
-exports['test Database#run works with domains'] = protect(testStatementMethod('run'));
-exports['test Database#prepare works with domains'] = protect(testStatementMethod('prepare'));
-exports['test Database#get works with domains'] = protect(testStatementMethod('get'));
-exports['test Database#map works with domains'] = protect(testStatementMethod('all'));
-exports['test Database#each works with domains'] = protect(testStatementMethod('each'));
-exports['test Database#map works with domains'] = protect(testStatementMethod('map'));
-
-
-
+  });
+});
 
