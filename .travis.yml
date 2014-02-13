@@ -81,8 +81,14 @@ script:
 - if [ "$platform" != 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then npm install nw-gyp -g; fi; fi
 # rebuild node-sqlite3 for 32 bit node-webkit target (if NODE_WEBKIT is not empty)
 - if [ "$NODE_WEBKIT" != "" ]; then nw-gyp rebuild --target=$NODE_WEBKIT --build-from-source; fi;
+# on Linux 32 bit: download and unpack node-webkit, add it to PATH
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget https://s3.amazonaws.com/node-webkit/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then tar xf node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then export PATH=$(pwd)/node-webkit-v${NODE_WEBKIT}-linux-ia32:$PATH; fi; fi
 # attempt node-pre-gyp package testpackage (if NODE_WEBKIT is not empty)
 - if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp package testpackage --runtime=node-webkit --overwrite; fi;
+# on Linux 32 bit: erase used node-webkit
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then rm -rf node-webkit-v${NODE_WEBKIT}-linux-ia32; fi; fi
 - make clean
 # test source compile in 32 bit mode against external libsqlite3
 - if [[ "$platform" == 'linux' ]]; then sudo apt-get -y install libsqlite3-dev:i386; CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source --sqlite=/usr; npm test; fi
