@@ -52,7 +52,7 @@ script:
 # on Linux 64 bit: rebuild node-sqlite3 for 64 bit node-webkit target (if NODE_WEBKIT is not empty)
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then nw-gyp rebuild --target=$NODE_WEBKIT --build-from-source; fi; fi
 # on Linux 64 bit: attempt node-pre-gyp package testpackage (if NODE_WEBKIT is not empty)
-- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp package testpackage; fi; fi
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp package testpackage --runtime=node-webkit --overwrite; fi; fi
 - make clean
 # node v0.8 and above provide pre-built 32 bit and 64 bit binaries
 # so here we use the 32 bit ones to also test 32 bit builds
@@ -73,7 +73,7 @@ script:
 # rebuild node-sqlite3 for 32 bit node-webkit target (if NODE_WEBKIT is not empty)
 - if [ "$NODE_WEBKIT" != "" ]; then nw-gyp rebuild --target=$NODE_WEBKIT --build-from-source; fi;
 # attempt node-pre-gyp package testpackage (if NODE_WEBKIT is not empty)
-- if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp package testpackage; fi;
+- if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp package testpackage --runtime=node-webkit --overwrite; fi;
 - make clean
 # test source compile in 32 bit mode against external libsqlite3
 - if [[ "$platform" == 'linux' ]]; then sudo apt-get -y install libsqlite3-dev:i386; CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source --sqlite=/usr; npm test; fi
