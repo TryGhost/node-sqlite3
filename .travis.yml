@@ -71,7 +71,7 @@ script:
 # enable 32 bit node
 - export PATH=$(pwd)/node-${NVER}-${platform}-x86/bin:$PATH
 # install 32 bit compiler toolchain and X11
-- if [[ "$platform" == 'linux' ]]; then sudo apt-get -y install gcc-multilib g++-multilib; sudo apt-get update --fix-missing; fi
+- if [[ "$platform" == 'linux' ]]; then sudo apt-get -y install gcc-multilib g++-multilib; fi
 # test source compile in 32 bit mode with internal libsqlite3
 - if [[ "$platform" == 'linux' ]]; then CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source; else npm install --build-from-source; fi
 - npm test
@@ -85,6 +85,8 @@ script:
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget https://s3.amazonaws.com/node-webkit/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then tar xf node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then prenwpath="$PATH"; export PATH=$(pwd)/node-webkit-v${NODE_WEBKIT}-linux-ia32:$PATH; fi; fi
+# attempt ldd
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then ldd $(pwd)/node-webkit-v${NODE_WEBKIT}-linux-ia32/nw; fi; fi
 # attempt node-pre-gyp package testpackage (if NODE_WEBKIT is not empty)
 - if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp package testpackage --runtime=node-webkit --overwrite; fi;
 # on Linux 32 bit: erase used node-webkit, restore PATH
