@@ -73,7 +73,7 @@ script:
 # enable 32 bit node
 - export PATH=$(pwd)/node-${NVER}-${platform}-x86/bin:$PATH
 # install 32 bit compiler toolchain and X11
-- if [[ "$platform" == 'linux' ]]; then sudo apt-get -y install gcc-multilib g++-multilib; fi
+- if [[ "$platform" == 'linux' ]]; then sudo apt-get -y install gcc-multilib g++-multilib libx11-6:i386; fi
 # test source compile in 32 bit mode with internal libsqlite3
 - if [[ "$platform" == 'linux' ]]; then CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source; else npm install --build-from-source; fi
 - npm test
