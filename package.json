@@ -35,7 +35,7 @@
         "url": "git://github.com/mapbox/node-sqlite3.git"
     },
     "dependencies": {
-        "node-pre-gyp": "https://github.com/Mithgol/node-pre-gyp/tarball/14637b9caee2abb285b33dbf8a501d2b4514f6d1"
+        "node-pre-gyp": "https://github.com/Mithgol/node-pre-gyp/tarball/eaea6e159c9a052609cf93f0438cae17900f583b"
     },
     "bundledDependencies": [
         "node-pre-gyp"
