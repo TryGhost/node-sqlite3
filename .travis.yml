@@ -36,7 +36,7 @@ before_script:
 - if [[ `git describe --contains $( git rev-parse HEAD )` ]]; then echo yes;PUBLISH=true; fi;
 - if [[ $PUBLISH == true ]]; then node-pre-gyp package publish; fi
 # for testing node-webkit, launch a virtual display
-- if [ "$NODE_WEBKIT" != "" ]; then export DISPLAY=:99.0; sh -e /etc/init.d/xvfb start; sleep 3; fi
+- if [ "$NODE_WEBKIT" != "" ]; then export DISPLAY=:99.0; sh -e /etc/init.d/xvfb start; fi
 # note: `sleep 3` gives xvfb some time to start
 
 script:
