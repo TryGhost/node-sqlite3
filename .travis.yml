@@ -73,7 +73,7 @@ script:
 # enable 32 bit node
 - export PATH=$(pwd)/node-${NVER}-${platform}-x86/bin:$PATH
 # install 32 bit compiler toolchain and X11
-- if [[ "$platform" == 'linux' ]]; then sudo apt-get -y install gcc-multilib g++-multilib libx11-6:i386 ia32-libs; fi
+- if [[ "$platform" == 'linux' ]]; then sudo apt-get -y install gcc-multilib g++-multilib; fi
 # test source compile in 32 bit mode with internal libsqlite3
 - if [[ "$platform" == 'linux' ]]; then CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source; else npm install --build-from-source; fi
 - npm test
@@ -83,6 +83,8 @@ script:
 - if [ "$platform" != 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then npm install nw-gyp -g; fi; fi
 # rebuild node-sqlite3 for 32 bit node-webkit target (if NODE_WEBKIT is not empty)
 - if [ "$NODE_WEBKIT" != "" ]; then nw-gyp rebuild --target=$NODE_WEBKIT --build-from-source; fi;
+# on Linux 32 bit: install 32 bit stuff necessary for node-webkit 32 bit
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then sudo apt-get -y install libx11-6:i386 libglib2.0-0:i386 libgtk2.0-0:i386 libatk1.0-0:i386 libpangocairo-1.0-0:i386 libgdk-pixbuf2.0-0:i386 libcairo2:i386 libpango-1.0-0:i386 libfreetype6:i386 libfontconfig1:i386 libxcomposite1:i386 libasound2:i386 libxdamage1:i386 libxext6:i386 libxfixes3:i386 libnss3:i386 libnspr4:i386 libgconf-2-4:i386 libexpat1:i386 libdbus-1-3:i386; fi; fi
 # on Linux 32 bit: download and unpack node-webkit, add it to PATH
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget https://s3.amazonaws.com/node-webkit/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then tar xf node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
