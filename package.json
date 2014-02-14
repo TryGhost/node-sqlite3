@@ -38,9 +38,6 @@
         "node-pre-gyp": "~0.2.5",
         "nan": "~0.8.0"
     },
-    "devDependencies": {
-        "set-immediate": "~0.1.1"
-    },
     "bundledDependencies": [
         "node-pre-gyp"
     ],

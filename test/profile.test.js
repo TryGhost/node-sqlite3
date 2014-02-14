@@ -1,4 +1,3 @@
-require('set-immediate');
 var sqlite3 = require('..');
 var assert = require('assert');
 
@@ -32,7 +31,7 @@ describe('profiling', function() {
         assert.ok(!create);
         db.run("CREATE TABLE foo (id int)", function(err) {
             if (err) throw err;
-            setImmediate(function() {
+            process.nextTick(function() {
                 assert.ok(create);
                 done();
             });
@@ -44,7 +43,7 @@ describe('profiling', function() {
         assert.ok(!select);
         db.run("SELECT * FROM foo", function(err) {
             if (err) throw err;
-            setImmediate(function() {
+            process.nextTick(function() {
                 assert.ok(select);
                 done();
             });
