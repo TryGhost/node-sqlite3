@@ -104,7 +104,7 @@ const char* sqlite_authorizer_string(int type);
 
 #define TRY_CATCH_CALL(context, callback, argc, argv)                          \
 {   TryCatch try_catch;                                                        \
-    (callback)->Call((context), (argc), (argv));                               \
+    MakeCallback((context), (callback), (argc), (argv));                       \
     if (try_catch.HasCaught()) {                                               \
         FatalException(try_catch);                                             \
     }                                                                          }
