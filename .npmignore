@@ -1,0 +1,13 @@
+.gitignore
+.npmignore
+node_modules
+lib/binding
+build
+test
+benchmark
+configure
+Makefile
+deps/extract.py
+scripts
+.travis.yml
+examples
