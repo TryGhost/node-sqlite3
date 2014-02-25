@@ -4,6 +4,7 @@
       "sqlite%":"internal",
       "module_name":"<!(node -e \"console.log(require('./package.json').binary.module_name)\")",
       "module_path":"<!(node -e \"console.log(require('./package.json').binary.module_path)\")",
+      "sqlite_libname":"sqlite3"
   },
   "targets": [
     {
@@ -12,7 +13,7 @@
         ["sqlite != 'internal'", {
             "libraries": [
                "-L<@(sqlite)/lib",
-               "-lsqlite3"
+               "-l<(sqlite_libname)"
             ],
             "include_dirs": [ "<@(sqlite)/include" ],
             "conditions": [ [ "OS=='linux'", {"libraries+":["-Wl,-rpath=<@(sqlite)/lib"]} ] ]
