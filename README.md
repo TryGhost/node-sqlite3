@@ -67,33 +67,6 @@ It is also possible to make your own build of `sqlite3` from its source instea
 
 It is possible to use the installed package in [node-webkit](https://github.com/rogerwang/node-webkit) instead of the vanilla Node.js, but a rebuild is required before use (see the next section).
 
-
-# REBUILDING FOR NODE-WEBKIT
-
-Because of ABI differences, only a rebuilt version of `sqlite3` can be used in [node-webkit](https://github.com/rogerwang/node-webkit).
-
-After the `sqlite3` module is installed (according to the previous section), do the following:
-
-1. Install [`nw-gyp`](https://github.com/rogerwang/nw-gyp) globally: `npm install nw-gyp -g` *(unless already installed)*
-
-2. Use `nw-gyp` to rebuild the module:
-
-```
-NODE_WEBKIT_VERSION="0.8.4" # see latest version at https://github.com/rogerwang/node-webkit#downloads
-nw-gyp rebuild --target=${NODE_WEBKIT_VERSION}
-```
-
-Remember the following:
-
-* In the `nw-gyp rebuild` command, specify the actual target version of your node-webkit. The command must be run in sqlite3's directory (where its `package.json` resides).
-
-* After the `sqlite3` package is rebuilt for node-webkit it cannot run in the vanilla Node.js (and vice versa).
-   * For example, `npm test` of the node-webkit's package would fail.
-   * If you need `sqlite3` package both for Node.js and node-webkit, then you should make two separate installations of `sqlite3` (in different directories) and rebuild only one of them for node-webkit.
-
-Visit the “[Using Node modules](https://github.com/rogerwang/node-webkit/wiki/Using-Node-modules)” article in the node-webkit's wiki for more details.
-
-
 # BUILDING FROM THE SOURCE
 
 Unless building via `npm install` (which uses its own `node-gyp`) you will need `node-gyp` installed globally:
@@ -123,6 +96,42 @@ Note, if building against homebrew-installed sqlite on OS X you can do:
     ./configure --sqlite=/usr/local/opt/sqlite/
     make
 
+# REBUILDING FOR NODE-WEBKIT
+
+Because of ABI differences, only a rebuilt version of `sqlite3` can be used in [node-webkit](https://github.com/rogerwang/node-webkit).
+
+After the `sqlite3` module is installed (according to the previous section), do the following:
+
+1. Install [`nw-gyp`](https://github.com/rogerwang/nw-gyp) globally: `npm install nw-gyp -g` *(unless already installed)*
+
+2. Use `nw-gyp` to rebuild the module:
+
+```
+NODE_WEBKIT_VERSION="0.8.4" # see latest version at https://github.com/rogerwang/node-webkit#downloads
+nw-gyp rebuild --target=${NODE_WEBKIT_VERSION}
+```
+
+Remember the following:
+
+* In the `nw-gyp rebuild` command, specify the actual target version of your node-webkit. The command must be run in sqlite3's directory (where its `package.json` resides).
+
+* After the `sqlite3` package is rebuilt for node-webkit it cannot run in the vanilla Node.js (and vice versa).
+   * For example, `npm test` of the node-webkit's package would fail.
+   * If you need `sqlite3` package both for Node.js and node-webkit, then you should make two separate installations of `sqlite3` (in different directories) and rebuild only one of them for node-webkit.
+
+Visit the “[Using Node modules](https://github.com/rogerwang/node-webkit/wiki/Using-Node-modules)” article in the node-webkit's wiki for more details.
+
+# BUILDING AGAINST SQLCIPHER
+
+To run node-sqlite3 against sqlcipher you need to compile from source by passing build options like:
+
+    npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/
+
+If your sqlcipher is installed in a custom location, say if you installed it with homebrew on OS X you also need to do:
+
+    export LDFLAGS="-L`brew --prefix`/opt/sqlcipher/lib"
+    export CPPFLAGS="-I/`brew --prefix`opt/sqlcipher/include"
+    npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix`
 
 # TESTING
 
