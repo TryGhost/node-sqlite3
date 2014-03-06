@@ -7,7 +7,6 @@ test
 benchmark
 configure
 Makefile
-deps/extract.py
 scripts
 .travis.yml
 examples
