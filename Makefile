@@ -1,5 +1,5 @@
 build:
-	npm install --build-from-source
+	export PATH=`npm explore npm -g -- pwd`/bin/node-gyp-bin:$$PATH && ./node_modules/.bin/node-pre-gyp build
 
 clean:
 	rm -f ./lib/node_sqlite3.node
