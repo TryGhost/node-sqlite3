@@ -2,7 +2,7 @@
   "includes": [ "deps/common-sqlite.gypi" ],
   "variables": {
       "sqlite%":"internal",
-      "sqlite_libname":"sqlite3"
+      "sqlite_libname%":"sqlite3"
   },
   "targets": [
     {
