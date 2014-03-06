@@ -15,10 +15,13 @@ void Database::Init(Handle<Object> target) {
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
 
     constructor_template = Persistent<FunctionTemplate>::New(t);
-    constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     constructor_template->SetClassName(String::NewSymbol("Database"));
+    Handle<Signature> sig = Signature::New(constructor_template);
+    constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
 
-    NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", Close);
+    Handle<ObjectTemplate> proto = constructor_template->PrototypeTemplate();
+    proto->Set(String::NewSymbol("close"),
+                FunctionTemplate::New(Close, Handle<Value>(), sig));
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "exec", Exec);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "wait", Wait);
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "loadExtension", LoadExtension);
@@ -199,13 +202,13 @@ void Database::Work_AfterOpen(uv_work_t* req) {
 
 Handle<Value> Database::OpenGetter(Local<String> str, const AccessorInfo& accessor) {
     HandleScope scope;
-    Database* db = ObjectWrap::Unwrap<Database>(accessor.This());
+    Database* db = ObjectWrap::Unwrap<Database>(accessor.Holder());
     return Boolean::New(db->open);
 }
 
 Handle<Value> Database::Close(const Arguments& args) {
     HandleScope scope;
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    Database* db = ObjectWrap::Unwrap<Database>(args.Holder());
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     Baton* baton = new Baton(db, callback);
@@ -277,7 +280,7 @@ void Database::Work_AfterClose(uv_work_t* req) {
 
 Handle<Value> Database::Serialize(const Arguments& args) {
     HandleScope scope;
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    Database* db = ObjectWrap::Unwrap<Database>(args.Holder());
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     bool before = db->serialize;
@@ -295,7 +298,7 @@ Handle<Value> Database::Serialize(const Arguments& args) {
 
 Handle<Value> Database::Parallelize(const Arguments& args) {
     HandleScope scope;
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    Database* db = ObjectWrap::Unwrap<Database>(args.Holder());
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     bool before = db->serialize;
@@ -313,7 +316,7 @@ Handle<Value> Database::Parallelize(const Arguments& args) {
 
 Handle<Value> Database::Configure(const Arguments& args) {
     HandleScope scope;
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    Database* db = ObjectWrap::Unwrap<Database>(args.Holder());
 
     REQUIRE_ARGUMENTS(2);
 
@@ -484,7 +487,7 @@ void Database::UpdateCallback(Database *db, UpdateInfo* info) {
 
 Handle<Value> Database::Exec(const Arguments& args) {
     HandleScope scope;
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    Database* db = ObjectWrap::Unwrap<Database>(args.Holder());
 
     REQUIRE_ARGUMENT_STRING(0, sql);
     OPTIONAL_ARGUMENT_FUNCTION(1, callback);
@@ -492,7 +495,7 @@ Handle<Value> Database::Exec(const Arguments& args) {
     Baton* baton = new ExecBaton(db, callback, *sql);
     db->Schedule(Work_BeginExec, baton, true);
 
-    return args.This();
+    return args.Holder();
 }
 
 void Database::Work_BeginExec(Baton* baton) {
@@ -553,7 +556,7 @@ void Database::Work_AfterExec(uv_work_t* req) {
 
 Handle<Value> Database::Wait(const Arguments& args) {
     HandleScope scope;
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    Database* db = ObjectWrap::Unwrap<Database>(args.Holder());
 
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
@@ -583,7 +586,7 @@ void Database::Work_Wait(Baton* baton) {
 
 Handle<Value> Database::LoadExtension(const Arguments& args) {
     HandleScope scope;
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    Database* db = ObjectWrap::Unwrap<Database>(args.Holder());
 
     REQUIRE_ARGUMENT_STRING(0, filename);
     OPTIONAL_ARGUMENT_FUNCTION(1, callback);
