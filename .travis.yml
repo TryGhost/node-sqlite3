@@ -53,7 +53,7 @@ script:
 # on Linux 64 bit: install nw-gyp if NODE_WEBKIT is not empty
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then npm install nw-gyp -g; fi; fi
 # on Linux 64 bit: rebuild node-sqlite3 for 64 bit node-webkit target (if NODE_WEBKIT is not empty)
-- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then nw-gyp rebuild --target=$NODE_WEBKIT --build-from-source; fi; fi
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp rebuild --runtime=node-webkit --target=$NODE_WEBKIT --build-from-source; fi; fi
 # on Linux 64 bit: download and unpack node-webkit, add it to PATH
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget https://s3.amazonaws.com/node-webkit/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-x64.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then tar xf node-webkit-v${NODE_WEBKIT}-linux-x64.tar.gz; fi; fi
@@ -82,7 +82,7 @@ script:
 # install nw-gyp in 32 bit environment if NODE_WEBKIT is not empty (but on Linux it's installed earlier on 64 bit)
 - if [ "$platform" != 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then npm install nw-gyp -g; fi; fi
 # rebuild node-sqlite3 for 32 bit node-webkit target (if NODE_WEBKIT is not empty)
-- if [ "$NODE_WEBKIT" != "" ]; then nw-gyp rebuild --target=$NODE_WEBKIT --build-from-source; fi;
+- if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp rebuild --runtime=node-webkit --target=$NODE_WEBKIT; fi;
 # on Linux 32 bit: install 32 bit stuff necessary for node-webkit 32 bit
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then sudo apt-get -y install libx11-6:i386; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then sudo apt-get -y install libglib2.0-0:i386; fi; fi
