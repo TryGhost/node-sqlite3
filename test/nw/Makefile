@@ -6,7 +6,7 @@ node_modules/sqlite3:
 	npm install https://github.com/mapbox/node-sqlite3/tarball/master
 
 node_modules/sqlite3/lib/node_sqlite3.node: node_modules/sqlite3
-	cd node_modules/sqlite3 && nw-gyp rebuild --target=$(NODE_WEBKIT_VERSION) && rm -rf build/
+	cd node_modules/sqlite3 && ./node_modules/.bin/node-pre-gyp build --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
 
 node-webkit-v$(NODE_WEBKIT_VERSION)-osx-ia32.zip:
 	wget https://s3.amazonaws.com/node-webkit/v$(NODE_WEBKIT_VERSION)/node-webkit-v$(NODE_WEBKIT_VERSION)-osx-ia32.zip
