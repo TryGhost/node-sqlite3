@@ -53,7 +53,7 @@ script:
 # on Linux 64 bit: install nw-gyp if NODE_WEBKIT is not empty
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then npm install nw-gyp -g; fi; fi
 # on Linux 64 bit: rebuild node-sqlite3 for 64 bit node-webkit target (if NODE_WEBKIT is not empty)
-- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp rebuild --runtime=node-webkit --target=$NODE_WEBKIT --build-from-source; fi; fi
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp rebuild --runtime=node-webkit --target=$NODE_WEBKIT; fi; fi
 # on Linux 64 bit: download and unpack node-webkit, add it to PATH
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget https://s3.amazonaws.com/node-webkit/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-x64.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then tar xf node-webkit-v${NODE_WEBKIT}-linux-x64.tar.gz; fi; fi
@@ -61,7 +61,7 @@ script:
 # on Linux 64 bit: ldd nw
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then ldd $(pwd)/node-webkit-v${NODE_WEBKIT}-linux-x64/nw; fi; fi
 # on Linux 64 bit: attempt node-pre-gyp package testpackage (if NODE_WEBKIT is not empty)
-- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp package testpackage --runtime=node-webkit --overwrite; fi; fi
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp package testpackage --runtime=node-webkit --target=$NODE_WEBKIT --overwrite; fi; fi
 # on Linux 64 bit: erase used node-webkit, restore PATH
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then export PATH="$prenwpath"; rm -rf node-webkit-v${NODE_WEBKIT}-linux-x64; fi; fi
 - make clean
@@ -110,7 +110,7 @@ script:
 # on Linux 32 bit: ldd nw
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then ldd $(pwd)/node-webkit-v${NODE_WEBKIT}-linux-ia32/nw; fi; fi
 # attempt node-pre-gyp package testpackage (if NODE_WEBKIT is not empty)
-- if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp package testpackage --runtime=node-webkit --overwrite; fi;
+- if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp package testpackage --runtime=node-webkit --target=$NODE_WEBKIT --overwrite; fi;
 # on Linux 32 bit: erase used node-webkit, restore PATH
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then export PATH="$prenwpath"; rm -rf node-webkit-v${NODE_WEBKIT}-linux-ia32; fi; fi
 - make clean
