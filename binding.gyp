@@ -2,8 +2,6 @@
   "includes": [ "deps/common-sqlite.gypi" ],
   "variables": {
       "sqlite%":"internal",
-      "module_name":"<!(node -e \"console.log(require('./package.json').binary.module_name)\")",
-      "module_path":"<!(node -e \"console.log(require('./package.json').binary.module_path)\")",
       "sqlite_libname":"sqlite3"
   },
   "targets": [
