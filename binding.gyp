@@ -2,8 +2,7 @@
   "includes": [ "deps/common-sqlite.gypi" ],
   "variables": {
       "sqlite%":"internal",
-      "module_name":"node_sqlite3",
-      "module_path":"./lib/"
+      "sqlite_libname%":"sqlite3"
   },
   "targets": [
     {
@@ -13,7 +12,7 @@
         ["sqlite != 'internal'", {
             "libraries": [
                "-L<@(sqlite)/lib",
-               "-lsqlite3"
+               "-l<(sqlite_libname)"
             ],
             "include_dirs": [ "<@(sqlite)/include" ],
             "conditions": [ [ "OS=='linux'", {"libraries+":["-Wl,-rpath=<@(sqlite)/lib"]} ] ]

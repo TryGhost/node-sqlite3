@@ -9,9 +9,10 @@
     },
     "binary": {
         "module_name": "node_sqlite3",
-        "module_path": "./lib",
-        "remote_uri": "http://node-sqlite3.s3.amazonaws.com",
-        "template": "{configuration}/{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz"
+        "module_path": "./lib/binding/{node_abi}-{platform}-{arch}",
+        "remote_path": "./{configuration}",
+        "package_name": "{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz",
+        "host": "https://node-sqlite3.s3.amazonaws.com"
     },
     "contributors": [
         "Konstantin Käfer <mail@kkaefer.com>",
@@ -35,12 +36,15 @@
         "url": "git://github.com/mapbox/node-sqlite3.git"
     },
     "dependencies": {
-        "node-pre-gyp": "~0.2.5",
-        "nan": "~0.8.0"
+        "node-pre-gyp": "0.5.x",
+	"nan": "~0.8.0"
     },
     "bundledDependencies": [
         "node-pre-gyp"
     ],
+    "devDependencies": {
+        "mocha": "*"
+    },
     "engines": {
         "node": ">= 0.8.0 < 0.11.0"
     },

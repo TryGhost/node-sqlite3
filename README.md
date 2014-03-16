@@ -1,14 +1,19 @@
-# NAME
+Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
-node-sqlite3 - Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](http://nodejs.org/) 0.2-0.4 (versions 2.0.x), **0.6.13+, 0.8.x, and 0.10.x** (versions 2.1.x).
-
-(Can also run in [node-webkit](https://github.com/rogerwang/node-webkit) if it uses a supported version of Node's engine.)
+[![NPM](https://nodei.co/npm/sqlite3.png)](https://nodei.co/npm/sqlite3/)
 
 [![Build Status](https://travis-ci.org/mapbox/node-sqlite3.png?branch=master)](https://travis-ci.org/mapbox/node-sqlite3)
 [![npm package version](https://badge.fury.io/js/sqlite3.png)](https://npmjs.org/package/sqlite3)
 
+## Depends
 
-# USAGE
+ - Node.js v0.8.x or v0.10.x
+
+Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/springmeyer/node-pre-gyp).
+
+Also works with [node-webkit](https://github.com/rogerwang/node-webkit) and sqlcipher.
+
+# Usage
 
 **Note:** the module must be [installed](#installing) before use.
 
@@ -33,18 +38,15 @@ db.serialize(function() {
 db.close();
 ```
 
+# Features
 
-
-# FEATURES
-
-* Straightforward query and parameter binding interface
-* Full Buffer/Blob support
-* Extensive [debugging support](https://github.com/mapbox/node-sqlite3/wiki/Debugging)
-* [Query serialization](https://github.com/mapbox/node-sqlite3/wiki/Control-Flow) API
-* [Extension support](https://github.com/mapbox/node-sqlite3/wiki/Extensions)
-* Big test suite
-* Written in modern C++ and tested for memory leaks
-
+ - Straightforward query and parameter binding interface
+ - Full Buffer/Blob support
+ - Extensive [debugging support](https://github.com/mapbox/node-sqlite3/wiki/Debugging)
+ - [Query serialization](https://github.com/mapbox/node-sqlite3/wiki/Control-Flow) API
+ - [Extension support](https://github.com/mapbox/node-sqlite3/wiki/Extensions)
+ - Big test suite
+ - Written in modern C++ and tested for memory leaks
 
 
 # API
@@ -52,7 +54,7 @@ db.close();
 See the [API documentation](https://github.com/mapbox/node-sqlite3/wiki) in the wiki.
 
 
-# INSTALLING
+# Installing
 
 You can use [`npm`](https://github.com/isaacs/npm) to download and install:
 
@@ -67,34 +69,7 @@ It is also possible to make your own build of `sqlite3` from its source instea
 
 It is possible to use the installed package in [node-webkit](https://github.com/rogerwang/node-webkit) instead of the vanilla Node.js, but a rebuild is required before use (see the next section).
 
-
-# REBUILDING FOR NODE-WEBKIT
-
-Because of ABI differences, only a rebuilt version of `sqlite3` can be used in [node-webkit](https://github.com/rogerwang/node-webkit).
-
-After the `sqlite3` module is installed (according to the previous section), do the following:
-
-1. Install [`nw-gyp`](https://github.com/rogerwang/nw-gyp) globally: `npm install nw-gyp -g` *(unless already installed)*
-
-2. Use `nw-gyp` to rebuild the module:
-
-```
-NODE_WEBKIT_VERSION="0.8.4" # see latest version at https://github.com/rogerwang/node-webkit#downloads
-nw-gyp rebuild --target=${NODE_WEBKIT_VERSION}
-```
-
-Remember the following:
-
-* In the `nw-gyp rebuild` command, specify the actual target version of your node-webkit. The command must be run in sqlite3's directory (where its `package.json` resides).
-
-* After the `sqlite3` package is rebuilt for node-webkit it cannot run in the vanilla Node.js (and vice versa).
-   * For example, `npm test` of the node-webkit's package would fail.
-   * If you need `sqlite3` package both for Node.js and node-webkit, then you should make two separate installations of `sqlite3` (in different directories) and rebuild only one of them for node-webkit.
-
-Visit the “[Using Node modules](https://github.com/rogerwang/node-webkit/wiki/Using-Node-modules)” article in the node-webkit's wiki for more details.
-
-
-# BUILDING FROM THE SOURCE
+## Source install
 
 Unless building via `npm install` (which uses its own `node-gyp`) you will need `node-gyp` installed globally:
 
@@ -123,8 +98,44 @@ Note, if building against homebrew-installed sqlite on OS X you can do:
     ./configure --sqlite=/usr/local/opt/sqlite/
     make
 
+## Building for node-webkit
 
-# TESTING
+Because of ABI differences, only a rebuilt version of `sqlite3` can be used in [node-webkit](https://github.com/rogerwang/node-webkit).
+
+After the `sqlite3` module is installed (according to the previous section), do the following:
+
+1. Install [`nw-gyp`](https://github.com/rogerwang/nw-gyp) globally: `npm install nw-gyp -g` *(unless already installed)*
+
+2. Use `nw-gyp` to rebuild the module:
+
+```
+NODE_WEBKIT_VERSION="0.8.4" # see latest version at https://github.com/rogerwang/node-webkit#downloads
+nw-gyp rebuild --target=${NODE_WEBKIT_VERSION}
+```
+
+Remember the following:
+
+* In the `nw-gyp rebuild` command, specify the actual target version of your node-webkit. The command must be run in sqlite3's directory (where its `package.json` resides).
+
+* After the `sqlite3` package is rebuilt for node-webkit it cannot run in the vanilla Node.js (and vice versa).
+   * For example, `npm test` of the node-webkit's package would fail.
+   * If you need `sqlite3` package both for Node.js and node-webkit, then you should make two separate installations of `sqlite3` (in different directories) and rebuild only one of them for node-webkit.
+
+Visit the “[Using Node modules](https://github.com/rogerwang/node-webkit/wiki/Using-Node-modules)” article in the node-webkit's wiki for more details.
+
+## Building for sqlcipher
+
+To run node-sqlite3 against sqlcipher you need to compile from source by passing build options like:
+
+    npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/
+
+If your sqlcipher is installed in a custom location, say if you installed it with homebrew on OS X you also need to do:
+
+    export LDFLAGS="-L`brew --prefix`/opt/sqlcipher/lib"
+    export CPPFLAGS="-I/`brew --prefix`opt/sqlcipher/include"
+    npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix`
+
+# Testing
 
 [mocha](https://github.com/visionmedia/mocha) is required to run unit tests.
 
@@ -134,8 +145,7 @@ In sqlite3's directory (where its `package.json` resides) run the following:
     npm test
 
 
-
-# CONTRIBUTORS
+# Contributors
 
 * [Konstantin Käfer](https://github.com/kkaefer)
 * [Dane Springmeyer](https://github.com/springmeyer)
@@ -152,8 +162,7 @@ In sqlite3's directory (where its `package.json` resides) run the following:
 * [Mithgol](https://github.com/Mithgol)
 
 
-
-# ACKNOWLEDGEMENTS
+# Acknowledgments
 
 Thanks to [Orlando Vazquez](https://github.com/orlandov),
 [Eric Fredricksen](https://github.com/grumdrig) and
@@ -162,6 +171,6 @@ Thanks to [Orlando Vazquez](https://github.com/orlandov),
 Development of this module is sponsored by [MapBox](http://mapbox.org/).
 
 
-# LICENSE
+# License
 
 `node-sqlite3` is [BSD licensed](https://github.com/mapbox/node-sqlite3/raw/master/LICENSE).
