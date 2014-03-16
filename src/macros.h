@@ -57,54 +57,54 @@ const char* sqlite_authorizer_string(int type);
 
 #define DEFINE_CONSTANT_INTEGER(target, constant, name)                        \
     (target)->Set(                                                             \
-        String::NewSymbol(#name),                                              \
-        Integer::New(constant),                                                \
+        NanSymbol(#name),                                                      \
+        NanNew<Integer>(constant),                                             \
         static_cast<PropertyAttribute>(ReadOnly | DontDelete)                  \
     );
 
 #define DEFINE_CONSTANT_STRING(target, constant, name)                         \
     (target)->Set(                                                             \
-        String::NewSymbol(#name),                                              \
-        String::NewSymbol(constant),                                           \
+        NanSymbol(#name),                                                      \
+        NanSymbol(constant),                                                   \
         static_cast<PropertyAttribute>(ReadOnly | DontDelete)                  \
     );
 
 
 #define NODE_SET_GETTER(target, name, function)                                \
     (target)->InstanceTemplate()                                               \
-        ->SetAccessor(String::NewSymbol(name), (function));
+        ->SetAccessor(NanSymbol(name), (function));
 
 #define GET_STRING(source, name, property)                                     \
-    String::Utf8Value name((source)->Get(String::NewSymbol(property)));
+    String::Utf8Value name((source)->Get(NanSymbol(property)));
 
 #define GET_INTEGER(source, name, property)                                    \
-    int name = (source)->Get(String::NewSymbol(property))->Int32Value();
+    int name = (source)->Get(NanSymbol(property))->Int32Value();
 
 #define EXCEPTION(msg, errno, name)                                            \
     Local<Value> name = Exception::Error(                                      \
         String::Concat(                                                        \
             String::Concat(                                                    \
-                String::NewSymbol(sqlite_code_string(errno)),                  \
-                String::NewSymbol(": ")                                        \
+                NanSymbol(sqlite_code_string(errno)),                          \
+                NanSymbol(": ")                                                \
             ),                                                                 \
             (msg)                                                              \
         )                                                                      \
     );                                                                         \
     Local<Object> name ##_obj = name->ToObject();                              \
-    name ##_obj->Set(String::NewSymbol("errno"), Integer::New(errno));         \
-    name ##_obj->Set(String::NewSymbol("code"),                                \
-        String::NewSymbol(sqlite_code_string(errno)));
+    name ##_obj->Set(NanSymbol("errno"), NanNew<Integer>(errno));              \
+    name ##_obj->Set(NanSymbol("code"),                                        \
+        NanSymbol(sqlite_code_string(errno)));
 
 
 #define EMIT_EVENT(obj, argc, argv)                                            \
     TRY_CATCH_CALL((obj),                                                      \
-        Local<Function>::Cast((obj)->Get(String::NewSymbol("emit"))),          \
+        Local<Function>::Cast((obj)->Get(NanSymbol("emit"))),                  \
         argc, argv                                                             \
     );
 
 #define TRY_CATCH_CALL(context, callback, argc, argv)                          \
 {   TryCatch try_catch;                                                        \
-    MakeCallback((context), (callback), (argc), (argv));                       \
+    NanMakeCallback((context), (callback), (argc), (argv));                    \
     if (try_catch.HasCaught()) {                                               \
         FatalException(try_catch);                                             \
     }                                                                          }

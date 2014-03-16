@@ -40,11 +40,11 @@ public:
                 db(db_), status(SQLITE_OK) {
             db->Ref();
             request.data = this;
-            NanAssignPersistent(Function, callback, cb_);
+            NanAssignPersistent(callback, cb_);
         }
         virtual ~Baton() {
             db->Unref();
-            callback.Dispose();
+            NanDisposePersistent(callback);
         }
     };
 

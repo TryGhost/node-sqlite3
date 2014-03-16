@@ -14,10 +14,10 @@ Persistent<FunctionTemplate> Statement::constructor_template;
 void Statement::Init(Handle<Object> target) {
     NanScope();
 
-    Local<FunctionTemplate> t = FunctionTemplate::New(New);
+    Local<FunctionTemplate> t = NanNew<FunctionTemplate>(New);
 
     t->InstanceTemplate()->SetInternalFieldCount(1);
-    t->SetClassName(String::NewSymbol("Statement"));
+    t->SetClassName(NanSymbol("Statement"));
 
     NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(t, "get", Get);
@@ -27,8 +27,8 @@ void Statement::Init(Handle<Object> target) {
     NODE_SET_PROTOTYPE_METHOD(t, "reset", Reset);
     NODE_SET_PROTOTYPE_METHOD(t, "finalize", Finalize);
 
-    NanAssignPersistent(FunctionTemplate, constructor_template, t);
-    target->Set(String::NewSymbol("Statement"),
+    NanAssignPersistent(constructor_template, t);
+    target->Set(NanSymbol("Statement"),
         t->GetFunction());
 }
 
@@ -63,7 +63,7 @@ template <class T> void Statement::Error(T* baton) {
     Statement* stmt = baton->stmt;
     // Fail hard on logic errors.
     assert(stmt->status != 0);
-    EXCEPTION(String::New(stmt->message.c_str()), stmt->status, exception);
+    EXCEPTION(NanNew<String>(stmt->message.c_str()), stmt->status, exception);
 
     Local<Function> cb = NanPersistentToLocal(baton->callback);
 
@@ -72,7 +72,7 @@ template <class T> void Statement::Error(T* baton) {
         TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
     }
     else {
-        Local<Value> argv[] = { String::NewSymbol("error"), exception };
+        Local<Value> argv[] = { NanSymbol("error"), exception };
         EMIT_EVENT(NanObjectWrapHandle(stmt), 2, argv);
     }
 }
@@ -100,7 +100,7 @@ NAN_METHOD(Statement::New) {
     Database* db = ObjectWrap::Unwrap<Database>(args[0]->ToObject());
     Local<String> sql = Local<String>::Cast(args[1]);
 
-    args.This()->Set(String::NewSymbol("sql"), sql, ReadOnly);
+    args.This()->Set(NanSymbol("sql"), sql, ReadOnly);
 
     Statement* stmt = new Statement(db);
     stmt->Wrap(args.This());
@@ -156,7 +156,7 @@ void Statement::Work_AfterPrepare(uv_work_t* req) {
         stmt->prepared = true;
         Local<Function> cb = NanPersistentToLocal(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+            Local<Value> argv[] = { NanNew(NanNull()) };
             TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
         }
     }
@@ -340,7 +340,7 @@ void Statement::Work_AfterBind(uv_work_t* req) {
         // Fire callbacks.
         Local<Function> cb = NanPersistentToLocal(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+            Local<Value> argv[] = { NanNew(NanNull()) };
             TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
         }
     }
@@ -405,11 +405,11 @@ void Statement::Work_AfterGet(uv_work_t* req) {
         if (!cb.IsEmpty() && cb->IsFunction()) {
             if (stmt->status == SQLITE_ROW) {
                 // Create the result array from the data we acquired.
-                Local<Value> argv[] = { NanNewLocal<Value>(Null()), RowToJS(&baton->row) };
+                Local<Value> argv[] = { NanNew(NanNull()), RowToJS(&baton->row) };
                 TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 2, argv);
             }
             else {
-                Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+                Local<Value> argv[] = { NanNew(NanNull()) };
                 TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
             }
         }
@@ -473,10 +473,10 @@ void Statement::Work_AfterRun(uv_work_t* req) {
         // Fire callbacks.
         Local<Function> cb = NanPersistentToLocal(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            NanObjectWrapHandle(stmt)->Set(String::NewSymbol("lastID"), Local<Integer>(Integer::New(baton->inserted_id)));
-            NanObjectWrapHandle(stmt)->Set(String::NewSymbol("changes"), Local<Integer>(Integer::New(baton->changes)));
+            NanObjectWrapHandle(stmt)->Set(NanSymbol("lastID"), NanNew<Integer>(baton->inserted_id));
+            NanObjectWrapHandle(stmt)->Set(NanSymbol("changes"), NanNew<Integer>(baton->changes));
 
-            Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+            Local<Value> argv[] = { NanNew(NanNull()) };
             TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
         }
     }
@@ -541,7 +541,7 @@ void Statement::Work_AfterAll(uv_work_t* req) {
         if (!cb.IsEmpty() && cb->IsFunction()) {
             if (baton->rows.size()) {
                 // Create the result array from the data we acquired.
-                Local<Array> result(Array::New(baton->rows.size()));
+                Local<Array> result(NanNew<Array>(baton->rows.size()));
                 Rows::const_iterator it = baton->rows.begin();
                 Rows::const_iterator end = baton->rows.end();
                 for (int i = 0; it < end; ++it, i++) {
@@ -549,14 +549,14 @@ void Statement::Work_AfterAll(uv_work_t* req) {
                     delete *it;
                 }
 
-                Local<Value> argv[] = { NanNewLocal<Value>(Null()), result };
+                Local<Value> argv[] = { NanNew(NanNull()), result };
                 TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 2, argv);
             }
             else {
                 // There were no result rows.
                 Local<Value> argv[] = {
-                    NanNewLocal<Value>(Null()),
-                    NanNewLocal<Value>(Array::New(0))
+                    NanNew(NanNull()),
+                    NanNew<Array>(0)
                 };
                 TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 2, argv);
             }
@@ -582,7 +582,7 @@ NAN_METHOD(Statement::Each) {
         return NanThrowError("Data type is not supported");
     }
     else {
-        NanAssignPersistent(Function, baton->completed, completed);
+        NanAssignPersistent(baton->completed, completed);
         stmt->Schedule(Work_BeginEach, baton);
         NanReturnValue(args.This());
     }
@@ -593,8 +593,8 @@ void Statement::Work_BeginEach(Baton* baton) {
     // the event loop. This prevents dangling events.
     EachBaton* each_baton = static_cast<EachBaton*>(baton);
     each_baton->async = new Async(each_baton->stmt, AsyncEach);
-    NanAssignPersistent(Function, each_baton->async->item_cb, each_baton->callback);
-    NanAssignPersistent(Function, each_baton->async->completed_cb, each_baton->completed);
+    NanAssignPersistent(each_baton->async->item_cb, each_baton->callback);
+    NanAssignPersistent(each_baton->async->completed_cb, each_baton->completed);
 
     STATEMENT_BEGIN(Each);
 }
@@ -667,7 +667,7 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
         Local<Function> cb = NanPersistentToLocal(async->item_cb);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[2];
-            argv[0] = NanNewLocal<Value>(Null());
+            argv[0] = NanNew(NanNull());
 
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
@@ -685,8 +685,8 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
         if (!cb.IsEmpty() &&
                 cb->IsFunction()) {
             Local<Value> argv[] = {
-                NanNewLocal<Value>(Null()),
-                Integer::New(async->retrieved)
+                NanNew(NanNull()),
+                NanNew<Integer>(async->retrieved)
             };
             TRY_CATCH_CALL(NanObjectWrapHandle(async->stmt), cb, 2, argv);
         }
@@ -735,7 +735,7 @@ void Statement::Work_AfterReset(uv_work_t* req) {
     // Fire callbacks.
     Local<Function> cb = NanPersistentToLocal(baton->callback);
     if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+        Local<Value> argv[] = { NanNew(NanNull()) };
         TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
     }
 
@@ -743,7 +743,7 @@ void Statement::Work_AfterReset(uv_work_t* req) {
 }
 
 Local<Object> Statement::RowToJS(Row* row) {
-    Local<Object> result(Object::New());
+    Local<Object> result(NanNew<Object>());
 
     Row::const_iterator it = row->begin();
     Row::const_iterator end = row->end();
@@ -754,23 +754,23 @@ Local<Object> Statement::RowToJS(Row* row) {
 
         switch (field->type) {
             case SQLITE_INTEGER: {
-                value = Local<Value>(Number::New(((Values::Integer*)field)->value));
+                value = NanNew<Number>(((Values::Integer*)field)->value);
             } break;
             case SQLITE_FLOAT: {
-                value = Local<Value>(Number::New(((Values::Float*)field)->value));
+                value = NanNew<Number>(((Values::Float*)field)->value);
             } break;
             case SQLITE_TEXT: {
-                value = Local<Value>(String::New(((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size()));
+                value = NanNew<String>(((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size());
             } break;
             case SQLITE_BLOB: {
-                value = NanNewLocal<Value>(NanNewBufferHandle(((Values::Blob*)field)->value, ((Values::Blob*)field)->length));
+                value = NanNew(NanNewBufferHandle(((Values::Blob*)field)->value, ((Values::Blob*)field)->length));
             } break;
             case SQLITE_NULL: {
-                value = NanNewLocal<Value>(Null());
+                value = NanNew(NanNull());
             } break;
         }
 
-        result->Set(String::NewSymbol(field->name.c_str()), value);
+        result->Set(NanSymbol(field->name.c_str()), value);
 
         DELETE_FIELD(field);
     }
@@ -848,7 +848,7 @@ void Statement::CleanQueue() {
     if (prepared && !queue.empty()) {
         // This statement has already been prepared and is now finalized.
         // Fire error for all remaining items in the queue.
-        EXCEPTION(String::New("Statement is already finalized"), SQLITE_MISUSE, exception);
+        EXCEPTION(NanNew<String>("Statement is already finalized"), SQLITE_MISUSE, exception);
         Local<Value> argv[] = { exception };
         bool called = false;
 
@@ -874,7 +874,7 @@ void Statement::CleanQueue() {
         // When we couldn't call a callback function, emit an error on the
         // Statement object.
         if (!called) {
-            Local<Value> args[] = { String::NewSymbol("error"), exception };
+            Local<Value> args[] = { NanSymbol("error"), exception };
             EMIT_EVENT(NanObjectWrapHandle(this), 2, args);
         }
     }

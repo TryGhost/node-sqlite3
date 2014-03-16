@@ -12,10 +12,10 @@ Persistent<FunctionTemplate> Database::constructor_template;
 void Database::Init(Handle<Object> target) {
     NanScope();
 
-    Local<FunctionTemplate> t = FunctionTemplate::New(New);
+    Local<FunctionTemplate> t = NanNew<FunctionTemplate>(New);
 
     t->InstanceTemplate()->SetInternalFieldCount(1);
-    t->SetClassName(String::NewSymbol("Database"));
+    t->SetClassName(NanSymbol("Database"));
 
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
     NODE_SET_PROTOTYPE_METHOD(t, "exec", Exec);
@@ -27,15 +27,15 @@ void Database::Init(Handle<Object> target) {
 
     NODE_SET_GETTER(t, "open", OpenGetter);
 
-    NanAssignPersistent(FunctionTemplate, constructor_template, t);
+    NanAssignPersistent(constructor_template, t);
 
-    target->Set(String::NewSymbol("Database"),
+    target->Set(NanSymbol("Database"),
         t->GetFunction());
 }
 
 void Database::Process() {
     if (!open && locked && !queue.empty()) {
-        EXCEPTION(String::New("Database handle is closed"), SQLITE_MISUSE, exception);
+        EXCEPTION(NanNew<String>("Database handle is closed"), SQLITE_MISUSE, exception);
         Local<Value> argv[] = { exception };
         bool called = false;
 
@@ -57,7 +57,7 @@ void Database::Process() {
         // When we couldn't call a callback function, emit an error on the
         // Database object.
         if (!called) {
-            Local<Value> args[] = { String::NewSymbol("error"), exception };
+            Local<Value> args[] = { NanSymbol("error"), exception };
             EMIT_EVENT(NanObjectWrapHandle(this), 2, args);
         }
         return;
@@ -81,14 +81,14 @@ void Database::Process() {
 
 void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
     if (!open && locked) {
-        EXCEPTION(String::New("Database is closed"), SQLITE_MISUSE, exception);
+        EXCEPTION(NanNew<String>("Database is closed"), SQLITE_MISUSE, exception);
         Local<Function> cb = NanPersistentToLocal(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[] = { exception };
             TRY_CATCH_CALL(NanObjectWrapHandle(this), cb, 1, argv);
         }
         else {
-            Local<Value> argv[] = { String::NewSymbol("error"), exception };
+            Local<Value> argv[] = { NanSymbol("error"), exception };
             EMIT_EVENT(NanObjectWrapHandle(this), 2, argv);
         }
         return;
@@ -128,8 +128,8 @@ NAN_METHOD(Database::New) {
     Database* db = new Database();
     db->Wrap(args.This());
 
-    args.This()->Set(String::NewSymbol("filename"), args[0]->ToString(), ReadOnly);
-    args.This()->Set(String::NewSymbol("mode"), Integer::New(mode), ReadOnly);
+    args.This()->Set(NanSymbol("filename"), args[0]->ToString(), ReadOnly);
+    args.This()->Set(NanSymbol("mode"), NanNew<Integer>(mode), ReadOnly);
 
     // Start opening the database.
     OpenBaton* baton = new OpenBaton(db, callback, *filename, mode);
@@ -173,12 +173,12 @@ void Database::Work_AfterOpen(uv_work_t* req) {
 
     Local<Value> argv[1];
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
+        EXCEPTION(NanNew<String>(baton->message.c_str()), baton->status, exception);
         argv[0] = exception;
     }
     else {
         db->open = true;
-        argv[0] = NanNewLocal<Value>(Null());
+        argv[0] = NanNew(NanNull());
     }
 
     Local<Function> cb = NanPersistentToLocal(baton->callback);
@@ -187,12 +187,12 @@ void Database::Work_AfterOpen(uv_work_t* req) {
         TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
     }
     else if (!db->open) {
-        Local<Value> args[] = { String::NewSymbol("error"), argv[0] };
+        Local<Value> args[] = { NanSymbol("error"), argv[0] };
         EMIT_EVENT(NanObjectWrapHandle(db), 2, args);
     }
 
     if (db->open) {
-        Local<Value> args[] = { String::NewSymbol("open") };
+        Local<Value> args[] = { NanSymbol("open") };
         EMIT_EVENT(NanObjectWrapHandle(db), 1, args);
         db->Process();
     }
@@ -203,7 +203,7 @@ void Database::Work_AfterOpen(uv_work_t* req) {
 NAN_GETTER(Database::OpenGetter) {
     NanScope();
     Database* db = ObjectWrap::Unwrap<Database>(args.This());
-    NanReturnValue(Boolean::New(db->open));
+    NanReturnValue(NanNew<Boolean>(db->open));
 }
 
 NAN_METHOD(Database::Close) {
@@ -250,14 +250,14 @@ void Database::Work_AfterClose(uv_work_t* req) {
 
     Local<Value> argv[1];
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
+        EXCEPTION(NanNew<String>(baton->message.c_str()), baton->status, exception);
         argv[0] = exception;
     }
     else {
         db->open = false;
         // Leave db->locked to indicate that this db object has reached
         // the end of its life.
-        argv[0] = NanNewLocal<Value>(Null());
+        argv[0] = NanNew(NanNull());
     }
 
     Local<Function> cb = NanPersistentToLocal(baton->callback);
@@ -267,12 +267,12 @@ void Database::Work_AfterClose(uv_work_t* req) {
         TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
     }
     else if (db->open) {
-        Local<Value> args[] = { String::NewSymbol("error"), argv[0] };
+        Local<Value> args[] = { NanSymbol("error"), argv[0] };
         EMIT_EVENT(NanObjectWrapHandle(db), 2, args);
     }
 
     if (!db->open) {
-        Local<Value> args[] = { String::NewSymbol("close"), argv[0] };
+        Local<Value> args[] = { NanSymbol("close"), argv[0] };
         EMIT_EVENT(NanObjectWrapHandle(db), 1, args);
         db->Process();
     }
@@ -322,17 +322,17 @@ NAN_METHOD(Database::Configure) {
 
     REQUIRE_ARGUMENTS(2);
 
-    if (args[0]->Equals(String::NewSymbol("trace"))) {
+    if (args[0]->Equals(NanSymbol("trace"))) {
         Local<Function> handle;
         Baton* baton = new Baton(db, handle);
         db->Schedule(RegisterTraceCallback, baton);
     }
-    else if (args[0]->Equals(String::NewSymbol("profile"))) {
+    else if (args[0]->Equals(NanSymbol("profile"))) {
         Local<Function> handle;
         Baton* baton = new Baton(db, handle);
         db->Schedule(RegisterProfileCallback, baton);
     }
-    else if (args[0]->Equals(String::NewSymbol("busyTimeout"))) {
+    else if (args[0]->Equals(NanSymbol("busyTimeout"))) {
         if (!args[1]->IsInt32()) {
             return NanThrowTypeError("Value must be an integer");
         }
@@ -344,7 +344,7 @@ NAN_METHOD(Database::Configure) {
     else {
         return NanThrowError(Exception::Error(String::Concat(
             args[0]->ToString(),
-            String::New(" is not a valid configuration option")
+            NanNew<String>(" is not a valid configuration option")
         )));
     }
 
@@ -393,8 +393,8 @@ void Database::TraceCallback(Database* db, std::string* sql) {
     // Note: This function is called in the main V8 thread.
     NanScope();
     Local<Value> argv[] = {
-        String::NewSymbol("trace"),
-        String::New(sql->c_str())
+        NanSymbol("trace"),
+        NanNew<String>(sql->c_str())
     };
     EMIT_EVENT(NanObjectWrapHandle(db), 2, argv);
     delete sql;
@@ -432,9 +432,9 @@ void Database::ProfileCallback(void* db, const char* sql, sqlite3_uint64 nsecs) 
 void Database::ProfileCallback(Database *db, ProfileInfo* info) {
     NanScope();
     Local<Value> argv[] = {
-        String::NewSymbol("profile"),
-        String::New(info->sql.c_str()),
-        Integer::New((double)info->nsecs / 1000000.0)
+        NanSymbol("profile"),
+        NanNew<String>(info->sql.c_str()),
+        NanNew<Integer>((double)info->nsecs / 1000000.0)
     };
     EMIT_EVENT(NanObjectWrapHandle(db), 3, argv);
     delete info;
@@ -476,10 +476,10 @@ void Database::UpdateCallback(Database *db, UpdateInfo* info) {
     NanScope();
 
     Local<Value> argv[] = {
-        String::NewSymbol(sqlite_authorizer_string(info->type)),
-        String::New(info->database.c_str()),
-        String::New(info->table.c_str()),
-        Integer::New(info->rowid),
+        NanSymbol(sqlite_authorizer_string(info->type)),
+        NanNew<String>(info->database.c_str()),
+        NanNew<String>(info->table.c_str()),
+        NanNew<Integer>(info->rowid),
     };
     EMIT_EVENT(NanObjectWrapHandle(db), 4, argv);
     delete info;
@@ -534,19 +534,19 @@ void Database::Work_AfterExec(uv_work_t* req) {
     Local<Function> cb = NanPersistentToLocal(baton->callback);
 
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
+        EXCEPTION(NanNew<String>(baton->message.c_str()), baton->status, exception);
 
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[] = { exception };
             TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
         }
         else {
-            Local<Value> args[] = { String::NewSymbol("error"), exception };
+            Local<Value> args[] = { NanSymbol("error"), exception };
             EMIT_EVENT(NanObjectWrapHandle(db), 2, args);
         }
     }
     else if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+        Local<Value> argv[] = { NanNew(NanNull()) };
         TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
     }
 
@@ -577,7 +577,7 @@ void Database::Work_Wait(Baton* baton) {
 
     Local<Function> cb = NanPersistentToLocal(baton->callback);
     if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+        Local<Value> argv[] = { NanNew(NanNull()) };
         TRY_CATCH_CALL(NanObjectWrapHandle(baton->db), cb, 1, argv);
     }
 
@@ -637,19 +637,19 @@ void Database::Work_AfterLoadExtension(uv_work_t* req) {
     Local<Function> cb = NanPersistentToLocal(baton->callback);
 
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(String::New(baton->message.c_str()), baton->status, exception);
+        EXCEPTION(NanNew<String>(baton->message.c_str()), baton->status, exception);
 
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[] = { exception };
             TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
         }
         else {
-            Local<Value> args[] = { String::NewSymbol("error"), exception };
+            Local<Value> args[] = { NanSymbol("error"), exception };
             EMIT_EVENT(NanObjectWrapHandle(db), 2, args);
         }
     }
     else if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { NanNewLocal<Value>(Null()) };
+        Local<Value> argv[] = { NanNew(NanNull()) };
         TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
     }
 

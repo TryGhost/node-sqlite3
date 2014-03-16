@@ -88,7 +88,7 @@ public:
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
             request.data = this;
-            NanAssignPersistent(Function, callback, cb_);
+            NanAssignPersistent(callback, cb_);
         }
         virtual ~Baton() {
             for (unsigned int i = 0; i < parameters.size(); i++) {
@@ -96,7 +96,7 @@ public:
                 DELETE_FIELD(field);
             }
             stmt->Unref();
-            callback.Dispose();
+            NanDisposePersistent(callback);
         }
     };
 
@@ -176,8 +176,8 @@ public:
 
         ~Async() {
             stmt->Unref();
-            item_cb.Dispose();
-            completed_cb.Dispose();
+            NanDisposePersistent(item_cb);
+            NanDisposePersistent(completed_cb);
             NODE_SQLITE3_MUTEX_DESTROY
         }
     };
