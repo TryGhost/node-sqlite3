@@ -65,7 +65,7 @@ template <class T> void Statement::Error(T* baton) {
     assert(stmt->status != 0);
     EXCEPTION(NanNew<String>(stmt->message.c_str()), stmt->status, exception);
 
-    Local<Function> cb = NanPersistentToLocal(baton->callback);
+    Local<Function> cb = NanNew(baton->callback);
 
     if (!cb.IsEmpty() && cb->IsFunction()) {
         Local<Value> argv[] = { exception };
@@ -154,7 +154,7 @@ void Statement::Work_AfterPrepare(uv_work_t* req) {
     }
     else {
         stmt->prepared = true;
-        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        Local<Function> cb = NanNew(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[] = { NanNew(NanNull()) };
             TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
@@ -338,7 +338,7 @@ void Statement::Work_AfterBind(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        Local<Function> cb = NanNew(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[] = { NanNew(NanNull()) };
             TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
@@ -401,7 +401,7 @@ void Statement::Work_AfterGet(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        Local<Function> cb = NanNew(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             if (stmt->status == SQLITE_ROW) {
                 // Create the result array from the data we acquired.
@@ -471,7 +471,7 @@ void Statement::Work_AfterRun(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        Local<Function> cb = NanNew(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             NanObjectWrapHandle(stmt)->Set(NanSymbol("lastID"), NanNew<Integer>(baton->inserted_id));
             NanObjectWrapHandle(stmt)->Set(NanSymbol("changes"), NanNew<Integer>(baton->changes));
@@ -537,7 +537,7 @@ void Statement::Work_AfterAll(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        Local<Function> cb = NanNew(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             if (baton->rows.size()) {
                 // Create the result array from the data we acquired.
@@ -664,7 +664,7 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
             break;
         }
 
-        Local<Function> cb = NanPersistentToLocal(async->item_cb);
+        Local<Function> cb = NanNew(async->item_cb);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[2];
             argv[0] = NanNew(NanNull());
@@ -680,7 +680,7 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
         }
     }
 
-    Local<Function> cb = NanPersistentToLocal(async->completed_cb);
+    Local<Function> cb = NanNew(async->completed_cb);
     if (async->completed) {
         if (!cb.IsEmpty() &&
                 cb->IsFunction()) {
@@ -733,7 +733,7 @@ void Statement::Work_AfterReset(uv_work_t* req) {
     STATEMENT_INIT(Baton);
 
     // Fire callbacks.
-    Local<Function> cb = NanPersistentToLocal(baton->callback);
+    Local<Function> cb = NanNew(baton->callback);
     if (!cb.IsEmpty() && cb->IsFunction()) {
         Local<Value> argv[] = { NanNew(NanNull()) };
         TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
@@ -825,7 +825,7 @@ void Statement::Finalize(Baton* baton) {
     baton->stmt->Finalize();
 
     // Fire callback in case there was one.
-    Local<Function> cb = NanPersistentToLocal(baton->callback);
+    Local<Function> cb = NanNew(baton->callback);
     if (!cb.IsEmpty() && cb->IsFunction()) {
         TRY_CATCH_CALL(NanObjectWrapHandle(baton->stmt), cb, 0, NULL);
     }
@@ -857,7 +857,7 @@ void Statement::CleanQueue() {
             Call* call = queue.front();
             queue.pop();
 
-            Local<Function> cb = NanPersistentToLocal(call->baton->callback);
+            Local<Function> cb = NanNew(call->baton->callback);
 
             if (prepared && !cb.IsEmpty() &&
                 cb->IsFunction()) {

@@ -26,7 +26,7 @@ public:
     static inline bool HasInstance(Handle<Value> val) {
         if (!val->IsObject()) return false;
         Local<Object> obj = val->ToObject();
-        return NanPersistentToLocal(constructor_template)->HasInstance(obj);
+        return NanNew(constructor_template)->HasInstance(obj);
     }
 
     struct Baton {

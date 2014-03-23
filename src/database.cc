@@ -42,7 +42,7 @@ void Database::Process() {
         // Call all callbacks with the error object.
         while (!queue.empty()) {
             Call* call = queue.front();
-            Local<Function> cb = NanPersistentToLocal(call->baton->callback);
+            Local<Function> cb = NanNew(call->baton->callback);
             if (!cb.IsEmpty() && cb->IsFunction()) {
                 TRY_CATCH_CALL(NanObjectWrapHandle(this), cb, 1, argv);
                 called = true;
@@ -82,7 +82,7 @@ void Database::Process() {
 void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
     if (!open && locked) {
         EXCEPTION(NanNew<String>("Database is closed"), SQLITE_MISUSE, exception);
-        Local<Function> cb = NanPersistentToLocal(baton->callback);
+        Local<Function> cb = NanNew(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[] = { exception };
             TRY_CATCH_CALL(NanObjectWrapHandle(this), cb, 1, argv);
@@ -181,7 +181,7 @@ void Database::Work_AfterOpen(uv_work_t* req) {
         argv[0] = NanNew(NanNull());
     }
 
-    Local<Function> cb = NanPersistentToLocal(baton->callback);
+    Local<Function> cb = NanNew(baton->callback);
 
     if (!cb.IsEmpty() && cb->IsFunction()) {
         TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
@@ -260,7 +260,7 @@ void Database::Work_AfterClose(uv_work_t* req) {
         argv[0] = NanNew(NanNull());
     }
 
-    Local<Function> cb = NanPersistentToLocal(baton->callback);
+    Local<Function> cb = NanNew(baton->callback);
 
     // Fire callbacks.
     if (!cb.IsEmpty() && cb->IsFunction()) {
@@ -531,7 +531,7 @@ void Database::Work_AfterExec(uv_work_t* req) {
     ExecBaton* baton = static_cast<ExecBaton*>(req->data);
     Database* db = baton->db;
 
-    Local<Function> cb = NanPersistentToLocal(baton->callback);
+    Local<Function> cb = NanNew(baton->callback);
 
     if (baton->status != SQLITE_OK) {
         EXCEPTION(NanNew<String>(baton->message.c_str()), baton->status, exception);
@@ -575,7 +575,7 @@ void Database::Work_Wait(Baton* baton) {
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
 
-    Local<Function> cb = NanPersistentToLocal(baton->callback);
+    Local<Function> cb = NanNew(baton->callback);
     if (!cb.IsEmpty() && cb->IsFunction()) {
         Local<Value> argv[] = { NanNew(NanNull()) };
         TRY_CATCH_CALL(NanObjectWrapHandle(baton->db), cb, 1, argv);
@@ -634,7 +634,7 @@ void Database::Work_AfterLoadExtension(uv_work_t* req) {
     NanScope();
     LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(req->data);
     Database* db = baton->db;
-    Local<Function> cb = NanPersistentToLocal(baton->callback);
+    Local<Function> cb = NanNew(baton->callback);
 
     if (baton->status != SQLITE_OK) {
         EXCEPTION(NanNew<String>(baton->message.c_str()), baton->status, exception);
