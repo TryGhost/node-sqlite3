@@ -1,5 +1,9 @@
 # Changlog
 
+## Future
+
+ - Fixed solaris/smartos compile by passing `-std=c99` when building internally bundled libsqlite3 (#201)
+
 ## 2.2.0
 
 Released Jan 13th, 2014
