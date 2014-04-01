@@ -2,6 +2,9 @@
   'includes': [ 'common-sqlite.gypi' ],
   'target_defaults': {
     'default_configuration': 'Debug',
+    'cflags':[
+      '-std=c99'
+    ],
     'configurations': {
       'Debug': {
         'defines': [ 'DEBUG', '_DEBUG' ],
