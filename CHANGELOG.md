@@ -1,8 +1,14 @@
 # Changlog
 
-## Future
+## 2.2.1
 
- - Fixed solaris/smartos compile by passing `-std=c99` when building internally bundled libsqlite3 (#201)
+ - Now shipping with 64bit FreeBSD binaries against both node v0.10.x and node v0.8.x.
+ - Fixed solaris/smartos source compile by passing `-std=c99` when building internally bundled libsqlite3 (#201)
+ - Reduced size of npm package by ignoring tests and examples.
+ - Various fixes and improvements for building against node-webkit
+ - Upgraded to node-pre-gyp@0.5.x from node-pre-gyp@0.2.5
+ - Improved ability to build from source against `sqlcipher` by passing custom library name: `--sqlite_libname=sqlcipher`
+ - No changes to C++ Core / Existing binaries are exactly the same
 
 ## 2.2.0
 
