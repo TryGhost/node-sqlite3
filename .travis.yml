@@ -18,7 +18,7 @@ before_install:
 - nvm use $NODE_VERSION
 - node --version
 - npm --version
-- npm install mocha
+- npm install mocha aws-sdk
 - platform=$(uname -s | sed "y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/")
 
 install:
