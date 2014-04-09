@@ -7,7 +7,7 @@ Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](
 
 ## Depends
 
- - Node.js v0.8.x or v0.10.x
+ - Node.js v0.10.x or v0.8.x
 
 Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/springmeyer/node-pre-gyp).
 
