@@ -9,6 +9,10 @@ env:
     - secure: HxCS2dQAWI0KmCFnFNNZoucG4FeAW+itG7+Hp0dNtwmxZzGOZYFO2bZcGvTAMNfVN++oqLxTebYQI1oB5yUl5mPJjrjthaGS6Zq3S6rfJcXiv+icYgEXlR6ejQ97dsHw1Jeg8nedCQlI4kHfvG6pgBLhq9hnugxH1Cjhdt14E9U=
 
 before_install:
+# check if tag exists and matches package.json
+- scripts/validate_tag.sh
+# get commit message
+- COMMIT_MESSAGE=$(git show -s --format=%B $TRAVIS_COMMIT | tr -d '\n')
 # put node-pre-gyp on path
 - export PATH=./node_modules/.bin/:$PATH
 - echo $NODE_VERSION
@@ -35,7 +39,7 @@ before_script:
 - if test "${COMMIT_MESSAGE#*'[publish binary]'}" != "$COMMIT_MESSAGE"; then echo PUBLISH_BINARY;PUBLISH_BINARY=true; fi;
 - if [[ ${PUBLISH_BINARY} == true ]]; then node-pre-gyp package publish; fi
 # for testing node-webkit, launch a virtual display
-- if [ "$NODE_WEBKIT" != "" ]; then export DISPLAY=:99.0; sh -e /etc/init.d/xvfb start; fi
+- if [ "$NODE_WEBKIT" != "" ]; then export DISPLAY=:99.0; sh -e /etc/init.d/xvfb start +extension RANDR; fi
 # note: `sleep 3` gives xvfb some time to start
 
 script:
