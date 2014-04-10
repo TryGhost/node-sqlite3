@@ -37,7 +37,7 @@ before_script:
 - if [[ $TRAVIS_BRANCH == `git describe --tags --always HEAD` ]]; then echo PUBLISH_BINARY;PUBLISH_BINARY=true; fi;
 # or check if we are manually requesting binary publishing via a commit keyword
 - if test "${COMMIT_MESSAGE#*'[publish binary]'}" != "$COMMIT_MESSAGE"; then echo PUBLISH_BINARY;PUBLISH_BINARY=true; fi;
-#- if [[ ${PUBLISH_BINARY} == true ]]; then node-pre-gyp package publish; fi
+- if [[ ${PUBLISH_BINARY} == true ]]; then node-pre-gyp package publish; fi
 # for testing node-webkit, launch a virtual display
 - if [ "$NODE_WEBKIT" != "" ]; then export DISPLAY=:99.0; sh -e /etc/init.d/xvfb start +extension RANDR; fi
 # note: `sleep 3` gives xvfb some time to start
