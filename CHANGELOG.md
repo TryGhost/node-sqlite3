@@ -1,5 +1,9 @@
 # Changlog
 
+## 2.2.2
+
+ - Fixed packaging problem whereby a `config.gypi` was unintentially packaged and could cause breakages for OS X builds.
+
 ## 2.2.1
 
  - Now shipping with 64bit FreeBSD binaries against both node v0.10.x and node v0.8.x.

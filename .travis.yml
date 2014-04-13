@@ -34,7 +34,7 @@ before_script:
 # test publishing
 - PUBLISH_BINARY=false
 # check if this is a git tag built statically to be portable
-- if [[ $TRAVIS_BRANCH == `git describe --tags --always HEAD` ]]; then echo PUBLISH_BINARY;PUBLISH_BINARY=true; fi;
+#- if [[ $TRAVIS_BRANCH == `git describe --tags --always HEAD` ]]; then echo PUBLISH_BINARY;PUBLISH_BINARY=true; fi;
 # or check if we are manually requesting binary publishing via a commit keyword
 - if test "${COMMIT_MESSAGE#*'[publish binary]'}" != "$COMMIT_MESSAGE"; then echo PUBLISH_BINARY;PUBLISH_BINARY=true; fi;
 - if [[ ${PUBLISH_BINARY} == true ]]; then node-pre-gyp package publish; fi
