@@ -1,5 +1,9 @@
 # Changlog
 
+## 2.2.3
+
+ - Fixed regression in v2.2.2 for installing from binaries on windows.
+
 ## 2.2.2
 
  - Fixed packaging problem whereby a `config.gypi` was unintentially packaged and could cause breakages for OS X builds.
