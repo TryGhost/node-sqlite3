@@ -6,8 +6,6 @@ Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](
 
 [![Build status](https://ci.appveyor.com/api/projects/status/d5dfp6cmo5fmh2a8)](https://ci.appveyor.com/project/springmeyer/node-sqlite3)
 
-[![npm package version](https://badge.fury.io/js/sqlite3.png)](https://npmjs.org/package/sqlite3)
-
 ## Depends
 
  - Node.js v0.10.x or v0.8.x
