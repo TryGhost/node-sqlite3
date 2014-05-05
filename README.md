@@ -1,6 +1,6 @@
 Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
-[![NPM](https://nodei.co/npm/sqlite3.png)](https://nodei.co/npm/sqlite3/)
+[![NPM](https://nodei.co/npm/sqlite3.png?downloads=true)](https://nodei.co/npm/sqlite3/)
 
 [![Build Status](https://travis-ci.org/mapbox/node-sqlite3.svg?branch=master)](https://travis-ci.org/mapbox/node-sqlite3)
 
