@@ -58,7 +58,7 @@ script:
 # on Linux 64 bit: rebuild node-sqlite3 for 64 bit node-webkit target (if NODE_WEBKIT is not empty)
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp rebuild --runtime=node-webkit --target=$NODE_WEBKIT; fi; fi
 # on Linux 64 bit: download and unpack node-webkit, add it to PATH
-- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget https://s3.amazonaws.com/node-webkit/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-x64.tar.gz; fi; fi
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget http://dl.node-webkit.org/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-x64.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then tar xf node-webkit-v${NODE_WEBKIT}-linux-x64.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then prenwpath="$PATH"; export PATH=$(pwd)/node-webkit-v${NODE_WEBKIT}-linux-x64:$PATH; fi; fi
 # on Linux 64 bit: ldd nw
@@ -107,7 +107,7 @@ script:
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then sudo apt-get -y install libdbus-1-3:i386; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then sudo apt-get -y install libudev0:i386; fi; fi
 # on Linux 32 bit: download and unpack node-webkit, add it to PATH
-- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget https://s3.amazonaws.com/node-webkit/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget http://dl.node-webkit.org/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then tar xf node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then prenwpath="$PATH"; export PATH=$(pwd)/node-webkit-v${NODE_WEBKIT}-linux-ia32:$PATH; fi; fi
 # on Linux 32 bit: ldd nw
