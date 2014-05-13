@@ -3,7 +3,7 @@ language: cpp
 env:
   matrix:
    - export NODE_VERSION="0.8"
-   - export NODE_VERSION="0.10"
+   - export NODE_VERSION="0.10" NODE_WEBKIT="0.8.6"
   global:
     - secure: QhuP5E/kYL1j1KDkHGJtk6DSJr1RH4DR/JrC62Viuf5Du8jE+i0kPWfF2MxtuEmKo35orhpu8t8mzKygWfuO63WPuuIE9qd/+V/y99Lqcj0tEN6wJ5RnywktbTJWg23zphjhmYq3Xj8DLVEikCZBwHtlbygkO9Q60cn1PK+bnPg=
     - secure: HxCS2dQAWI0KmCFnFNNZoucG4FeAW+itG7+Hp0dNtwmxZzGOZYFO2bZcGvTAMNfVN++oqLxTebYQI1oB5yUl5mPJjrjthaGS6Zq3S6rfJcXiv+icYgEXlR6ejQ97dsHw1Jeg8nedCQlI4kHfvG6pgBLhq9hnugxH1Cjhdt14E9U=
