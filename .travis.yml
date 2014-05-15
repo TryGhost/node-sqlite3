@@ -3,7 +3,7 @@ language: cpp
 env:
   matrix:
    - export NODE_VERSION="0.8"
-   - export NODE_VERSION="0.10"
+   - export NODE_VERSION="0.10" NODE_WEBKIT="0.8.6"
   global:
     - secure: QhuP5E/kYL1j1KDkHGJtk6DSJr1RH4DR/JrC62Viuf5Du8jE+i0kPWfF2MxtuEmKo35orhpu8t8mzKygWfuO63WPuuIE9qd/+V/y99Lqcj0tEN6wJ5RnywktbTJWg23zphjhmYq3Xj8DLVEikCZBwHtlbygkO9Q60cn1PK+bnPg=
     - secure: HxCS2dQAWI0KmCFnFNNZoucG4FeAW+itG7+Hp0dNtwmxZzGOZYFO2bZcGvTAMNfVN++oqLxTebYQI1oB5yUl5mPJjrjthaGS6Zq3S6rfJcXiv+icYgEXlR6ejQ97dsHw1Jeg8nedCQlI4kHfvG6pgBLhq9hnugxH1Cjhdt14E9U=
@@ -58,7 +58,7 @@ script:
 # on Linux 64 bit: rebuild node-sqlite3 for 64 bit node-webkit target (if NODE_WEBKIT is not empty)
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then node-pre-gyp rebuild --runtime=node-webkit --target=$NODE_WEBKIT; fi; fi
 # on Linux 64 bit: download and unpack node-webkit, add it to PATH
-- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget https://s3.amazonaws.com/node-webkit/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-x64.tar.gz; fi; fi
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget http://dl.node-webkit.org/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-x64.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then tar xf node-webkit-v${NODE_WEBKIT}-linux-x64.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then prenwpath="$PATH"; export PATH=$(pwd)/node-webkit-v${NODE_WEBKIT}-linux-x64:$PATH; fi; fi
 # on Linux 64 bit: ldd nw
@@ -107,7 +107,7 @@ script:
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then sudo apt-get -y install libdbus-1-3:i386; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then sudo apt-get -y install libudev0:i386; fi; fi
 # on Linux 32 bit: download and unpack node-webkit, add it to PATH
-- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget https://s3.amazonaws.com/node-webkit/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
+- if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then wget http://dl.node-webkit.org/v${NODE_WEBKIT}/node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then tar xf node-webkit-v${NODE_WEBKIT}-linux-ia32.tar.gz; fi; fi
 - if [ "$platform" = 'linux' ]; then if [ "$NODE_WEBKIT" != "" ]; then prenwpath="$PATH"; export PATH=$(pwd)/node-webkit-v${NODE_WEBKIT}-linux-ia32:$PATH; fi; fi
 # on Linux 32 bit: ldd nw
