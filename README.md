@@ -1,13 +1,14 @@
 Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
-[![NPM](https://nodei.co/npm/sqlite3.png)](https://nodei.co/npm/sqlite3/)
+[![NPM](https://nodei.co/npm/sqlite3.png?downloads=true)](https://nodei.co/npm/sqlite3/)
 
-[![Build Status](https://travis-ci.org/mapbox/node-sqlite3.png?branch=master)](https://travis-ci.org/mapbox/node-sqlite3)
-[![npm package version](https://badge.fury.io/js/sqlite3.png)](https://npmjs.org/package/sqlite3)
+[![Build Status](https://travis-ci.org/mapbox/node-sqlite3.svg?branch=master)](https://travis-ci.org/mapbox/node-sqlite3)
+
+[![Build status](https://ci.appveyor.com/api/projects/status/d5dfp6cmo5fmh2a8/branch/master)](https://ci.appveyor.com/project/springmeyer/node-sqlite3)
 
 ## Depends
 
- - Node.js v0.8.x or v0.10.x
+ - Node.js v0.10.x or v0.8.x
 
 Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/springmeyer/node-pre-gyp).
 
@@ -67,7 +68,7 @@ and thus your system must meet [node-gyp's requirements](https://github.com/T
 
 It is also possible to make your own build of `sqlite3` from its source instead of its npm package ([see below](#building-from-the-source)).
 
-It is possible to use the installed package in [node-webkit](https://github.com/rogerwang/node-webkit) instead of the vanilla Node.js, but a rebuild is required before use (see the next section).
+It is possible to use the installed package in [node-webkit](https://github.com/rogerwang/node-webkit) instead of the vanilla Node.js. See [Building for node-webkit](#building-for-node-webkit) for details.
 
 ## Source install
 
@@ -100,26 +101,33 @@ Note, if building against homebrew-installed sqlite on OS X you can do:
 
 ## Building for node-webkit
 
-Because of ABI differences, only a rebuilt version of `sqlite3` can be used in [node-webkit](https://github.com/rogerwang/node-webkit).
+Because of ABI differences, `sqlite3` must be built in a custom to be used with [node-webkit](https://github.com/rogerwang/node-webkit).
 
-After the `sqlite3` module is installed (according to the previous section), do the following:
+To build node-sqlite3 for node-webkit:
 
 1. Install [`nw-gyp`](https://github.com/rogerwang/nw-gyp) globally: `npm install nw-gyp -g` *(unless already installed)*
 
-2. Use `nw-gyp` to rebuild the module:
+2. Build the module with the custom flags of `--runtime`, `--target_arch`, and `--target`:
 
-```
+```sh
 NODE_WEBKIT_VERSION="0.8.4" # see latest version at https://github.com/rogerwang/node-webkit#downloads
-nw-gyp rebuild --target=${NODE_WEBKIT_VERSION}
+npm install sqlite3 --build-from-source --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
+```
+
+This command internally calls out to [`node-pre-gyp`](https://github.com/mapbox/node-pre-gyp) which itself calls out to [`nw-gyp`](https://github.com/rogerwang/nw-gyp) when the `--runtime=node-webkit` option is passed.
+
+You can also run this command from within a `node-sqlite3` checkout:
+
+```sh
+npm install --build-from-source --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
 ```
 
 Remember the following:
 
-* In the `nw-gyp rebuild` command, specify the actual target version of your node-webkit. The command must be run in sqlite3's directory (where its `package.json` resides).
+* You must provide the right `--target_arch` flag. `ia32` is needed to target 32bit node-webkit builds, while `x64` will target 64bit node-webkit builds (if available for your platform).
 
-* After the `sqlite3` package is rebuilt for node-webkit it cannot run in the vanilla Node.js (and vice versa).
+* After the `sqlite3` package is built for node-webkit it cannot run in the vanilla Node.js (and vice versa).
    * For example, `npm test` of the node-webkit's package would fail.
-   * If you need `sqlite3` package both for Node.js and node-webkit, then you should make two separate installations of `sqlite3` (in different directories) and rebuild only one of them for node-webkit.
 
 Visit the “[Using Node modules](https://github.com/rogerwang/node-webkit/wiki/Using-Node-modules)” article in the node-webkit's wiki for more details.
 

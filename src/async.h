@@ -26,7 +26,7 @@ public:
         : callback(cb_), parent(parent_) {
         watcher.data = this;
         NODE_SQLITE3_MUTEX_INIT
-        uv_async_init(uv_default_loop(), &watcher, listener);
+        uv_async_init(uv_default_loop(), &watcher, reinterpret_cast<uv_async_cb>(listener));
     }
 
     static void listener(uv_async_t* handle, int status) {

@@ -1,0 +1,26 @@
+environment:
+  matrix:
+    - nodejs_version: 0.8
+    - nodejs_version: 0.10
+
+platform:
+  - x64
+  - x86
+
+install:
+  - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version)
+  - node --version
+  - npm --version
+  # ensure python is on path so that srs_settings.js are generated
+  - cmd: SET PATH=c:\python27;%PATH%
+  - npm install --build-from-source
+  - npm install mocha
+  - npm test
+
+build: OFF
+
+test: OFF
+
+test_script: OFF
+
+deploy: OFF

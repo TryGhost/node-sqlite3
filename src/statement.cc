@@ -592,7 +592,7 @@ void Statement::Work_BeginEach(Baton* baton) {
     // Only create the Async object when we're actually going into
     // the event loop. This prevents dangling events.
     EachBaton* each_baton = static_cast<EachBaton*>(baton);
-    each_baton->async = new Async(each_baton->stmt, AsyncEach);
+    each_baton->async = new Async(each_baton->stmt, reinterpret_cast<uv_async_cb>(AsyncEach));
     NanAssignPersistent(each_baton->async->item_cb, each_baton->callback);
     NanAssignPersistent(each_baton->async->completed_cb, each_baton->completed);
 
