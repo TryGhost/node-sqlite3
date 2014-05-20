@@ -17,7 +17,7 @@ void Statement::Init(Handle<Object> target) {
     Local<FunctionTemplate> t = NanNew<FunctionTemplate>(New);
 
     t->InstanceTemplate()->SetInternalFieldCount(1);
-    t->SetClassName(NanSymbol("Statement"));
+    t->SetClassName(NanNew("Statement"));
 
     NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(t, "get", Get);
@@ -28,7 +28,7 @@ void Statement::Init(Handle<Object> target) {
     NODE_SET_PROTOTYPE_METHOD(t, "finalize", Finalize);
 
     NanAssignPersistent(constructor_template, t);
-    target->Set(NanSymbol("Statement"),
+    target->Set(NanNew("Statement"),
         t->GetFunction());
 }
 
@@ -60,6 +60,8 @@ void Statement::Schedule(Work_Callback callback, Baton* baton) {
 }
 
 template <class T> void Statement::Error(T* baton) {
+    NanScope();
+
     Statement* stmt = baton->stmt;
     // Fail hard on logic errors.
     assert(stmt->status != 0);
@@ -72,7 +74,7 @@ template <class T> void Statement::Error(T* baton) {
         TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
     }
     else {
-        Local<Value> argv[] = { NanSymbol("error"), exception };
+        Local<Value> argv[] = { NanNew("error"), exception };
         EMIT_EVENT(NanObjectWrapHandle(stmt), 2, argv);
     }
 }
@@ -100,7 +102,7 @@ NAN_METHOD(Statement::New) {
     Database* db = ObjectWrap::Unwrap<Database>(args[0]->ToObject());
     Local<String> sql = Local<String>::Cast(args[1]);
 
-    args.This()->Set(NanSymbol("sql"), sql, ReadOnly);
+    args.This()->Set(NanNew("sql"), sql, ReadOnly);
 
     Statement* stmt = new Statement(db);
     stmt->Wrap(args.This());
@@ -195,6 +197,8 @@ template <class T> Values::Field*
 }
 
 template <class T> T* Statement::Bind(_NAN_METHOD_ARGS, int start, int last) {
+    NanScope();
+
     if (last < 0) last = args.Length();
     Local<Function> callback;
     if (last > start && args[last - 1]->IsFunction()) {
@@ -473,8 +477,8 @@ void Statement::Work_AfterRun(uv_work_t* req) {
         // Fire callbacks.
         Local<Function> cb = NanNew(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            NanObjectWrapHandle(stmt)->Set(NanSymbol("lastID"), NanNew<Integer>(baton->inserted_id));
-            NanObjectWrapHandle(stmt)->Set(NanSymbol("changes"), NanNew<Integer>(baton->changes));
+            NanObjectWrapHandle(stmt)->Set(NanNew("lastID"), NanNew<Integer>(baton->inserted_id));
+            NanObjectWrapHandle(stmt)->Set(NanNew("changes"), NanNew<Integer>(baton->changes));
 
             Local<Value> argv[] = { NanNew(NanNull()) };
             TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
@@ -743,6 +747,8 @@ void Statement::Work_AfterReset(uv_work_t* req) {
 }
 
 Local<Object> Statement::RowToJS(Row* row) {
+    NanEscapableScope();
+
     Local<Object> result(NanNew<Object>());
 
     Row::const_iterator it = row->begin();
@@ -770,12 +776,12 @@ Local<Object> Statement::RowToJS(Row* row) {
             } break;
         }
 
-        result->Set(NanSymbol(field->name.c_str()), value);
+        result->Set(NanNew(field->name.c_str()), value);
 
         DELETE_FIELD(field);
     }
 
-    return result;
+    return NanEscapeScope(result);
 }
 
 void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
@@ -822,6 +828,7 @@ NAN_METHOD(Statement::Finalize) {
 }
 
 void Statement::Finalize(Baton* baton) {
+    NanScope();
     baton->stmt->Finalize();
 
     // Fire callback in case there was one.
@@ -845,6 +852,7 @@ void Statement::Finalize() {
 }
 
 void Statement::CleanQueue() {
+    NanScope();
     if (prepared && !queue.empty()) {
         // This statement has already been prepared and is now finalized.
         // Fire error for all remaining items in the queue.
@@ -874,7 +882,7 @@ void Statement::CleanQueue() {
         // When we couldn't call a callback function, emit an error on the
         // Statement object.
         if (!called) {
-            Local<Value> args[] = { NanSymbol("error"), exception };
+            Local<Value> args[] = { NanNew("error"), exception };
             EMIT_EVENT(NanObjectWrapHandle(this), 2, args);
         }
     }

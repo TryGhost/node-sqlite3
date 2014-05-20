@@ -15,7 +15,7 @@ void Database::Init(Handle<Object> target) {
     Local<FunctionTemplate> t = NanNew<FunctionTemplate>(New);
 
     t->InstanceTemplate()->SetInternalFieldCount(1);
-    t->SetClassName(NanSymbol("Database"));
+    t->SetClassName(NanNew("Database"));
 
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
     NODE_SET_PROTOTYPE_METHOD(t, "exec", Exec);
@@ -29,11 +29,13 @@ void Database::Init(Handle<Object> target) {
 
     NanAssignPersistent(constructor_template, t);
 
-    target->Set(NanSymbol("Database"),
+    target->Set(NanNew("Database"),
         t->GetFunction());
 }
 
 void Database::Process() {
+    NanScope();
+
     if (!open && locked && !queue.empty()) {
         EXCEPTION(NanNew<String>("Database handle is closed"), SQLITE_MISUSE, exception);
         Local<Value> argv[] = { exception };
@@ -57,7 +59,7 @@ void Database::Process() {
         // When we couldn't call a callback function, emit an error on the
         // Database object.
         if (!called) {
-            Local<Value> args[] = { NanSymbol("error"), exception };
+            Local<Value> args[] = { NanNew("error"), exception };
             EMIT_EVENT(NanObjectWrapHandle(this), 2, args);
         }
         return;
@@ -80,6 +82,7 @@ void Database::Process() {
 }
 
 void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
+    NanScope();
     if (!open && locked) {
         EXCEPTION(NanNew<String>("Database is closed"), SQLITE_MISUSE, exception);
         Local<Function> cb = NanNew(baton->callback);
@@ -88,7 +91,7 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
             TRY_CATCH_CALL(NanObjectWrapHandle(this), cb, 1, argv);
         }
         else {
-            Local<Value> argv[] = { NanSymbol("error"), exception };
+            Local<Value> argv[] = { NanNew("error"), exception };
             EMIT_EVENT(NanObjectWrapHandle(this), 2, argv);
         }
         return;
@@ -128,8 +131,8 @@ NAN_METHOD(Database::New) {
     Database* db = new Database();
     db->Wrap(args.This());
 
-    args.This()->Set(NanSymbol("filename"), args[0]->ToString(), ReadOnly);
-    args.This()->Set(NanSymbol("mode"), NanNew<Integer>(mode), ReadOnly);
+    args.This()->Set(NanNew("filename"), args[0]->ToString(), ReadOnly);
+    args.This()->Set(NanNew("mode"), NanNew<Integer>(mode), ReadOnly);
 
     // Start opening the database.
     OpenBaton* baton = new OpenBaton(db, callback, *filename, mode);
@@ -187,12 +190,12 @@ void Database::Work_AfterOpen(uv_work_t* req) {
         TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
     }
     else if (!db->open) {
-        Local<Value> args[] = { NanSymbol("error"), argv[0] };
+        Local<Value> args[] = { NanNew("error"), argv[0] };
         EMIT_EVENT(NanObjectWrapHandle(db), 2, args);
     }
 
     if (db->open) {
-        Local<Value> args[] = { NanSymbol("open") };
+        Local<Value> args[] = { NanNew("open") };
         EMIT_EVENT(NanObjectWrapHandle(db), 1, args);
         db->Process();
     }
@@ -267,12 +270,12 @@ void Database::Work_AfterClose(uv_work_t* req) {
         TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
     }
     else if (db->open) {
-        Local<Value> args[] = { NanSymbol("error"), argv[0] };
+        Local<Value> args[] = { NanNew("error"), argv[0] };
         EMIT_EVENT(NanObjectWrapHandle(db), 2, args);
     }
 
     if (!db->open) {
-        Local<Value> args[] = { NanSymbol("close"), argv[0] };
+        Local<Value> args[] = { NanNew("close"), argv[0] };
         EMIT_EVENT(NanObjectWrapHandle(db), 1, args);
         db->Process();
     }
@@ -322,17 +325,17 @@ NAN_METHOD(Database::Configure) {
 
     REQUIRE_ARGUMENTS(2);
 
-    if (args[0]->Equals(NanSymbol("trace"))) {
+    if (args[0]->Equals(NanNew("trace"))) {
         Local<Function> handle;
         Baton* baton = new Baton(db, handle);
         db->Schedule(RegisterTraceCallback, baton);
     }
-    else if (args[0]->Equals(NanSymbol("profile"))) {
+    else if (args[0]->Equals(NanNew("profile"))) {
         Local<Function> handle;
         Baton* baton = new Baton(db, handle);
         db->Schedule(RegisterProfileCallback, baton);
     }
-    else if (args[0]->Equals(NanSymbol("busyTimeout"))) {
+    else if (args[0]->Equals(NanNew("busyTimeout"))) {
         if (!args[1]->IsInt32()) {
             return NanThrowTypeError("Value must be an integer");
         }
@@ -393,7 +396,7 @@ void Database::TraceCallback(Database* db, std::string* sql) {
     // Note: This function is called in the main V8 thread.
     NanScope();
     Local<Value> argv[] = {
-        NanSymbol("trace"),
+        NanNew("trace"),
         NanNew<String>(sql->c_str())
     };
     EMIT_EVENT(NanObjectWrapHandle(db), 2, argv);
@@ -432,7 +435,7 @@ void Database::ProfileCallback(void* db, const char* sql, sqlite3_uint64 nsecs) 
 void Database::ProfileCallback(Database *db, ProfileInfo* info) {
     NanScope();
     Local<Value> argv[] = {
-        NanSymbol("profile"),
+        NanNew("profile"),
         NanNew<String>(info->sql.c_str()),
         NanNew<Integer>((double)info->nsecs / 1000000.0)
     };
@@ -476,7 +479,7 @@ void Database::UpdateCallback(Database *db, UpdateInfo* info) {
     NanScope();
 
     Local<Value> argv[] = {
-        NanSymbol(sqlite_authorizer_string(info->type)),
+        NanNew(sqlite_authorizer_string(info->type)),
         NanNew<String>(info->database.c_str()),
         NanNew<String>(info->table.c_str()),
         NanNew<Integer>(info->rowid),
@@ -541,7 +544,7 @@ void Database::Work_AfterExec(uv_work_t* req) {
             TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
         }
         else {
-            Local<Value> args[] = { NanSymbol("error"), exception };
+            Local<Value> args[] = { NanNew("error"), exception };
             EMIT_EVENT(NanObjectWrapHandle(db), 2, args);
         }
     }
@@ -644,7 +647,7 @@ void Database::Work_AfterLoadExtension(uv_work_t* req) {
             TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, 1, argv);
         }
         else {
-            Local<Value> args[] = { NanSymbol("error"), exception };
+            Local<Value> args[] = { NanNew("error"), exception };
             EMIT_EVENT(NanObjectWrapHandle(db), 2, args);
         }
     }

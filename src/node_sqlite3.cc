@@ -16,6 +16,7 @@ using namespace node_sqlite3;
 namespace {
 
 void RegisterModule(v8::Handle<Object> target) {
+    NanScope();
     Database::Init(target);
     Statement::Init(target);
 

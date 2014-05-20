@@ -1,3 +1,4 @@
+
 #ifndef NODE_SQLITE3_SRC_DATABASE_H
 #define NODE_SQLITE3_SRC_DATABASE_H
 
@@ -24,6 +25,7 @@ public:
     static void Init(Handle<Object> target);
 
     static inline bool HasInstance(Handle<Value> val) {
+        NanScope();
         if (!val->IsObject()) return false;
         Local<Object> obj = val->ToObject();
         return NanNew(constructor_template)->HasInstance(obj);
@@ -108,7 +110,6 @@ protected:
         debug_trace(NULL),
         debug_profile(NULL),
         update_event(NULL) {
-
     }
 
     ~Database() {
