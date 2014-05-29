@@ -591,8 +591,13 @@ void Statement::Work_BeginEach(Baton* baton) {
     // the event loop. This prevents dangling events.
     EachBaton* each_baton = static_cast<EachBaton*>(baton);
     each_baton->async = new Async(each_baton->stmt, AsyncEach);
-    each_baton->async->item_cb = Persistent<Function>::New(each_baton->callback);
-    each_baton->async->completed_cb = Persistent<Function>::New(each_baton->completed);
+
+    // Move Callback-Function Objects to Statement::Async struct and replace
+    // them with dummies.
+    each_baton->async->item_cb = each_baton->callback;
+    each_baton->callback = Persistent<Function>();
+    each_baton->async->completed_cb = each_baton->completed;
+    each_baton->completed = Persistent<Function>();
 
     STATEMENT_BEGIN(Each);
 }
