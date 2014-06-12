@@ -31,10 +31,10 @@ describe('profiling', function() {
         assert.ok(!create);
         db.run("CREATE TABLE foo (id int)", function(err) {
             if (err) throw err;
-            process.nextTick(function() {
+            setTimeout(function() {
                 assert.ok(create);
                 done();
-            });
+            },10);
         });
     });
 
@@ -43,10 +43,10 @@ describe('profiling', function() {
         assert.ok(!select);
         db.run("SELECT * FROM foo", function(err) {
             if (err) throw err;
-            process.nextTick(function() {
+            setTimeout(function() {
                 assert.ok(select);
                 done();
-            });
+            },10);
         });
     });
 

@@ -134,6 +134,9 @@ Handle<Value> Database::New(const Arguments& args) {
     OpenBaton* baton = new OpenBaton(db, callback, *filename, mode);
     Work_BeginOpen(baton);
 
+    Handle<Value> argv[0];
+    MakeCallback(args.This(),"_init",0,argv);
+
     return args.This();
 }
 

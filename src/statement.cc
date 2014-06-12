@@ -112,6 +112,9 @@ Handle<Value> Statement::New(const Arguments& args) {
     baton->sql = std::string(*String::Utf8Value(sql));
     db->Schedule(Work_BeginPrepare, baton);
 
+    Handle<Value> argv[0];
+    MakeCallback(args.This(),"_init",0,argv);
+
     return args.This();
 }
 
