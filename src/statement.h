@@ -122,10 +122,14 @@ public:
     struct Async;
 
     struct EachBaton : Baton {
-        EachBaton(Statement* stmt_, Handle<Function> cb_) :
-            Baton(stmt_, cb_) {}
         Persistent<Function> completed;
         Async* async; // Isn't deleted when the baton is deleted.
+
+        EachBaton(Statement* stmt_, Handle<Function> cb_) :
+            Baton(stmt_, cb_) {}
+        virtual ~EachBaton() {
+            NanDisposePersistent(completed);
+        }
     };
 
     struct PrepareBaton : Database::Baton {
