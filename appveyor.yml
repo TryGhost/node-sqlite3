@@ -1,7 +1,7 @@
 environment:
   matrix:
-    - nodejs_version: 0.8
     - nodejs_version: 0.10
+    - nodejs_version: 0.11
 
 platform:
   - x64
@@ -11,16 +11,21 @@ install:
   - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version)
   - node --version
   - npm --version
-  # ensure python is on path so that srs_settings.js are generated
-  - cmd: SET PATH=c:\python27;%PATH%
-  - npm install --build-from-source
+  - SET PATH=c:\python27;%PATH%
+  - SET PATH=C:\Program Files (x86)\MSBuild\12.0\bin\;%PATH%
+  - npm install --build-from-source  --msvs_version=2013
   - npm install mocha
   - npm test
+  - node-pre-gyp package
+  # make commit message env var shorter
+  - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
+  - ECHO commit message %CM%
+  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 package unpublish publish 2>&1
+
+artifacts:
+  - path: build\stage
+    name: BuildFiles
 
 build: OFF
-
 test: OFF
-
-test_script: OFF
-
 deploy: OFF
