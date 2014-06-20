@@ -16,6 +16,8 @@ install:
   - npm install --build-from-source  --msvs_version=2013
   - npm install mocha
   - npm test
+  # add local node-pre-gyp dir to path
+  - SET PATH=C:\projects\node-sqlite3\node_modules\node-pre-gyp\bin;%PATH%
   - node-pre-gyp package
   # make commit message env var shorter
   - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
