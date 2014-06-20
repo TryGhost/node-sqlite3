@@ -1,5 +1,6 @@
 var sqlite3 = require('..');
 var assert = require('assert');
+require('set-immediate');
 
 describe('profiling', function() {
     var create = false;
@@ -14,6 +15,7 @@ describe('profiling', function() {
             if (sql.match(/^SELECT/)) {
                 assert.ok(!select);
                 assert.equal(sql, "SELECT * FROM foo");
+                console.log('profile select');
                 select = true;
             }
             else if (sql.match(/^CREATE/)) {
@@ -31,7 +33,7 @@ describe('profiling', function() {
         assert.ok(!create);
         db.run("CREATE TABLE foo (id int)", function(err) {
             if (err) throw err;
-            process.nextTick(function() {
+            setImmediate(function() {
                 assert.ok(create);
                 done();
             });
@@ -43,10 +45,10 @@ describe('profiling', function() {
         assert.ok(!select);
         db.run("SELECT * FROM foo", function(err) {
             if (err) throw err;
-            process.nextTick(function() {
+            setImmediate(function() {
                 assert.ok(select);
                 done();
-            });
+            }, 0);
         });
     });
 

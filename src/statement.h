@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <sqlite3.h>
+#include "nan.h"
 
 using namespace v8;
 using namespace node;
@@ -76,7 +77,7 @@ public:
     static Persistent<FunctionTemplate> constructor_template;
 
     static void Init(Handle<Object> target);
-    static Handle<Value> New(const Arguments& args);
+    static NAN_METHOD(New);
 
     struct Baton {
         uv_work_t request;
@@ -87,7 +88,7 @@ public:
         Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
             request.data = this;
-            callback = Persistent<Function>::New(cb_);
+            NanAssignPersistent(callback, cb_);
         }
         virtual ~Baton() {
             for (unsigned int i = 0; i < parameters.size(); i++) {
@@ -95,7 +96,7 @@ public:
                 DELETE_FIELD(field);
             }
             stmt->Unref();
-            callback.Dispose();
+            NanDisposePersistent(callback);
         }
     };
 
@@ -175,15 +176,15 @@ public:
 
         ~Async() {
             stmt->Unref();
-            item_cb.Dispose();
-            completed_cb.Dispose();
+            NanDisposePersistent(item_cb);
+            NanDisposePersistent(completed_cb);
             NODE_SQLITE3_MUTEX_DESTROY
         }
     };
 
     Statement(Database* db_) : ObjectWrap(),
             db(db_),
-            handle(NULL),
+            _handle(NULL),
             status(SQLITE_OK),
             prepared(false),
             locked(true),
@@ -202,7 +203,7 @@ public:
     WORK_DEFINITION(Each);
     WORK_DEFINITION(Reset);
 
-    static Handle<Value> Finalize(const Arguments& args);
+    static NAN_METHOD(Finalize);
 
 protected:
     static void Work_BeginPrepare(Database::Baton* baton);
@@ -216,8 +217,8 @@ protected:
     void Finalize();
 
     template <class T> inline Values::Field* BindParameter(const Handle<Value> source, T pos);
-    template <class T> T* Bind(const Arguments& args, int start = 0, int end = -1);
-    bool Bind(const Parameters & parameters);
+    template <class T> T* Bind(_NAN_METHOD_ARGS, int start = 0, int end = -1);
+    bool Bind(const Parameters &parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
     static Local<Object> RowToJS(Row* row);
@@ -229,7 +230,7 @@ protected:
 protected:
     Database* db;
 
-    sqlite3_stmt* handle;
+    sqlite3_stmt* _handle;
     int status;
     std::string message;
 

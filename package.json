@@ -36,7 +36,10 @@
         "url": "git://github.com/mapbox/node-sqlite3.git"
     },
     "dependencies": {
-        "node-pre-gyp": "0.5.13"
+        "node-pre-gyp": "0.5.13",
+        "nan": "1.1.2",
+        "node-pre-gyp": "0.5.13",
+        "set-immediate": "0.1.1"
     },
     "bundledDependencies": [
         "node-pre-gyp"
@@ -45,7 +48,7 @@
         "mocha": "*"
     },
     "engines": {
-        "node": ">= 0.8.0 < 0.11.0"
+        "node": ">= 0.8.0 < 0.13.0"
     },
     "scripts": {
         "install": "node-pre-gyp install --fallback-to-build",

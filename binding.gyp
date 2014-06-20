@@ -7,6 +7,7 @@
   "targets": [
     {
       "target_name": "<(module_name)",
+      "include_dirs": ["<!(node -e \"require('nan')\")"],
       "conditions": [
         ["sqlite != 'internal'", {
             "libraries": [
