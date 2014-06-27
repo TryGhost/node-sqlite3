@@ -6,13 +6,15 @@ Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](
 
 [![Build status](https://ci.appveyor.com/api/projects/status/d5dfp6cmo5fmh2a8/branch/master)](https://ci.appveyor.com/project/springmeyer/node-sqlite3)
 
-## Depends
+## Supported platforms
 
- - Node.js v0.10.x or v0.8.x
+The `sqlite3` module works with Node.js v0.8.x, v0.10.x or v0.11.x (though only v0.11.13 and above).
 
-Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/springmeyer/node-pre-gyp).
+Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/springmeyer/node-pre-gyp).
 
-Also works with [node-webkit](https://github.com/rogerwang/node-webkit) and sqlcipher.
+The `sqlite3` module also works with [node-webkit](https://github.com/rogerwang/node-webkit) if node-webkit contains a supported version of Node.js engine. [(See below.)](#building-for-node-webkit)
+
+SQLite's [SQLCipher extension](https://github.com/sqlcipher/sqlcipher) is also supported. [(See below.)](#building-for-sqlcipher)
 
 # Usage
 
