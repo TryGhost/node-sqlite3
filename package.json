@@ -36,7 +36,7 @@
         "url": "git://github.com/mapbox/node-sqlite3.git"
     },
     "dependencies": {
-        "node-pre-gyp": "https://github.com/Mithgol/node-pre-gyp/tarball/improve-validation",
+        "node-pre-gyp": "https://github.com/mapbox/node-pre-gyp/tarball/e4fc810e44f3ce4579abf244b1998983b78251b0",
         "nan": "1.1.2",
         "set-immediate": "0.1.1"
     },
