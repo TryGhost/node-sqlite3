@@ -1,5 +1,11 @@
 # Changlog
 
+## 2.2.4
+
+ - Now supporting node v0.11.x (specifically >=0.11.13)
+ - Fix db opening error with absolute path on windows
+ - Updated to node-pre-gyp@0.5.18
+
 ## 2.2.3
 
  - Fixed regression in v2.2.2 for installing from binaries on windows.
