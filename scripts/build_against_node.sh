@@ -60,6 +60,7 @@ if [[ $(uname -s) == 'Linux' ]]; then
     # install 32 bit compiler toolchain and X11
     # test source compile in 32 bit mode with internal libsqlite3
     CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source
+    node-pre-gyp package testpackage
     npm test
     publish
     make clean
