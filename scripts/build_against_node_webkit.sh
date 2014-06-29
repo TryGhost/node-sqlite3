@@ -2,6 +2,15 @@
 
 set -u -e
 
+if [[ ! -d ../.nvm ]]; then
+    git clone https://github.com/creationix/nvm.git ../.nvm
+fi
+source ../.nvm/nvm.sh
+nvm install 0.10
+nvm use 0.10
+node --version
+npm --version
+
 # for testing node-webkit, launch a virtual display
 export DISPLAY=:99.0
 sh -e /etc/init.d/xvfb start +extension RANDR
