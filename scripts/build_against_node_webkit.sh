@@ -13,9 +13,6 @@ set -u
 node --version
 npm --version
 
-# for testing node-webkit, launch a virtual display
-export DISPLAY=:99.0
-sh -e /etc/init.d/xvfb start +extension RANDR
 npm install nw-gyp
 
 OLD_PATH="$PATH"
@@ -27,6 +24,9 @@ if [[ $(uname -s) == 'Darwin' ]]; then
     unzip ${NW_DOWNLOAD}.zip
     export PATH=$(pwd)/${NW_DOWNLOAD}:$PATH
 else
+    # for testing node-webkit, launch a virtual display
+    export DISPLAY=:99.0
+    sh -e /etc/init.d/xvfb start +extension RANDR
     npm install --build-from-source --runtime=node-webkit --target=$NODE_WEBKIT
     export NW_DOWNLOAD=node-webkit-v${NODE_WEBKIT}-linux-x64
     wget http://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.tar.gz
