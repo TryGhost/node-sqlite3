@@ -7,9 +7,9 @@ if [[ ! -d ../.nvm ]]; then
 fi
 set +u
 source ../.nvm/nvm.sh
-set -u
 nvm install 0.10
 nvm use 0.10
+set -u
 node --version
 npm --version
 

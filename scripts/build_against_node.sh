@@ -22,9 +22,9 @@ if [[ ! -d ../.nvm ]]; then
 fi
 set +u
 source ../.nvm/nvm.sh
-set -u
 nvm install $NODE_VERSION
 nvm use $NODE_VERSION
+set -u
 node --version
 npm --version
 
@@ -49,7 +49,7 @@ npm test
 platform=$(uname -s | sed "y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/")
 
 if [[ $(uname -s) == 'Linux' ]]; then
-    sudo apt-get -y install gcc-multilib g++-multilib; fi
+    sudo apt-get -y install gcc-multilib g++-multilib
     # node v0.8 and above provide pre-built 32 bit and 64 bit binaries
     # so here we use the 32 bit ones to also test 32 bit builds
     NVER=`node -v`
