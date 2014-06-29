@@ -27,6 +27,8 @@ if [[ $(uname -s) == 'Darwin' ]]; then
     wget http://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.zip
     unzip -q ${NW_DOWNLOAD}.zip
     export PATH=$(pwd)/node-webkit.app/Contents/MacOS/:${PATH}
+    # v0.10.0-rc1 unzips with extra folder
+    export PATH=$(pwd)/${NW_DOWNLOAD}/node-webkit.app/Contents/MacOS/:${PATH}
 else
     export NW_DOWNLOAD=node-webkit-v${NODE_WEBKIT}-linux-x64
     # for testing node-webkit, launch a virtual display
