@@ -61,6 +61,8 @@ rm -rf ${NW_DOWNLOAD}
 node-pre-gyp rebuild --runtime=node-webkit --target=$NODE_WEBKIT
 # on Linux 32 bit: install 32 bit stuff necessary for node-webkit 32 bit
 sudo apt-get -y install libx11-6:i386
+sudo apt-get -y install libxtst6:i386
+sudo apt-get -y install libcap2:i386
 sudo apt-get -y install libglib2.0-0:i386
 sudo apt-get -y install libgtk2.0-0:i386
 sudo apt-get -y install libatk1.0-0:i386
