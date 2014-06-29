@@ -41,6 +41,8 @@ else
 fi
 npm test
 
+platform=$(uname -s | sed "y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/")
+
 if [[ $(uname -s) == 'Linux' ]]; then
     sudo apt-get -y install gcc-multilib g++-multilib; fi
     # node v0.8 and above provide pre-built 32 bit and 64 bit binaries

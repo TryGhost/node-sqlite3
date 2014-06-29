@@ -15,15 +15,17 @@ npm --version
 export DISPLAY=:99.0
 sh -e /etc/init.d/xvfb start +extension RANDR
 npm install nw-gyp
-node-pre-gyp rebuild --runtime=node-webkit --target=$NODE_WEBKIT
-# now we need node-webkit itself to test
+
 OLD_PATH="$PATH"
+
 if [[ $(uname -s) == 'Darwin' ]]; then
+    npm install --build-from-source --target_arch=ia32 --runtime=node-webkit --target=$NODE_WEBKIT
     export NW_DOWNLOAD=node-webkit-v${NODE_WEBKIT}-osx-ia32
     wget http://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.tar.gz
     unzip ${NW_DOWNLOAD}.zip
     export PATH=$(pwd)/${NW_DOWNLOAD}:$PATH
 else
+    npm install --build-from-source --runtime=node-webkit --target=$NODE_WEBKIT
     export NW_DOWNLOAD=node-webkit-v${NODE_WEBKIT}-linux-x64
     wget http://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.tar.gz
     tar xf ${NW_DOWNLOAD}.tar.gz
