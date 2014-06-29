@@ -20,7 +20,7 @@ OLD_PATH="$PATH"
 if [[ $(uname -s) == 'Darwin' ]]; then
     npm install --build-from-source --target_arch=ia32 --runtime=node-webkit --target=$NODE_WEBKIT
     export NW_DOWNLOAD=node-webkit-v${NODE_WEBKIT}-osx-ia32
-    wget http://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.tar.gz
+    wget http://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.zip
     unzip ${NW_DOWNLOAD}.zip
     export PATH=$(pwd)/${NW_DOWNLOAD}:$PATH
 else
