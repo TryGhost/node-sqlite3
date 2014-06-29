@@ -5,7 +5,9 @@ set -u -e
 if [[ ! -d ../.nvm ]]; then
     git clone https://github.com/creationix/nvm.git ../.nvm
 fi
+set +u
 source ../.nvm/nvm.sh
+set -u
 nvm install 0.10
 nvm use 0.10
 node --version
