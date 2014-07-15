@@ -5,6 +5,7 @@
  - Now supporting node v0.11.x (specifically >=0.11.13)
  - Fix db opening error with absolute path on windows
  - Updated to node-pre-gyp@0.5.18
+ - updated internal libsqlite3 from 3.8.4.3 -> 3.8.5 (http://www.sqlite.org/news.html)
 
 ## 2.2.3
 
