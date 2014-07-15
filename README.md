@@ -4,7 +4,7 @@ Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](
 
 [![Build Status](https://travis-ci.org/mapbox/node-sqlite3.svg?branch=master)](https://travis-ci.org/mapbox/node-sqlite3)
 
-[![Build status](https://ci.appveyor.com/api/projects/status/d5dfp6cmo5fmh2a8/branch/master)](https://ci.appveyor.com/project/springmeyer/node-sqlite3)
+[![Build status](https://ci.appveyor.com/api/projects/status/gvm7ul0hpmdawqom)](https://ci.appveyor.com/project/Mapbox/node-sqlite3)
 
 ## Supported platforms
 
