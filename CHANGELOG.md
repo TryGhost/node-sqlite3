@@ -1,4 +1,4 @@
-# Changlog
+# Changelog
 
 ## 2.2.4
 
