@@ -4,15 +4,16 @@ environment:
   node_pre_gyp_secretAccessKey:
     secure: W1rwNoSnOku1r+28gnoufO8UA8iWADmL1LiiwH9IOkIVhDTNGdGPJqAlLjNqwLnL
   matrix:
-    - nodejs_version: 0.10
-    - nodejs_version: 0.11
+    - nodejs_version: 0.10.29
+    - nodejs_version: 0.8.26
+    - nodejs_version: 0.11.13
 
 platform:
   - x64
   - x86
 
 install:
-  - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version)
+  - ps: Update-NodeJsInstallation $env:nodejs_version $env:Platform
   - node --version
   - npm --version
   - SET PATH=c:\python27;%PATH%
