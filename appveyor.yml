@@ -4,6 +4,7 @@ environment:
   node_pre_gyp_secretAccessKey:
     secure: s1us6xb8U2EqlaVYtoVMtulfgMdX4VVEKgTF+Eft104gWja1GG0Blf6cMJtG7Yu3
   matrix:
+    - nodejs_version: 0.8
     - nodejs_version: 0.10
     - nodejs_version: 0.11
 
@@ -26,7 +27,7 @@ install:
   # make commit message env var shorter
   - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
   - ECHO commit message %CM%
-  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 package unpublish publish 2>&1
+  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 package publish 2>&1
 
 artifacts:
   - path: build\stage
