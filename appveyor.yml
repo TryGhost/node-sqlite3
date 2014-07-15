@@ -18,6 +18,8 @@ install:
   - npm --version
   - SET PATH=c:\python27;%PATH%
   - SET PATH=C:\Program Files (x86)\MSBuild\12.0\bin\;%PATH%
+  # otherwise node-gyp that comes with node v0.8.x is used and doesn't yet know about --msvs_version=2013
+  - npm install node-gyp
   - npm install --build-from-source  --msvs_version=2013
   - npm install mocha
   - npm test
