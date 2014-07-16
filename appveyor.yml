@@ -18,20 +18,16 @@ install:
   - npm --version
   - SET PATH=c:\python27;%PATH%
   - SET PATH=C:\Program Files (x86)\MSBuild\12.0\bin\;%PATH%
+  # add local node-pre-gyp dir to path
+  - SET PATH=node_modules\.bin;%PATH%
   # otherwise node-gyp that comes with node v0.8.x is used and doesn't yet know about --msvs_version=2013
   - npm install node-gyp
   - npm install --build-from-source  --msvs_version=2013
   - npm test
-  # add local node-pre-gyp dir to path
-  - SET PATH=node_modules\.bin;%PATH%
   - node-pre-gyp package
   # make commit message env var shorter
   - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
-  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish 2>&1
-
-artifacts:
-  - path: build\stage
-    name: BuildFiles
+  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish
 
 build: OFF
 test: OFF
