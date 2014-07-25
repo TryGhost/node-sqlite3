@@ -5,8 +5,10 @@ environment:
     secure: W1rwNoSnOku1r+28gnoufO8UA8iWADmL1LiiwH9IOkIVhDTNGdGPJqAlLjNqwLnL
   matrix:
     - nodejs_version: 0.10.29
+      nw_version: 0.8.6
     - nodejs_version: 0.8.26
     - nodejs_version: 0.11.13
+      nw_version: 0.10.0
 
 platform:
   - x64
@@ -28,8 +30,11 @@ install:
   # make commit message env var shorter
   - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
   - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish
-  - cmd: echo Platform: 
-  - cmd: echo %PLATFORM%
+  - cmd: if "%PLATFORM%" == "x86" if not "%nw_version%" == "" node-pre-gyp clean
+  - cmd: if "%PLATFORM%" == "x86" if not "%nw_version%" == "" cinst wget 7zip.commandline
+  - cmd: if "%PLATFORM%" == "x86" if not "%nw_version%" == "" wget http://dl.node-webkit.org/v%nw_version%/node-webkit-v%nw_version%-win-ia32.zip
+  - cmd: if "%PLATFORM%" == "x86" if not "%nw_version%" == "" 7z e -onw node-webkit-v%nw_version%-win-ia32.zip
+  - cmd: if "%PLATFORM%" == "x86" if not "%nw_version%" == "" dir nw
 
 build: OFF
 test: OFF
