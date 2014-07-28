@@ -1,3 +1,5 @@
+if not "%PLATFORM%" == "x86" goto end
+if "%nw_version%" == "" goto end
 node-pre-gyp clean
 npm install nw-gyp
 cinst wget 7zip.commandline
@@ -7,3 +9,4 @@ dir nw
 set PATH=nw;%PATH%
 node-pre-gyp package testpackage --runtime=node-webkit --target=%nw_version% --target_arch=ia32
 if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp publish --msvs_version=2013 --runtime=node-webkit --target=%nw_version% --target_arch=ia32
+:end
