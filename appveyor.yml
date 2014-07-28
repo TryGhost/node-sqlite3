@@ -30,17 +30,8 @@ install:
   # make commit message env var shorter
   - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
   - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish
-  - cmd: if not "%PLATFORM%" == "x86" set nw_version=
-  - if not "%nw_version%" == "" node-pre-gyp clean
-  - if not "%nw_version%" == "" npm install nw-gyp
-  - if not "%nw_version%" == "" cinst wget 7zip.commandline
-  - if not "%nw_version%" == "" wget http://dl.node-webkit.org/v%nw_version%/node-webkit-v%nw_version%-win-ia32.zip
-  - if not "%nw_version%" == "" 7z e -onw node-webkit-v%nw_version%-win-ia32.zip
-  - if not "%nw_version%" == "" dir nw
-  - if not "%nw_version%" == "" set PATH=nw;%PATH%
-  - if not "%nw_version%" == "" npm install --build-from-source --msvs_version=2013 --runtime=node-webkit --target=%nw_version% --target_arch=ia32
-  - if not "%nw_version%" == "" node-pre-gyp package testpackage --runtime=node-webkit --target=%nw_version% --target_arch=ia32
-  - if not "%nw_version%" == "" if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp publish --msvs_version=2013 --runtime=node-webkit --target=%nw_version% --target_arch=ia32
+  - if not "%PLATFORM%" == "x86" set nw_version=
+  - if not "%nw_version%" == "" call scripts\build_for_node_webkit.cmd
 
 build: OFF
 test: OFF
