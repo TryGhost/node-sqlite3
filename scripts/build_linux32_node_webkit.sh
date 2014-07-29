@@ -2,6 +2,7 @@
 
 # rebuild node-sqlite3 for 32 bit node-webkit target
 GYP_ARGS="${GYP_ARGS} --target_arch=ia32"
+echo "GYP_ARGS are ${GYP_ARGS}"
 node-pre-gyp rebuild ${GYP_ARGS}
 # install 32 bit stuff necessary for node-webkit 32 bit
 sudo apt-get -y install libx11-6:i386
