@@ -7,7 +7,6 @@ clean:
 	#rm -f ./test/support/big.db*
 	rm -f test/support/big.db-journal
 	rm -f ./test/tmp/*
-	rm -rf ./deps/sqlite-autoconf-*/
 	rm -rf ./build
 	rm -rf ./out
 
