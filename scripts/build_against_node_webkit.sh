@@ -59,5 +59,4 @@ fi
 node-pre-gyp clean ${GYP_ARGS}
 # restore PATH
 export PATH="$OLD_PATH"
-export GYP_ARGS
 rm -rf ${NW_DOWNLOAD}

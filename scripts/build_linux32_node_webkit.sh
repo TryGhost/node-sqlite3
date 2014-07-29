@@ -3,8 +3,7 @@
 set -u -e
 
 # rebuild node-sqlite3 for 32 bit node-webkit target
-node-pre-gyp clean ${GYP_ARGS}
-GYP_ARGS="${GYP_ARGS} --target_arch=ia32"
+GYP_ARGS="--runtime=node-webkit --target=$NODE_WEBKIT --target_arch=ia32"
 echo "GYP_ARGS are ${GYP_ARGS}"
 node-pre-gyp rebuild ${GYP_ARGS}
 # install 32 bit stuff necessary for node-webkit 32 bit
