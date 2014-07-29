@@ -1,5 +1,5 @@
 set
-if not "%PLATFORM%" == "x86" goto end
+if not "%1" == "x86" goto end
 if "%nw_version%" == "" goto end
 node-pre-gyp clean
 npm install nw-gyp

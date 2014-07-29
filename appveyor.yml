@@ -30,7 +30,7 @@ install:
   # make commit message env var shorter
   - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
   - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish
-  - call scripts\build_for_node_webkit.cmd
+  - call scripts\build_for_node_webkit.cmd %PLATFORM%
 
 build: OFF
 test: OFF
