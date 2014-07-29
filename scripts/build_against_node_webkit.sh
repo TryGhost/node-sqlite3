@@ -54,10 +54,9 @@ if test "${COMMIT_MESSAGE#*'[publish binary]'}" != "$COMMIT_MESSAGE"; then
     INSTALL_RESULT=$(npm install ${GYP_ARGS} --fallback-to-build=false > /dev/null)$? || true
     # if install returned non zero (errored) then we first unpublish and then call false so travis will bail at this line
     if [[ $INSTALL_RESULT != 0 ]]; then echo "returned $INSTALL_RESULT";node-pre-gyp unpublish ${GYP_ARGS};false; fi
-    # If success then we arrive here so lets clean up
-    node-pre-gyp clean ${GYP_ARGS}
 fi
 
+node-pre-gyp clean ${GYP_ARGS}
 # restore PATH
 export PATH="$OLD_PATH"
 export GYP_ARGS
