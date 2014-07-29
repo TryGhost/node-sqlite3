@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # rebuild node-sqlite3 for 32 bit node-webkit target
+GYP_ARGS="${GYP_ARGS} --target_arch=ia32"
 node-pre-gyp rebuild ${GYP_ARGS}
 # install 32 bit stuff necessary for node-webkit 32 bit
 sudo apt-get -y install libx11-6:i386
@@ -32,6 +33,19 @@ export PATH=$(pwd)/node-webkit-v${NODE_WEBKIT}-linux-ia32:$PATH
 # ldd nw (helps to find out if some necessary apt-get line is missing)
 ldd $(pwd)/node-webkit-v${NODE_WEBKIT}-linux-ia32/nw
 # attempt node-pre-gyp package testpackage
-node-pre-gyp package testpackage publish ${GYP_ARGS}
+node-pre-gyp package testpackage ${GYP_ARGS}
+# publish if necessary
+if test "${COMMIT_MESSAGE#*'[publish binary]'}" != "$COMMIT_MESSAGE"; then
+    node-pre-gyp publish ${GYP_ARGS}
+    node-pre-gyp info ${GYP_ARGS}
+    node-pre-gyp clean ${GYP_ARGS}
+    make clean
+    # now install from binary
+    INSTALL_RESULT=$(npm install ${GYP_ARGS} --fallback-to-build=false > /dev/null)$? || true
+    # if install returned non zero (errored) then we first unpublish and then call false so travis will bail at this line
+    if [[ $INSTALL_RESULT != 0 ]]; then echo "returned $INSTALL_RESULT";node-pre-gyp unpublish ${GYP_ARGS};false; fi
+    # If success then we arrive here so lets clean up
+    node-pre-gyp clean ${GYP_ARGS}
+fi
 # erase used node-webkit, restore PATH
 export PATH="$OLD_PATH"; rm -rf node-webkit-v${NODE_WEBKIT}-linux-ia32
