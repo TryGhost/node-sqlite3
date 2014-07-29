@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # rebuild node-sqlite3 for 32 bit node-webkit target
+node-pre-gyp clean ${GYP_ARGS}
 GYP_ARGS="${GYP_ARGS} --target_arch=ia32"
 echo "GYP_ARGS are ${GYP_ARGS}"
 node-pre-gyp rebuild ${GYP_ARGS}
