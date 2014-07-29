@@ -6,21 +6,26 @@ environment:
   matrix:
     - nodejs_version: 0.10.29
       nw_version: 0.8.6
+      PLATFORM: x86
+    - nodejs_version: 0.10.29
+      nw_version: 0.8.6
+      PLATFORM: x64
     - nodejs_version: 0.8.26
+      PLATFORM: x86
+    - nodejs_version: 0.8.26
+      PLATFORM: x64
     - nodejs_version: 0.11.13
       nw_version: 0.10.0
-
-platform:
-  - x64
-  - x86
+      PLATFORM: x86
+    - nodejs_version: 0.11.13
+      nw_version: 0.10.0
+      PLATFORM: x64
 
 install:
   - ps: Update-NodeJsInstallation $env:nodejs_version $env:Platform
   - node --version
   - npm --version
-  - set nw_platform=%PLATFORM%
   - echo %PLATFORM%
-  - echo %NW_PLATFORM%
   - SET PATH=c:\python27;%PATH%
   - SET PATH=C:\Program Files (x86)\MSBuild\12.0\bin\;%PATH%
   # add local node-pre-gyp dir to path
@@ -33,7 +38,7 @@ install:
   # make commit message env var shorter
   - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
   - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish
-  - call scripts\build_for_node_webkit.cmd %NW_PLATFORM%
+  - call scripts\build_for_node_webkit.cmd %PLATFORM%
 
 build: OFF
 test: OFF
