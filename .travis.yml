@@ -31,4 +31,5 @@ before_script:
 script:
 - if [[ "${NODE_VERSION}" ]]; then ./scripts/build_against_node.sh; fi;
 - if [[ "${NODE_WEBKIT}" ]]; then ./scripts/build_against_node_webkit.sh; fi;
+- chmod +x scripts/build_linux32_node_webkit.sh
 - if [[ "${NODE_WEBKIT}" ]]; then if [[ "${TRAVIS_OS_NAME}" == 'linux' ]]; then ./scripts/build_linux32_node_webkit.sh; fi; fi;
