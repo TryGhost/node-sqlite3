@@ -1,3 +1,5 @@
+echo Platform: %1
+echo The list of environment variables:
 set
 if not "%1" == "x86" goto end
 if "%nw_version%" == "" goto end
