@@ -32,6 +32,8 @@ if [[ $(uname -s) == 'Darwin' ]]; then
     export PATH=$(pwd)/node-webkit.app/Contents/MacOS/:${PATH}
     # v0.10.0-rc1 unzips with extra folder
     export PATH=$(pwd)/${NW_DOWNLOAD}/node-webkit.app/Contents/MacOS/:${PATH}
+    
+    npm install --build-from-source ${GYP_ARGS}
 else
     # Linux
     export NW_DOWNLOAD=node-webkit-v${NODE_WEBKIT}-linux-${TARGET_ARCH}
@@ -42,7 +44,10 @@ else
     tar xf ${NW_DOWNLOAD}.tar.gz
     export PATH=$(pwd)/${NW_DOWNLOAD}:${PATH}
     if [[ '${TARGET_ARCH}' == 'ia32' ]]; then
-        # prepare packages on 32-bit Linux
+        # prepare packages for 32-bit builds on Linux
+        sudo apt-get -y install gcc-multilib
+        sudo apt-get -y install g++-multilib
+        # prepare packages for 32-bit node-webkit on Linux
         sudo apt-get -y install libx11-6:i386
         sudo apt-get -y install libxtst6:i386
         sudo apt-get -y install libcap2:i386
@@ -66,10 +71,12 @@ else
         sudo apt-get -y install libudev0:i386
         # also use ldd to find out if some necessary apt-get is missing
         ldd $(pwd)/${NW_DOWNLOAD}/nw
+        
+        CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source ${GYP_ARGS}
+    else
+        npm install --build-from-source ${GYP_ARGS}
     fi
 fi
-
-npm install --build-from-source ${GYP_ARGS}
 
 # test the package
 node-pre-gyp package testpackage ${GYP_ARGS}
