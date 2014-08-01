@@ -26,8 +26,6 @@ matrix:
       os: osx
 
 before_install:
-# work around old npm problem with ^
-- if [[ "${NODE_VERSION}" == '0.8' ]]; then npm install npm -g; fi
 # check if tag exists and matches package.json
 - scripts/validate_tag.sh
 
