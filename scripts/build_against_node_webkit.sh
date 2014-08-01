@@ -8,7 +8,6 @@ fi
 set +u
 source ../.nvm/nvm.sh
 nvm install 0.10
-nvm use 0.10
 set -u
 node --version
 npm --version
@@ -32,44 +31,31 @@ if [[ $(uname -s) == 'Darwin' ]]; then
     export PATH=$(pwd)/node-webkit.app/Contents/MacOS/:${PATH}
     # v0.10.0-rc1 unzips with extra folder
     export PATH=$(pwd)/${NW_DOWNLOAD}/node-webkit.app/Contents/MacOS/:${PATH}
+    npm install --build-from-source ${GYP_ARGS}
 else
+    sudo apt-get install build-essential
     # Linux
     export NW_DOWNLOAD=node-webkit-v${NODE_WEBKIT}-linux-${TARGET_ARCH}
     # for testing node-webkit, launch a virtual display
     export DISPLAY=:99.0
+    # NOTE: travis already has xvfb installed
+    # http://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-GUI-%28e.g.-a-Web-browser%29
     sh -e /etc/init.d/xvfb start +extension RANDR
     wget http://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.tar.gz
     tar xf ${NW_DOWNLOAD}.tar.gz
     export PATH=$(pwd)/${NW_DOWNLOAD}:${PATH}
-    if [[ '${TARGET_ARCH}' == 'ia32' ]]; then
-        # prepare packages on 32-bit Linux
-        sudo apt-get -y install libx11-6:i386
-        sudo apt-get -y install libxtst6:i386
-        sudo apt-get -y install libcap2:i386
-        sudo apt-get -y install libglib2.0-0:i386
-        sudo apt-get -y install libgtk2.0-0:i386
-        sudo apt-get -y install libatk1.0-0:i386
-        sudo apt-get -y install libgdk-pixbuf2.0-0:i386
-        sudo apt-get -y install libcairo2:i386
-        sudo apt-get -y install libfreetype6:i386
-        sudo apt-get -y install libfontconfig1:i386
-        sudo apt-get -y install libxcomposite1:i386
-        sudo apt-get -y install libasound2:i386
-        sudo apt-get -y install libxdamage1:i386
-        sudo apt-get -y install libxext6:i386
-        sudo apt-get -y install libxfixes3:i386
-        sudo apt-get -y install libnss3:i386
-        sudo apt-get -y install libnspr4:i386
-        sudo apt-get -y install libgconf-2-4:i386
-        sudo apt-get -y install libexpat1:i386
-        sudo apt-get -y install libdbus-1-3:i386
-        sudo apt-get -y install libudev0:i386
+    if [[ "${TARGET_ARCH}" == 'ia32' ]]; then
+        # need to update to avoid 404 for linux-libc-dev_3.2.0-64.97_amd64.deb
+        sudo apt-get update
+        # prepare packages for 32-bit builds on Linux
+        sudo apt-get -y install gcc-multilib g++-multilib libx11-6:i386 libxtst6:i386 libcap2:i386 libglib2.0-0:i386 libgtk2.0-0:i386 libatk1.0-0:i386 libgdk-pixbuf2.0-0:i386 libcairo2:i386 libfreetype6:i386 libfontconfig1:i386 libxcomposite1:i386 libasound2:i386 libxdamage1:i386 libxext6:i386 libxfixes3:i386 libnss3:i386 libnspr4:i386 libgconf-2-4:i386 libexpat1:i386 libdbus-1-3:i386 libudev0:i386
         # also use ldd to find out if some necessary apt-get is missing
         ldd $(pwd)/${NW_DOWNLOAD}/nw
+        CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source ${GYP_ARGS}
+    else
+        npm install --build-from-source ${GYP_ARGS}
     fi
 fi
-
-npm install --build-from-source ${GYP_ARGS}
 
 # test the package
 node-pre-gyp package testpackage ${GYP_ARGS}
