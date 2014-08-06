@@ -17,7 +17,6 @@ verbose:
 clean:
 	@rm -rf ./build
 	rm -rf lib/binding/
-	rm ./test/tmp/*
 	rm -f test/support/big.db-journal
 	rm -rf ./node_modules/
 
