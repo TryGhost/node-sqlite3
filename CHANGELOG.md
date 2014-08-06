@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.6
+
+Released August 6th, 2014
+
+ - Fix bundled version of node-pre-gyp
+
 ## 2.2.5
 
 Released August 5th, 2014
