@@ -48,8 +48,9 @@
         "aws-sdk": "~2.0.4"
     },
     "engines": {
-        "node": ">= 0.8.0 < 0.13.0"
+        "node": ">= 0.8.0 < 0.11.0 || >= 0.11.13 < 0.13.0"
     },
+    "engineStrict": true,
     "scripts": {
         "install": "node-pre-gyp install --fallback-to-build",
         "pretest": "node test/support/createdb.js",
