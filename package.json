@@ -8,11 +8,11 @@
         "url": "https://mapbox.com/"
     },
     "binary": {
-        "module_name": "node_sqlite3",
-        "module_path": "./lib/binding/{node_abi}-{platform}-{arch}",
-        "remote_path": "./{configuration}",
-        "package_name": "{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz",
-        "host": "https://node-sqlite3.s3.amazonaws.com"
+        "module_name" : "sqlite3",
+        "module_path" : "./lib/binding/{node_abi}-{platform}-{arch}",
+        "host"        : "https://mapbox-node-binary.s3.amazonaws.com",
+        "remote_path" : "./{module_name}/v{version}/",
+        "package_name": "{node_abi}-{platform}-{arch}.tar.gz"
     },
     "contributors": [
         "Konstantin Käfer <mail@kkaefer.com>",

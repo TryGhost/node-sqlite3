@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.5
+
+Released August 5th, 2014
+
+ - Fix leak in complete() callback of Database.each() (#307)
+
 ## 2.2.4
 
 Released July 14th, 2014
