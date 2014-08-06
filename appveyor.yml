@@ -31,11 +31,11 @@ install:
   - SET PATH=%APPDATA%\npm;%PATH%
   # add local node-pre-gyp dir to path
   - SET PATH=node_modules\.bin;%PATH%
-  # upgrade node-gyp to support --msvs_version=2013
-  - npm install node-gyp
   # # work around old npm problem with ^
   - npm install npm -g
   - npm --version
+  # upgrade node-gyp to support --msvs_version=2013
+  - npm install node-gyp
   - npm install --build-from-source  --msvs_version=2013
   - npm test
   - node-pre-gyp package
