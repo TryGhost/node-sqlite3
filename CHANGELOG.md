@@ -5,6 +5,7 @@
 Released August 5th, 2014
 
  - Fix leak in complete() callback of Database.each() (#307)
+ - Started using `engineStrict` and improved `engines` declaration to make clear only >= 0.11.13 is supported for the 0.11.x series.
 
 ## 2.2.4
 
