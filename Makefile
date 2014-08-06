@@ -1,17 +1,41 @@
-build:
-	export PATH=`npm explore npm -g -- pwd`/bin/node-gyp-bin:$$PATH && ./node_modules/.bin/node-pre-gyp build
+#http://www.gnu.org/prep/standards/html_node/Standard-Targets.html#Standard-Targets
+
+all: build
+
+./node_modules:
+	npm install --build-from-source
+
+build: ./node_modules
+	./node_modules/.bin/node-pre-gyp build --loglevel=silent
+
+debug:
+	./node_modules/.bin/node-pre-gyp rebuild --debug
+
+verbose:
+	./node_modules/.bin/node-pre-gyp rebuild --loglevel=verbose
 
 clean:
-	rm -f ./lib/node_sqlite3.node
-	rm -rf ./lib/binding/
-	#rm -f ./test/support/big.db*
+	@rm -rf ./build
+	rm -rf lib/binding/
+	rm ./test/tmp/*
 	rm -f test/support/big.db-journal
-	rm -f ./test/tmp/*
-	rm -rf ./deps/sqlite-autoconf-*/
-	rm -rf ./build
-	rm -rf ./out
+	rm -rf ./node_modules/
 
+grind:
+	valgrind --leak-check=full node node_modules/.bin/_mocha
+
+rebuild:
+	@make clean
+	@make
+
+ifndef only
 test:
-	npm test
+	@PATH="./node_modules/mocha/bin:${PATH}" && NODE_PATH="./lib:$(NODE_PATH)" mocha -R spec
+else
+test:
+	@PATH="./node_modules/mocha/bin:${PATH}" && NODE_PATH="./lib:$(NODE_PATH)" mocha -R spec test/${only}.test.js
+endif
 
-.PHONY: build clean test
+check: test
+
+.PHONY: test clean build
