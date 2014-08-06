@@ -28,6 +28,12 @@ matrix:
 before_install:
 # check if tag exists and matches package.json
 - scripts/validate_tag.sh
+- echo $NODE_VERSION
+# upgrade nvm
+- node --version
+- npm --version
+- npm update -g npm
+- npm --version
 
 install:
 # put node-pre-gyp on path
