@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.7
+
+Released August 6th, 2014
+
+ - Removed usage of `npm ls` with `prepublish` target (which breaks node v0.8.x)
+
 ## 2.2.6
 
 Released August 6th, 2014

@@ -1,7 +1,7 @@
 {
     "name": "sqlite3",
     "description": "Asynchronous, non-blocking SQLite3 bindings",
-    "version": "2.2.6",
+    "version": "2.2.7",
     "homepage": "http://github.com/mapbox/node-sqlite3",
     "author": {
         "name": "MapBox",
@@ -52,7 +52,6 @@
     },
     "engineStrict": true,
     "scripts": {
-        "prepublish":"npm ls",
         "install": "node-pre-gyp install --fallback-to-build",
         "pretest": "node test/support/createdb.js",
         "test": "mocha -R spec --timeout 480000"
