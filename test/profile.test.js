@@ -1,6 +1,6 @@
 var sqlite3 = require('..');
 var assert = require('assert');
-require('set-immediate');
+require('setimmediate');
 
 describe('profiling', function() {
     var create = false;
