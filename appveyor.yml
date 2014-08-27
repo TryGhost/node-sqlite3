@@ -15,10 +15,10 @@ environment:
     - nodejs_version: 0.8.28
       PLATFORM: x64
     - nodejs_version: 0.11.13
-      nw_version: 0.10.0
+      nw_version: 0.10.2
       PLATFORM: x86
     - nodejs_version: 0.11.13
-      nw_version: 0.10.0
+      nw_version: 0.10.2
       PLATFORM: x64
 
 install:
