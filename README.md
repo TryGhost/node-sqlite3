@@ -112,7 +112,7 @@ To build node-sqlite3 for node-webkit:
 2. Build the module with the custom flags of `--runtime`, `--target_arch`, and `--target`:
 
 ```sh
-NODE_WEBKIT_VERSION="0.8.4" # see latest version at https://github.com/rogerwang/node-webkit#downloads
+NODE_WEBKIT_VERSION="0.8.6" # see latest version at https://github.com/rogerwang/node-webkit#downloads
 npm install sqlite3 --build-from-source --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
 ```
 
