@@ -32,7 +32,7 @@ install:
   # add local node-pre-gyp dir to path
   - SET PATH=node_modules\.bin;%PATH%
   # # work around old npm problem with ^
-  - npm install npm -g
+  - npm update npm -g
   - npm --version
   # upgrade node-gyp to support --msvs_version=2013
   - npm install node-gyp
