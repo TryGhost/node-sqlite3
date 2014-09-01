@@ -13,7 +13,6 @@ branches:
 
 env:
   matrix:
-   - NODE_VERSION="0.8"
    - NODE_VERSION="0.10"
    - NODE_VERSION="0.11"
    - NODE_WEBKIT="0.8.6" TARGET_ARCH="ia32"
