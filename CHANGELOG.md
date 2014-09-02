@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.0
+
+Released September 2nd, 2014
+
+ - Backwards-incompatible change: node versions 0.8.x are no longer supported.
+
 ## 2.2.7
 
 Released August 6th, 2014
