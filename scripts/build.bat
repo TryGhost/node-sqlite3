@@ -27,23 +27,3 @@ npm install --build-from-source
 npm test
 node-pre-gyp package publish
 node-pre-gyp clean
-
-@ rem 32 bit v0.8x
-set NODIST_X64=0
-nodist use v0.8
-node -e "console.log(process.version + ' ' + process.arch)"
-node-pre-gyp clean
-npm install --build-from-source
-npm test
-node-pre-gyp package publish
-node-pre-gyp clean
-
-@rem 64 bit v0.8.x
-set NODIST_X64=1
-nodist use v0.8
-node -e "console.log(process.version + ' ' + process.arch)"
-node-pre-gyp clean
-npm install --build-from-source
-npm test
-node-pre-gyp package publish
-node-pre-gyp clean
