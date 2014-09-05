@@ -11,10 +11,10 @@ environment:
       nw_version: 0.8.6
       PLATFORM: x64
     - nodejs_version: 0.11.13
-      nw_version: 0.10.2
+      nw_version: 0.10.4
       PLATFORM: x86
     - nodejs_version: 0.11.13
-      nw_version: 0.10.2
+      nw_version: 0.10.4
       PLATFORM: x64
 
 install:
