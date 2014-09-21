@@ -2,9 +2,11 @@
 
 ## 3.0.0
 
-Released September 2nd, 2014
+Released September 20nd, 2014
 
  - Backwards-incompatible change: node versions 0.8.x are no longer supported.
+ - Updated to node-pre-gyp@0.5.27
+ - Updated NAN to 1.3.0
 
 ## 2.2.7
 
