@@ -32,7 +32,7 @@ install:
   - npm --version
   # upgrade node-gyp to support --msvs_version=2013
   - npm install node-gyp
-  - npm install --build-from-source  --msvs_version=2013
+  - npm install --build-from-source --msvs_version=2013
   - npm test
   - node-pre-gyp package
   # make commit message env var shorter
