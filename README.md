@@ -142,7 +142,7 @@ To run node-sqlite3 against sqlcipher you need to compile from source by passing
 If your sqlcipher is installed in a custom location, say if you installed it with homebrew on OS X you also need to do:
 
     export LDFLAGS="-L`brew --prefix`/opt/sqlcipher/lib"
-    export CPPFLAGS="-I/`brew --prefix`opt/sqlcipher/include"
+    export CPPFLAGS="-I`brew --prefix`/opt/sqlcipher/include"
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix`
 
 # Testing
