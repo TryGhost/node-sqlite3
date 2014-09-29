@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.2
+
+ - Republish for possibly busted npm package.
+
 ## 3.0.1
 
  - Use ~ in node-pre-gyp semver for more flexible dep management.
