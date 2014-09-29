@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.1
+
+ - Use ~ in node-pre-gyp semver for more flexible dep management.
+
 ## 3.0.0
 
 Released September 20nd, 2014
