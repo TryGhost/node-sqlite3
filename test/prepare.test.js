@@ -99,6 +99,57 @@ describe('prepare', function() {
         after(function(done) { db.close(done); });
     });
 
+    describe('inserting with accidental undefined', function() {
+        var db;
+        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+
+        var inserted = 0;
+        var retrieved = 0;
+
+        it('should create the table', function(done) {
+            db.prepare("CREATE TABLE foo (num int)").run().finalize(done);
+        });
+
+        it('should insert two rows', function(done) {
+            db.prepare('INSERT INTO foo VALUES(4)').run(function(err) {
+                if (err) throw err;
+                inserted++;
+            }).run(undefined, function (err) {
+                // The second time we pass undefined as a parameter. This is
+                // a mistake, but it should either throw an error or be ignored,
+                // not silently fail to run the statement.
+                if (err) throw err;
+                inserted++;
+            }).finalize(function(err) {
+                if (err) throw err;
+                if (inserted == 2) done();
+            });
+        });
+
+        it('should retrieve the data', function(done) {
+            var stmt = db.prepare("SELECT num FROM foo", function(err) {
+                if (err) throw err;
+            });
+
+            for (var i = 0; i < 2; i++) (function(i) {
+                stmt.get(function(err, row) {
+                    if (err) throw err;
+                    assert(row);
+                    assert.equal(row.num, 4);
+                    retrieved++;
+                });
+            })(i);
+
+            stmt.finalize(done);
+        });
+
+        it('should have retrieved two rows', function() {
+            assert.equal(2, retrieved, "Didn't retrieve all rows");
+        });
+
+        after(function(done) { db.close(done); });
+    });
+
     describe('retrieving reset() function', function() {
         var db;
         before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
