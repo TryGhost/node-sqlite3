@@ -1,5 +1,5 @@
 {
   'variables': {
-      'sqlite_version%':'3080600'
+      'sqlite_version%':'3080700'
   }
 }
