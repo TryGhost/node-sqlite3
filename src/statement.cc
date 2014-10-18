@@ -295,11 +295,11 @@ bool Statement::Bind(const Parameters & parameters) {
                     status = sqlite3_bind_null(_handle, pos);
                 } break;
             }
-        }
 
-        if (status != SQLITE_OK) {
-            message = std::string(sqlite3_errmsg(db->_handle));
-            return false;
+            if (status != SQLITE_OK) {
+                message = std::string(sqlite3_errmsg(db->_handle));
+                return false;
+            }
         }
     }
 
