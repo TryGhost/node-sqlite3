@@ -17,13 +17,17 @@ environment:
       nw_version: 0.10.5
       PLATFORM: x64
 
+os: Visual Studio 2014 CTP4
+
 install:
   - ps: Update-NodeJsInstallation $env:nodejs_version $env:Platform
   - node --version
   - npm --version
   - echo %PLATFORM%
   - SET PATH=c:\python27;%PATH%
-  - SET PATH=C:\Program Files (x86)\MSBuild\12.0\bin\;%PATH%
+  - SET PATH=C:\Program Files (x86)\MSBuild\14.0\bin\;%PATH%
+  - if %platform% == x64 CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
+  - if %platform% == x86 CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64_x86
   - SET PATH=%APPDATA%\npm;%PATH%
   # add local node-pre-gyp dir to path
   - SET PATH=node_modules\.bin;%PATH%
@@ -32,7 +36,7 @@ install:
   - npm --version
   # upgrade node-gyp to support --msvs_version=2013
   - npm install node-gyp
-  - npm install --build-from-source --msvs_version=2013
+  - npm install --build-from-source --msvs_version=2013 --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11/v0.10.33
   - npm test
   - node-pre-gyp package
   # make commit message env var shorter
