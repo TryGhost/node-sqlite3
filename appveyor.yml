@@ -38,8 +38,8 @@ install:
   # use 64 bit python if platform is 64 bit
   - if "%PLATFORM%" == "x64" set PATH=C:\Python27-x64;%PATH%
   # install node version per visual studio toolset
-  - if "%msvs_toolset%" == "12" powershell Install-Product node $env:nodejs_version $env:Platform
-  - if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"
+  - if "%msvs_toolset%" == "12" powershell "Install-Product node $env:nodejs_version $env:Platform"
+  - if "%msvs_toolset%" == "14" powershell "Start-FileDownload https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"
   # upgrade node-gyp to support --msvs_version=2013
   - npm install node-gyp
   - SET PATH=C:\Program Files (x86)\MSBuild\%msvs_toolset%.0\bin\;%PATH%
