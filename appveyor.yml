@@ -7,42 +7,51 @@ environment:
     - nodejs_version: 0.10.30
       nw_version: 0.8.6
       PLATFORM: x86
+      msvs_toolset: 12
+      TOOLSET_ARGS:
     - nodejs_version: 0.10.30
       nw_version: 0.8.6
       PLATFORM: x64
-    - nodejs_version: 0.11.13
-      nw_version: 0.10.5
-      PLATFORM: x86
-    - nodejs_version: 0.11.13
-      nw_version: 0.10.5
+      msvs_toolset: 12
+      TOOLSET_ARGS:
+    - nodejs_version: 0.10.30
+      nw_version: 0.8.6
       PLATFORM: x64
+      msvs_toolset: 14
+      TOOLSET_ARGS: --toolset=cpp11 --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11/
+#    - nodejs_version: 0.11.13
+#      nw_version: 0.10.5
+#      PLATFORM: x86
+#      msvs_toolset: 12
+#    - nodejs_version: 0.11.13
+#      nw_version: 0.10.5
+#      PLATFORM: x64
+#      msvs_toolset: 12
 
 os: Visual Studio 2014 CTP4
 
 install:
-  - ps: Update-NodeJsInstallation $env:nodejs_version $env:Platform
-  - node --version
-  - npm --version
-  - echo %PLATFORM%
-  - SET PATH=c:\python27;%PATH%
-  - SET PATH=C:\Program Files (x86)\MSBuild\14.0\bin\;%PATH%
-  - if %platform% == x64 CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
-  - if %platform% == x86 CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64_x86
-  - SET PATH=%APPDATA%\npm;%PATH%
+  # add local node to path (since we install it for msvs_toolset == 14)
+  - SET PATH=%CD%;%PATH%;
   # add local node-pre-gyp dir to path
   - SET PATH=node_modules\.bin;%PATH%
-  # # work around old npm problem with ^
-  - npm update npm -g
-  - npm --version
+  # use 64 bit python if platform is 64 bit
+  - if "%PLATFORM%" == "x64" set PATH=C:\Python27-x64;%PATH%
+  # install node version per visual studio toolset
+  - if "%msvs_toolset%" == "12" powershell Install-Product node $env:nodejs_version $env:Platform
+  - if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"
   # upgrade node-gyp to support --msvs_version=2013
   - npm install node-gyp
-  - npm install --build-from-source --msvs_version=2013 --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11/v0.10.33
+  - SET PATH=C:\Program Files (x86)\MSBuild\%msvs_toolset%.0\bin\;%PATH%
+  - if %platform% == x64 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64
+  - if %platform% == x86 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64_x86
+  - npm install --build-from-source --msvs_version=2013 %TOOLSET_ARGS%
   - npm test
-  - node-pre-gyp package
+  - node-pre-gyp package %TOOLSET_ARGS%
   # make commit message env var shorter
   - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
-  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish
-  - call scripts\build_for_node_webkit.cmd %PLATFORM%
+  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish %TOOLSET_ARGS%
+  - if "%msvs_toolset%" == "12" call scripts\build_for_node_webkit.cmd %PLATFORM%
 
 build: OFF
 test: OFF
