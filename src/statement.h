@@ -76,7 +76,7 @@ class Statement : public ObjectWrap {
 public:
     static Persistent<FunctionTemplate> constructor_template;
     static bool HasInstance(Handle<Value> value) {
-        return constructor_template->HasInstance(value);
+        return NanNew(constructor_template)->HasInstance(value);
     }
 
     static void Init(Handle<Object> target);
