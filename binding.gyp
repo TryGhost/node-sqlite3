@@ -2,12 +2,7 @@
   "includes": [ "deps/common-sqlite.gypi" ],
   "variables": {
       "sqlite%":"internal",
-      "sqlite_libname%":"sqlite3",
-      "toolset%":'',
-  },
-  'target_defaults': {
-    'default_configuration': 'Release',
-    'msbuild_toolset':'<(toolset)'
+      "sqlite_libname%":"sqlite3"
   },
   "targets": [
     {
