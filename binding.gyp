@@ -2,7 +2,12 @@
   "includes": [ "deps/common-sqlite.gypi" ],
   "variables": {
       "sqlite%":"internal",
-      "sqlite_libname%":"sqlite3"
+      "sqlite_libname%":"sqlite3",
+      "toolset%":'',
+  },
+  'target_defaults': {
+    'default_configuration': 'Release',
+    'msbuild_toolset':'<(toolset)'
   },
   "targets": [
     {
@@ -10,7 +15,7 @@
       "include_dirs": ["<!(node -e \"require('nan')\")"],
       "conditions": [
         ["sqlite != 'internal'", {
-            "include_dirs": [ "<@(sqlite)/include" ],
+            "include_dirs": [ "<(sqlite)/include" ],
             "libraries": [
                "-l<(sqlite_libname)"
             ],
@@ -19,7 +24,7 @@
             'msvs_settings': {
               'VCLinkerTool': {
                 'AdditionalLibraryDirectories': [
-                  '<@(sqlite)/lib'
+                  '<(sqlite)/lib'
                 ],
               },
             }

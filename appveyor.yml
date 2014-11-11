@@ -18,7 +18,7 @@ environment:
       nw_version: 0.8.6
       PLATFORM: x64
       msvs_toolset: 14
-      TOOLSET_ARGS: --toolset=cpp11 --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11/
+      TOOLSET_ARGS: --toolset=v140 --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11/
 #    - nodejs_version: 0.11.13
 #      nw_version: 0.10.5
 #      PLATFORM: x86
@@ -38,11 +38,12 @@ install:
   # use 64 bit python if platform is 64 bit
   - if "%PLATFORM%" == "x64" set PATH=C:\Python27-x64;%PATH%
   # install node version per visual studio toolset
+  - ps: Write-Output "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"
   - if "%msvs_toolset%" == "12" powershell "Install-Product node $env:nodejs_version $env:Platform"
-  - if "%msvs_toolset%" == "14" powershell "Start-FileDownload https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"
+  - if "%msvs_toolset%" == "14" powershell 'Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"'
   # upgrade node-gyp to support --msvs_version=2013
   - npm install node-gyp
-  - SET PATH=C:\Program Files (x86)\MSBuild\%msvs_toolset%.0\bin\;%PATH%
+  - SET PATH=C:\Program Files (x86)\MSBuild\%msvs_toolset%.0\bin;%PATH%
   - if %platform% == x64 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64
   - if %platform% == x86 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64_x86
   - npm install --build-from-source --msvs_version=2013 %TOOLSET_ARGS%
