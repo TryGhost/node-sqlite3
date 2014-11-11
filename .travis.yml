@@ -13,8 +13,8 @@ branches:
 
 env:
   matrix:
-   - NODE_VERSION="0.10"
-   - NODE_VERSION="0.11"
+   - NODE_VERSION="0.10.33"
+   - NODE_VERSION="0.11.14"
    - NODE_WEBKIT="0.8.6" TARGET_ARCH="ia32"
    - NODE_WEBKIT="0.8.6" TARGET_ARCH="x64"
    - NODE_WEBKIT="0.10.5" TARGET_ARCH="ia32"
@@ -24,7 +24,7 @@ env:
     - secure: cc4esJY1vPXL31IeumAJoKWDDO2BTGFiltwfO1jbTbiV7QT911QUjTUasxXIVpOaHNCpxSTyevPwwTWfzt2EtF92Lli+qhQ2bbzMiDSBZstSrHdAe62Ai2M1oYYUwk/0cABB/2nO9uRyYwITCxpTSNzZBrYhn3C29WqBhPeVDmM=
 
 matrix:
-  allow_failures:
+  exclude:
     - env: NODE_WEBKIT="0.8.6" TARGET_ARCH="x64"
       os: osx
 
