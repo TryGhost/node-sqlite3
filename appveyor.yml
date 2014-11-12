@@ -18,15 +18,14 @@ environment:
       msvs_toolset: 14
       TOOLSET_ARGS: --toolset=v140 --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11/
       os: Visual Studio 2014 CTP4
-
-#    - nodejs_version: 0.11.13
-#      nw_version: 0.10.5
-#      PLATFORM: x86
-#      msvs_toolset: 12
-#    - nodejs_version: 0.11.13
-#      nw_version: 0.10.5
-#      PLATFORM: x64
-#      msvs_toolset: 12
+    - nodejs_version: 0.11.13
+      nw_version: 0.10.5
+      PLATFORM: x86
+      msvs_toolset: 12
+    - nodejs_version: 0.11.13
+      nw_version: 0.10.5
+      PLATFORM: x64
+      msvs_toolset: 12
 
 install:
   - node -v
