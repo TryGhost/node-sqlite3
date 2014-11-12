@@ -50,7 +50,7 @@ install:
   #- if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:Platform.exe"
   #- if "%msvs_toolset%" == "14" .\vcredist_%platform%.exe /q /norestart
   - node -v
-  - node -e "console.log(process.argv)"
+  - node -e "console.log(process.argv,process.execPath)"
   - npm -v
   # upgrade node-gyp to support --msvs_version=2013
   - npm install node-gyp
@@ -63,8 +63,12 @@ install:
   - node_modules\.bin\node-pre-gyp reveal module --silent > module.txt
   - SET /p MODULE=<module.txt
   - del module.txt
+  - node -e "console.log(process.execPath)" > node_path.txt
+  - SET /p NODE_EXE_PATH=<node_path.txt
+  - del node_path.txt
   # should display MSVCP140.dll if build with visual studio 2014 and /MD
-  - dumpbin /DEPENDENTS %MODULE%
+  - dumpbin /DEPENDENTS "%NODE_EXE_PATH%"
+  - dumpbin /DEPENDENTS "%MODULE%"
   - npm test
   - node-pre-gyp package %TOOLSET_ARGS%
   # make commit message env var shorter
