@@ -17,6 +17,8 @@ environment:
       PLATFORM: x64
       msvs_toolset: 14
       TOOLSET_ARGS: --toolset=v140 --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11/
+      os: Visual Studio 2014 CTP4
+
 #    - nodejs_version: 0.11.13
 #      nw_version: 0.10.5
 #      PLATFORM: x86
@@ -26,9 +28,8 @@ environment:
 #      PLATFORM: x64
 #      msvs_toolset: 12
 
-os: Visual Studio 2014 CTP4
-
 install:
+  - node -v
   # add local node to path (since we install it for msvs_toolset == 14)
   - SET PATH=%CD%;%PATH%;
   # add local node-pre-gyp dir to path
@@ -52,7 +53,7 @@ install:
   - node-pre-gyp package %TOOLSET_ARGS%
   # make commit message env var shorter
   - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
-  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish %TOOLSET_ARGS%
+  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish --loglevel=verbose %TOOLSET_ARGS%
   - if "%msvs_toolset%" == "12" call scripts\build_for_node_webkit.cmd %PLATFORM%
 
 build: OFF
