@@ -12,11 +12,6 @@ environment:
       nw_version: 0.8.6
       PLATFORM: x64
       msvs_toolset: 12
-    - nodejs_version: 0.10.33
-      nw_version: 0.8.6
-      PLATFORM: x64
-      msvs_toolset: 14
-      TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11/ --toolset=v140
     - nodejs_version: 0.11.13
       nw_version: 0.10.5
       PLATFORM: x86
@@ -25,6 +20,15 @@ environment:
       nw_version: 0.10.5
       PLATFORM: x64
       msvs_toolset: 12
+    # custoom 64 bit visual studio 2014 builds
+    - nodejs_version: 0.10.33
+      PLATFORM: x64
+      msvs_toolset: 14
+      TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
+    - nodejs_version: 0.11.14
+      PLATFORM: x64
+      msvs_toolset: 14
+      TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
 
 os: Visual Studio 2014 CTP4
 
@@ -55,12 +59,12 @@ install:
   - SET PATH=C:\Program Files (x86)\MSBuild\%msvs_toolset%.0\bin;%PATH%
   - if %platform% == x64 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64
   - if %platform% == x86 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64_x86
-  - npm install --build-from-source --msvs_version=2013 --loglevel=verbose %TOOLSET_ARGS%
+  - npm install --build-from-source --msvs_version=2013 %TOOLSET_ARGS%
   - npm test
   - node-pre-gyp package %TOOLSET_ARGS%
   # make commit message env var shorter
   - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
-  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 unpublish publish --loglevel=verbose %TOOLSET_ARGS%
+  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 unpublish publish %TOOLSET_ARGS%
   - if "%msvs_toolset%" == "12" call scripts\build_for_node_webkit.cmd %PLATFORM%
 
 build: OFF
