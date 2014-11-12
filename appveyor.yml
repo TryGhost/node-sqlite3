@@ -17,7 +17,6 @@ environment:
       PLATFORM: x64
       msvs_toolset: 14
       TOOLSET_ARGS: --toolset=v140 --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11/
-      os: Visual Studio 2014 CTP4
     - nodejs_version: 0.11.13
       nw_version: 0.10.5
       PLATFORM: x86
@@ -26,6 +25,8 @@ environment:
       nw_version: 0.10.5
       PLATFORM: x64
       msvs_toolset: 12
+
+os: Visual Studio 2014 CTP4
 
 install:
   - node -v
@@ -40,9 +41,10 @@ install:
   - if "%msvs_toolset%" == "12" powershell Install-Product node $env:nodejs_version $env:Platform
   - if "%msvs_toolset%" == "14" powershell Write-Output "fetching https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"
   - if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"
-  - if "%msvs_toolset%" == "14" powershell Write-Output "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:Platform.exe"
-  - if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:Platform.exe"
-  - if "%msvs_toolset%" == "14" .\vcredist_%platform%.exe /q /norestart
+  # only needed if not using 'os: Visual Studio 2014 CTP4'
+  #- if "%msvs_toolset%" == "14" powershell Write-Output "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:Platform.exe"
+  #- if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:Platform.exe"
+  #- if "%msvs_toolset%" == "14" .\vcredist_%platform%.exe /q /norestart
   - node -v
   - node -e "console.log(process.argv)"
   - npm -v
