@@ -29,6 +29,7 @@ environment:
 
 install:
   - node -v
+  - npm -v
   # add local node to path (since we install it for msvs_toolset == 14)
   - SET PATH=%CD%;%PATH%;
   # add local node-pre-gyp dir to path
@@ -36,9 +37,12 @@ install:
   # use 64 bit python if platform is 64 bit
   - if "%PLATFORM%" == "x64" set PATH=C:\Python27-x64;%PATH%
   # install node version per visual studio toolset
-  - ps: Write-Output "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"
   - if "%msvs_toolset%" == "12" powershell Install-Product node $env:nodejs_version $env:Platform
+  - if "%msvs_toolset%" == "14" powershell Write-Output "fetching https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"
   - if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:Platform/node.exe"
+  - if "%msvs_toolset%" == "14" powershell Write-Output "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:Platform.exe"
+  - if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:Platform.exe"
+  - if "%msvs_toolset%" == "14" .\vcredist_%platform%.exe /q /norestart
   - node -v
   - node -e "console.log(process.argv)"
   - npm -v
