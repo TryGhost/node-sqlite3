@@ -60,6 +60,11 @@ install:
   - if %platform% == x64 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64
   - if %platform% == x86 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64_x86
   - npm install --build-from-source --msvs_version=2013 %TOOLSET_ARGS% --loglevel=http
+  - node_modules\.bin\node-pre-gyp reveal module --silent > module.txt
+  - SET /p MODULE=<module.txt
+  - del module.txt
+  # should display MSVCP140.dll if build with visual studio 2014 and /MD
+  - dumpbin /DEPENDENTS %MODULE%
   - npm test
   - node-pre-gyp package %TOOLSET_ARGS%
   # make commit message env var shorter
