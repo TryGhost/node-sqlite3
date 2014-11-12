@@ -57,6 +57,7 @@ install:
   # clear out node-gyp header cache
   - if "%msvs_toolset%" == "14" rd /s /q %USERPROFILE%\.node-gyp
   - SET PATH=C:\Program Files (x86)\MSBuild\%msvs_toolset%.0\bin;%PATH%
+  - SET PATH=C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\bin;%PATH%
   - if %platform% == x64 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64
   - if %platform% == x86 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64_x86
   - npm install --build-from-source --msvs_version=2013 %TOOLSET_ARGS% --loglevel=http
