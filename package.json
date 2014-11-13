@@ -37,7 +37,7 @@
     },
     "dependencies": {
         "nan": "~1.4.1",
-        "node-pre-gyp": "https://github.com/mapbox/node-pre-gyp/tarball/master"
+        "node-pre-gyp": "~0.6.0"
     },
     "bundledDependencies": [
         "node-pre-gyp"
