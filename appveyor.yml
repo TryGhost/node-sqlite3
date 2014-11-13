@@ -4,11 +4,11 @@ environment:
   node_pre_gyp_secretAccessKey:
     secure: 1amwJJw9fu0j6dXnc5KsAQbSYf7Cjw/dapT6OZWABa6nc52grkKeLQ+DGaOfQz8i
   matrix:
-    - nodejs_version: 0.10.30
+    - nodejs_version: 0.10.32
       nw_version: 0.8.6
       PLATFORM: x86
       msvs_toolset: 12
-    - nodejs_version: 0.10.30
+    - nodejs_version: 0.10.32
       nw_version: 0.8.6
       PLATFORM: x64
       msvs_toolset: 12
@@ -33,8 +33,6 @@ environment:
 os: Visual Studio 2014 CTP4
 
 install:
-  - node -v
-  - npm -v
   # add local node to path (since we install it for msvs_toolset == 14)
   - SET PATH=%CD%;%PATH%;
   # add local node-pre-gyp dir to path
