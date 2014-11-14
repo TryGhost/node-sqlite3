@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.3
+
+ - Upgraded to node-pre-gyp@0.6.0 which should fix crashes against node v0.11.14
+ - Now providing binaries against Visual Studio 2014 (pass --toolset=v140) and use binaries from https://github.com/mapbox/node-cpp11
+
 ## 3.0.2
 
  - Republish for possibly busted npm package.
