@@ -25,11 +25,6 @@ source ../.nvm/nvm.sh
 nvm install $NODE_VERSION
 nvm use $NODE_VERSION
 set -u
-node --version
-npm --version
-# work around old npm problem with ^
-npm install npm -g
-npm --version
 
 # test installing from source
 npm install --build-from-source

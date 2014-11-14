@@ -9,13 +9,8 @@ set +u
 source ../.nvm/nvm.sh
 nvm install 0.10
 set -u
-node --version
-npm --version
-# work around old npm problem with ^
-npm install npm -g
-npm --version
 
-npm install nw-gyp
+npm install nw-gyp -g
 
 OLD_PATH="$PATH"
 
