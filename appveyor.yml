@@ -13,14 +13,6 @@ environment:
       platform: x64
       msvs_toolset: 14
       BUILD_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
-    - nodejs_version: 0.10.33
-      platform: x86
-      msvs_toolset: 14
-      BUILD_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
-    - nodejs_version: 0.11.14
-      platform: x86
-      msvs_toolset: 14
-      BUILD_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
     - nodejs_version: 0.10.32
       nw_version: 0.8.6
       platform: x86
