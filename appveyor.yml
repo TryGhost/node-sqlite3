@@ -31,10 +31,12 @@ install:
   - SET PATH=node_modules\.bin;%PATH%
   # use 64 bit python if platform is 64 bit
   - if "%platform%" == "x64" set PATH=C:\Python27-x64;%PATH%
+  - SET ARCHPATH=
+  - if %platform% == x64 (SET ARCHPATH="x64/")
   # install node version per visual studio toolset
   - if "%msvs_toolset%" == "12" powershell Install-Product node $env:nodejs_version $env:platform
-  - if "%msvs_toolset%" == "14" powershell Write-Output "fetching https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:platform/node.exe"
-  - if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:platform/node.exe"
+  - if "%msvs_toolset%" == "14" powershell Write-Output "fetching https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:ARCHPATHnode.exe"
+  - if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/$env:ARCHPATHnode.exe"
   # only needed if not using 'os: Visual Studio 2014 CTP4'
   #- if "%msvs_toolset%" == "14" powershell Write-Output "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:platform.exe"
   #- if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:platform.exe"
@@ -42,8 +44,6 @@ install:
   - node -v
   - node -e "console.log(process.argv,process.execPath)"
   - npm -v
-  # upgrade node-gyp to support --msvs_version=2013
-  - npm install node-gyp -g
   # clear out node-gyp header cache
   - if "%msvs_toolset%" == "14" rd /s /q %USERPROFILE%\.node-gyp
   - SET PATH=C:\Program Files (x86)\MSBuild\%msvs_toolset%.0\bin;%PATH%
