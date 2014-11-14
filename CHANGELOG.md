@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.4
+
+ - Upgraded node-pre-gyp@0.6.1
+
 ## 3.0.3
 
  - Upgraded to node-pre-gyp@0.6.0 which should fix crashes against node v0.11.14
