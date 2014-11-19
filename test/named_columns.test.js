@@ -26,4 +26,13 @@ describe('named columns', function() {
             done();
         });
     });
+
+    it('should be able to retrieve rowid of last inserted value', function(done) {
+        db.get("SELECT last_insert_rowid() as last_id FROM foo", function(err, row) {
+            if (err) throw err;
+            assert.equal(row.last_id, 1);
+            done();
+        });
+    });
+
 });
