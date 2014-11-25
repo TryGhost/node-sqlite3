@@ -2,11 +2,12 @@
   "includes": [ "deps/common-sqlite.gypi" ],
   "variables": {
       "sqlite%":"internal",
-      "sqlite_libname%":"sqlite3"
+      "sqlite_libname%":"sqlite3",
+      "module_path%":"lib/binding"
   },
   "targets": [
     {
-      "target_name": "<(module_name)",
+      "target_name": "node_sqlite3",
       "include_dirs": ["<!(node -e \"require('nan')\")"],
       "conditions": [
         ["sqlite != 'internal'", {
@@ -40,10 +41,10 @@
     {
       "target_name": "action_after_build",
       "type": "none",
-      "dependencies": [ "<(module_name)" ],
+      "dependencies": [ "node_sqlite3" ],
       "copies": [
           {
-            "files": [ "<(PRODUCT_DIR)/<(module_name).node" ],
+            "files": [ "<(PRODUCT_DIR)/node_sqlite3.node" ],
             "destination": "<(module_path)"
           }
       ]
