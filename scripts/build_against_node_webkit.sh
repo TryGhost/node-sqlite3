@@ -43,13 +43,26 @@ else
     tar xf ${NW_DOWNLOAD}.tar.gz
     export PATH=$(pwd)/${NW_DOWNLOAD}:${PATH}
     if [[ "${TARGET_ARCH}" == 'ia32' ]]; then
+        # for nw >= 0.11.0 on ia32 we need gcc/g++ 4.8
+        IFS='.' read -a NODE_WEBKIT_VERSION <<< "${NODE_WEBKIT}"
+        if test ${NODE_WEBKIT_VERSION[0]} -ge 0 -a ${NODE_WEBKIT_VERSION[1]} -ge 11; then
+            # travis-ci runs ubuntu 12.04, so we need this ppa for gcc/g++ 4.8
+            sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+            CC=gcc-4.8
+            CXX=g++-4.8
+            COMPILER_PACKAGES="gcc-4.8-multilib g++-4.8-multilib"
+        else
+            CC=gcc-4.6
+            CXX=g++-4.6
+            COMPILER_PACKAGES="gcc-multilib g++-multilib"
+        fi
         # need to update to avoid 404 for linux-libc-dev_3.2.0-64.97_amd64.deb
         sudo apt-get update
         # prepare packages for 32-bit builds on Linux
-        sudo apt-get -y install gcc-multilib g++-multilib libx11-6:i386 libnotify4:i386 libxtst6:i386 libcap2:i386 libglib2.0-0:i386 libgtk2.0-0:i386 libatk1.0-0:i386 libgdk-pixbuf2.0-0:i386 libcairo2:i386 libfreetype6:i386 libfontconfig1:i386 libxcomposite1:i386 libasound2:i386 libxdamage1:i386 libxext6:i386 libxfixes3:i386 libnss3:i386 libnspr4:i386 libgconf-2-4:i386 libexpat1:i386 libdbus-1-3:i386 libudev0:i386
+        sudo apt-get -y install $COMPILER_PACKAGES libx11-6:i386 libnotify4:i386 libxtst6:i386 libcap2:i386 libglib2.0-0:i386 libgtk2.0-0:i386 libatk1.0-0:i386 libgdk-pixbuf2.0-0:i386 libcairo2:i386 libfreetype6:i386 libfontconfig1:i386 libxcomposite1:i386 libasound2:i386 libxdamage1:i386 libxext6:i386 libxfixes3:i386 libnss3:i386 libnspr4:i386 libgconf-2-4:i386 libexpat1:i386 libdbus-1-3:i386 libudev0:i386
         # also use ldd to find out if some necessary apt-get is missing
         ldd $(pwd)/${NW_DOWNLOAD}/nw
-        CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source ${GYP_ARGS}
+        npm install --build-from-source ${GYP_ARGS}
     else
         npm install --build-from-source ${GYP_ARGS}
     fi
