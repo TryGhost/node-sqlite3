@@ -56,14 +56,14 @@ const char* sqlite_authorizer_string(int type);
 
 
 #define DEFINE_CONSTANT_INTEGER(target, constant, name)                        \
-    (target)->Set(                                                             \
+    (target)->ForceSet(                                                        \
         NanNew(#name),                                                         \
         NanNew<Integer>(constant),                                             \
         static_cast<PropertyAttribute>(ReadOnly | DontDelete)                  \
     );
 
 #define DEFINE_CONSTANT_STRING(target, constant, name)                         \
-    (target)->Set(                                                             \
+    (target)->ForceSet(                                                        \
         NanNew(#name),                                                         \
         NanNew(constant),                                                      \
         static_cast<PropertyAttribute>(ReadOnly | DontDelete)                  \

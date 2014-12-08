@@ -102,7 +102,7 @@ NAN_METHOD(Statement::New) {
     Database* db = ObjectWrap::Unwrap<Database>(args[0]->ToObject());
     Local<String> sql = Local<String>::Cast(args[1]);
 
-    args.This()->Set(NanNew("sql"), sql, ReadOnly);
+    args.This()->ForceSet(NanNew("sql"), sql, ReadOnly);
 
     Statement* stmt = new Statement(db);
     stmt->Wrap(args.This());

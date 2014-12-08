@@ -131,8 +131,8 @@ NAN_METHOD(Database::New) {
     Database* db = new Database();
     db->Wrap(args.This());
 
-    args.This()->Set(NanNew("filename"), args[0]->ToString(), ReadOnly);
-    args.This()->Set(NanNew("mode"), NanNew<Integer>(mode), ReadOnly);
+    args.This()->ForceSet(NanNew("filename"), args[0]->ToString(), ReadOnly);
+    args.This()->ForceSet(NanNew("mode"), NanNew<Integer>(mode), ReadOnly);
 
     // Start opening the database.
     OpenBaton* baton = new OpenBaton(db, callback, *filename, mode);
