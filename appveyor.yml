@@ -30,20 +30,20 @@ environment:
       platform: x64
       msvs_toolset: 12
     - nodejs_version: 0.11.13
-      nw_version: 0.10.5
+      nw_version: 0.11.2
       platform: x86
       msvs_toolset: 12
     - nodejs_version: 0.11.13
-      nw_version: 0.10.5
+      nw_version: 0.11.2
       platform: x64
       msvs_toolset: 12
     - nodejs_version: 0.11.13
-      nw_version: 0.10.5
+      nw_version: 0.11.2
       platform: x86
       msvs_toolset: 12
       BUILD_ARGS: --target=0.11.14
     - nodejs_version: 0.11.13
-      nw_version: 0.10.5
+      nw_version: 0.11.2
       platform: x64
       msvs_toolset: 12
       BUILD_ARGS: --target=0.11.14
