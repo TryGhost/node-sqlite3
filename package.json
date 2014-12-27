@@ -61,5 +61,11 @@
             "type": "BSD"
         }
     ],
+    "keywords": [
+        "sql",
+        "sqlite",
+        "sqlite3",
+        "database"
+    ],
     "main": "./lib/sqlite3"
 }
