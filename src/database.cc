@@ -437,7 +437,7 @@ void Database::ProfileCallback(Database *db, ProfileInfo* info) {
     Local<Value> argv[] = {
         NanNew("profile"),
         NanNew<String>(info->sql.c_str()),
-        NanNew<Integer>((double)info->nsecs / 1000000.0)
+        NanNew<Number>((double)info->nsecs / 1000000.0)
     };
     EMIT_EVENT(NanObjectWrapHandle(db), 3, argv);
     delete info;
@@ -482,7 +482,7 @@ void Database::UpdateCallback(Database *db, UpdateInfo* info) {
         NanNew(sqlite_authorizer_string(info->type)),
         NanNew<String>(info->database.c_str()),
         NanNew<String>(info->table.c_str()),
-        NanNew<Integer>(info->rowid),
+        NanNew<Number>(info->rowid),
     };
     EMIT_EVENT(NanObjectWrapHandle(db), 4, argv);
     delete info;
