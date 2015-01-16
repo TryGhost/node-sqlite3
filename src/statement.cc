@@ -477,7 +477,7 @@ void Statement::Work_AfterRun(uv_work_t* req) {
         // Fire callbacks.
         Local<Function> cb = NanNew(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            NanObjectWrapHandle(stmt)->Set(NanNew("lastID"), NanNew<Integer>(baton->inserted_id));
+            NanObjectWrapHandle(stmt)->Set(NanNew("lastID"), NanNew<Number>(baton->inserted_id));
             NanObjectWrapHandle(stmt)->Set(NanNew("changes"), NanNew<Integer>(baton->changes));
 
             Local<Value> argv[] = { NanNew(NanNull()) };
