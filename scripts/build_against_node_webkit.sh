@@ -48,12 +48,14 @@ else
         if test ${NODE_WEBKIT_VERSION[0]} -ge 0 -a ${NODE_WEBKIT_VERSION[1]} -ge 11; then
             # travis-ci runs ubuntu 12.04, so we need this ppa for gcc/g++ 4.8
             sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-            CC=gcc-4.8
-            CXX=g++-4.8
+            export CC=gcc-4.8
+            export CXX=g++-4.8
+            export CXXFLAGS="-fpermissive"
             COMPILER_PACKAGES="gcc-4.8-multilib g++-4.8-multilib"
         else
-            CC=gcc-4.6
-            CXX=g++-4.6
+            export CC=gcc-4.6
+            export CXX=g++-4.6
+            export CXXFLAGS="-fpermissive"
             COMPILER_PACKAGES="gcc-multilib g++-multilib"
         fi
         # need to update to avoid 404 for linux-libc-dev_3.2.0-64.97_amd64.deb
