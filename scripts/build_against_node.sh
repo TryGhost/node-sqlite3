@@ -26,13 +26,11 @@ nvm install $NODE_VERSION
 nvm use $NODE_VERSION
 set -u
 
+# remove exists NODE_PATH env
+unset NODE_PATH
+
 # test installing from source
-if [[ ${NODE_VERSION:0:4} == 'iojs' ]]; then
-    echo ${NODE_VERSION}
-    npm install --build-from-source --disturl=https://iojs.org/dist
-else
-    npm install --build-from-source --disturl=https://iojs.org/dist
-fi
+npm install --build-from-source
 node-pre-gyp package testpackage
 npm test
 

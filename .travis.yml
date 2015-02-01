@@ -36,7 +36,7 @@ before_install:
 # check if tag exists and matches package.json
 - scripts/validate_tag.sh
 - echo $NODE_VERSION
-# upgrade nvm
+# upgrade npm
 - node --version
 - npm --version
 - npm update -g npm
