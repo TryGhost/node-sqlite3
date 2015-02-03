@@ -22,8 +22,8 @@ if [[ ! -d ../.nvm ]]; then
 fi
 set +u
 source ../.nvm/nvm.sh
-nvm install $NODE_VERSION
-nvm use $NODE_VERSION
+nvm install $IOJS_VERSION
+nvm use $IOJS_VERSION
 set -u
 
 # test installing from source
