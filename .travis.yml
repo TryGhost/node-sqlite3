@@ -16,6 +16,7 @@ env:
    - NODE_VERSION="0.10.33"
    - NODE_VERSION="0.11.13"
    - NODE_VERSION="0.11.14"
+   - NODE_VERSION="iojs-1.0.4"
    - NODE_WEBKIT="0.8.6" TARGET_ARCH="ia32"
    - NODE_WEBKIT="0.8.6" TARGET_ARCH="x64"
    - NODE_WEBKIT="0.10.5" TARGET_ARCH="ia32"
@@ -35,7 +36,7 @@ before_install:
 # check if tag exists and matches package.json
 - scripts/validate_tag.sh
 - echo $NODE_VERSION
-# upgrade nvm
+# upgrade npm
 - node --version
 - npm --version
 - npm update -g npm
