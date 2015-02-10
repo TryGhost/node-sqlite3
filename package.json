@@ -36,8 +36,8 @@
         "url": "git://github.com/mapbox/node-sqlite3.git"
     },
     "dependencies": {
-        "nan": "https://github.com/springmeyer/nan/tarball/patch-3",
-        "node-pre-gyp": "~0.6.1"
+        "nan": "~1.6.2",
+        "node-pre-gyp": "~0.6.2"
     },
     "bundledDependencies": [
         "node-pre-gyp"
