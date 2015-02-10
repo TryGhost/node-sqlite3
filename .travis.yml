@@ -14,8 +14,8 @@ branches:
 env:
   matrix:
    - NODE_VERSION="0.10.33"
-   - NODE_VERSION="0.11.13"
-   - NODE_VERSION="0.11.14"
+   - NODE_VERSION="0.12.0"
+   - NODE_VERSION="iojs-1.1.0"
    - NODE_WEBKIT="0.8.6" TARGET_ARCH="ia32"
    - NODE_WEBKIT="0.8.6" TARGET_ARCH="x64"
    - NODE_WEBKIT="0.10.5" TARGET_ARCH="ia32"
