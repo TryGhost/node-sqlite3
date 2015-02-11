@@ -54,7 +54,7 @@ if [[ $(uname -s) == 'Linux' ]]; then
     # enable 32 bit node
     export PATH=$(pwd)/node-${NVER}-${platform}-x86/bin:$PATH
     if [[ ${NODE_VERSION:0:4} == 'iojs' ]]; then
-        wget http://iojs.org/dist/${NVER}/iojs-${NVER}-${platform}-x86.tar.gz
+        wget https://iojs.org/download/release/${NVER}/iojs-${NVER}-${platform}-x86.tar.gz
         tar xf iojs-${NVER}-${platform}-x86.tar.gz
         # enable 32 bit iojs
         export PATH=$(pwd)/iojs-${NVER}-${platform}-x86/bin:$PATH
@@ -64,6 +64,7 @@ if [[ $(uname -s) == 'Linux' ]]; then
         # enable 32 bit node
         export PATH=$(pwd)/node-${NVER}-${platform}-x86/bin:$PATH
     fi
+    node -e "console.log(process.arch,process.execPath)"
     # install 32 bit compiler toolchain and X11
     # test source compile in 32 bit mode with internal libsqlite3
     CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source
