@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.5
+
+ - IO.js and Node v0.12.x support.
+ - Node-webkit v0.11.x support regressed in this release, sorry (https://github.com/mapbox/node-sqlite3/issues/404).
+
 ## 3.0.4
 
  - Upgraded node-pre-gyp@0.6.1
