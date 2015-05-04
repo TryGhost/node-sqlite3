@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 
-set -u -e -x
+if [[ ! -d ../.nvm ]]; then
+    git clone https://github.com/creationix/nvm.git ../.nvm
+fi
+source ../.nvm/nvm.sh
+nvm install $NODE_VERSION
+nvm use $NODE_VERSION
+
+set -u -e
 
 function publish() {
     if test "${COMMIT_MESSAGE#*'[publish binary]'}" != "$COMMIT_MESSAGE"; then
@@ -16,15 +23,6 @@ function publish() {
         node-pre-gyp clean
     fi
 }
-
-if [[ ! -d ../.nvm ]]; then
-    git clone https://github.com/creationix/nvm.git ../.nvm
-fi
-set +u
-source ../.nvm/nvm.sh
-nvm install $NODE_VERSION
-nvm use $NODE_VERSION
-set -u
 
 # test installing from source
 npm install --build-from-source

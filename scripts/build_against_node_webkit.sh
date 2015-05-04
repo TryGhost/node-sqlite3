@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 
-set -u -e
 
 if [[ ! -d ../.nvm ]]; then
     git clone https://github.com/creationix/nvm.git ../.nvm
 fi
-set +u
 source ../.nvm/nvm.sh
 nvm install 0.10
-set -u
+
+set -u -e
 
 npm install nw-gyp -g
 
