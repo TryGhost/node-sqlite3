@@ -5,6 +5,7 @@
  - Upgraded node-pre-gyp@0.6.5
  - Upgraded nan@1.8.4
  - Fixed binaries to work on older linux systems (circa GLIBC_2.2.5 like centos 6) @bnoordhuis
+ - Updated internal libsqlite3 from 3.8.7.1 -> 3.8.9 (http://www.sqlite.org/news.html)
 
 ## 3.0.5
 
