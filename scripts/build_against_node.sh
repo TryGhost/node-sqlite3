@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -u -e
+set -u -e -x
 
 function publish() {
     if test "${COMMIT_MESSAGE#*'[publish binary]'}" != "$COMMIT_MESSAGE"; then
