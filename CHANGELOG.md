@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.6
+
+ - Upgraded node-pre-gyp@0.6.5
+ - Upgraded nan@1.8.4
+ - Fixed binaries to work on older linux systems (circa GLIBC_2.2.5 like centos 6) @bnoordhuis
+
 ## 3.0.5
 
  - IO.js and Node v0.12.x support.
