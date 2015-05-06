@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.7
+
+ - Fixed build regression against ARM and i386 linux
+ - Upgraded node-pre-gyp@0.6.6
+ - Added support for io.js 2.0.0
+
 ## 3.0.6
 
  - Upgraded node-pre-gyp@0.6.5
