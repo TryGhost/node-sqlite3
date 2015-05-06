@@ -1,7 +1,7 @@
 {
     "name": "sqlite3",
     "description": "Asynchronous, non-blocking SQLite3 bindings",
-    "version": "3.0.6",
+    "version": "3.0.7",
     "homepage": "http://github.com/mapbox/node-sqlite3",
     "author": {
         "name": "MapBox",
@@ -38,7 +38,7 @@
     },
     "dependencies": {
         "nan": "~1.8.4",
-        "node-pre-gyp": "~0.6.5"
+        "node-pre-gyp": "~0.6.6"
     },
     "bundledDependencies": [
         "node-pre-gyp"
