@@ -1,10 +1,10 @@
 Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
 [![NPM](https://nodei.co/npm/sqlite3.png?downloads=true&downloadRank=true)](https://nodei.co/npm/sqlite3/)
-
 [![Build Status](https://travis-ci.org/mapbox/node-sqlite3.svg?branch=master)](https://travis-ci.org/mapbox/node-sqlite3)
-
 [![Build status](https://ci.appveyor.com/api/projects/status/gvm7ul0hpmdawqom)](https://ci.appveyor.com/project/Mapbox/node-sqlite3)
+[![Dependencies](https://david-dm.org/mapbox/node-sqlite3.svg)](https://david-dm.org/mapbox/node-sqlite3)
+
 
 ## Supported platforms
 
