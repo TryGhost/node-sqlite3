@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.8
+
+ - Fixed build regression against FreeBSD
+ - Upgraded node-pre-gyp@0.6.7
+
 ## 3.0.7
 
  - Fixed build regression against ARM and i386 linux
