@@ -4,6 +4,10 @@
 #include "database.h"
 #include "statement.h"
 
+#ifndef SQLITE_DETERMINISTIC
+#define SQLITE_DETERMINISTIC 0x800
+#endif
+
 using namespace node_sqlite3;
 
 Nan::Persistent<FunctionTemplate> Database::constructor_template;
@@ -24,6 +28,7 @@ NAN_MODULE_INIT(Database::Init) {
     Nan::SetPrototypeMethod(t, "parallelize", Parallelize);
     Nan::SetPrototypeMethod(t, "configure", Configure);
     Nan::SetPrototypeMethod(t, "interrupt", Interrupt);
+    Nan::SetPrototypeMethod(t, "registerFunction", RegisterFunction);
 
     NODE_SET_GETTER(t, "open", OpenGetter);
 
@@ -372,6 +377,154 @@ NAN_METHOD(Database::Interrupt) {
 
     sqlite3_interrupt(db->_handle);
     info.GetReturnValue().Set(info.This());
+}
+
+NAN_METHOD(Database::RegisterFunction) {
+    NanScope();
+    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    REQUIRE_ARGUMENTS(2);
+    REQUIRE_ARGUMENT_STRING(0, functionName);
+    REQUIRE_ARGUMENT_FUNCTION(1, callback);
+
+    FunctionBaton *baton = new FunctionBaton(db, *functionName, callback);
+    sqlite3_create_function(
+        db->_handle,
+        *functionName,
+        -1, // arbitrary number of args
+        SQLITE_UTF8 | SQLITE_DETERMINISTIC,
+        baton,
+        FunctionEnqueue,
+        NULL,
+        NULL);
+
+    uv_mutex_init(&baton->mutex);
+    uv_cond_init(&baton->condition);
+    uv_async_init(uv_default_loop(), &baton->async, (uv_async_cb)Database::AsyncFunctionProcessQueue);
+
+    NanReturnValue(args.This());
+}
+
+void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    // the JS function can only be safely executed on the main thread
+    // (uv_default_loop), so setup an invocation w/ the relevant information,
+    // enqueue it and signal the main thread to process the invocation queue.
+    // sqlite3 requires the result to be set before this function returns, so
+    // wait for the invocation to be completed.
+    FunctionBaton *baton = (FunctionBaton *)sqlite3_user_data(context);
+    FunctionInvocation invocation = {};
+    invocation.context = context;
+    invocation.argc = argc;
+    invocation.argv = argv;
+
+    uv_async_send(&baton->async);
+    uv_mutex_lock(&baton->mutex);
+    baton->queue.push(&invocation);
+    while (!invocation.complete) {
+        uv_cond_wait(&baton->condition, &baton->mutex);
+    }
+    uv_mutex_unlock(&baton->mutex);
+}
+
+void Database::AsyncFunctionProcessQueue(uv_async_t *async) {
+    FunctionBaton *baton = (FunctionBaton *)async->data;
+
+    for (;;) {
+        FunctionInvocation *invocation = NULL;
+
+        uv_mutex_lock(&baton->mutex);
+        if (!baton->queue.empty()) {
+            invocation = baton->queue.front();
+            baton->queue.pop();
+        }
+        uv_mutex_unlock(&baton->mutex);
+
+        if (!invocation) { break; }
+
+        Database::FunctionExecute(baton, invocation);
+
+        uv_mutex_lock(&baton->mutex);
+        invocation->complete = true;
+        uv_cond_signal(&baton->condition); // allow paused thread to complete
+        uv_mutex_unlock(&baton->mutex);
+    }
+}
+
+void Database::FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocation) {
+    NanScope();
+
+    Database *db = baton->db;
+    Local<Function> cb = NanNew(baton->callback);
+    sqlite3_context *context = invocation->context;
+    sqlite3_value **values = invocation->argv;
+    int argc = invocation->argc;
+
+    if (!cb.IsEmpty() && cb->IsFunction()) {
+
+        // build the argument list for the function call
+        typedef Local<Value> LocalValue;
+        std::vector<LocalValue> argv;
+        for (int i = 0; i < argc; i++) {
+            sqlite3_value *value = values[i];
+            int type = sqlite3_value_type(value);
+            Local<Value> arg;
+            switch(type) {
+                case SQLITE_INTEGER: {
+                    arg = NanNew<Number>(sqlite3_value_int64(value));
+                } break;
+                case SQLITE_FLOAT: {
+                    arg = NanNew<Number>(sqlite3_value_double(value));
+                } break;
+                case SQLITE_TEXT: {
+                    const char* text = (const char*)sqlite3_value_text(value);
+                    int length = sqlite3_value_bytes(value);
+                    arg = NanNew<String>(text, length);
+                } break;
+                case SQLITE_BLOB: {
+                    const void *blob = sqlite3_value_blob(value);
+                    int length = sqlite3_value_bytes(value);
+                    arg = NanNew(NanNewBufferHandle((char *)blob, length));
+                } break;
+                case SQLITE_NULL: {
+                    arg = NanNew(NanNull());
+                } break;
+            }
+
+            argv.push_back(arg);
+        }
+
+        Local<Value> result = TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, argc, argv.data());
+
+        // process the result
+        if (result->IsString() || result->IsRegExp()) {
+            String::Utf8Value value(result->ToString());
+            sqlite3_result_text(context, *value, value.length(), SQLITE_TRANSIENT);
+        }
+        else if (result->IsInt32()) {
+            sqlite3_result_int(context, result->Int32Value());
+        }
+        else if (result->IsNumber() || result->IsDate()) {
+            sqlite3_result_double(context, result->NumberValue());
+        }
+        else if (result->IsBoolean()) {
+            sqlite3_result_int(context, result->BooleanValue());
+        }
+        else if (result->IsNull() || result->IsUndefined()) {
+            sqlite3_result_null(context);
+        }
+        else if (Buffer::HasInstance(result)) {
+            Local<Object> buffer = result->ToObject();
+            sqlite3_result_blob(context,
+                Buffer::Data(buffer),
+                Buffer::Length(buffer),
+                SQLITE_TRANSIENT);
+        }
+        else {
+            std::string message("invalid return type in user function");
+            message = message + " " + baton->name;
+            sqlite3_result_error(context, message.c_str(), message.length());
+        }
+    }
 }
 
 void Database::SetBusyTimeout(Baton* baton) {
