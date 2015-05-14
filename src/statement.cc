@@ -380,6 +380,15 @@ void Statement::Work_Get(uv_work_t* req) {
         sqlite3_mutex_enter(mtx);
 
         if (stmt->Bind(baton->parameters)) {
+            int cols = sqlite3_column_count(stmt->_handle);
+            for (int i = 0; i < cols; i++) {
+                const char *name = sqlite3_column_name(stmt->_handle, i);
+                const char *type = sqlite3_column_decltype(stmt->_handle, i);
+                if (type) {
+                    baton->types[name] = type;
+                }
+            }
+
             stmt->status = sqlite3_step(stmt->_handle);
 
             if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
@@ -407,14 +416,23 @@ void Statement::Work_AfterGet(uv_work_t* req) {
         // Fire callbacks.
         Local<Function> cb = NanNew(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
+            Local<Object> decltypes(NanNew<Object>());
+            Decltypes::const_iterator type_it = baton->types.begin();
+            Decltypes::const_iterator type_end = baton->types.end();
+            for (; type_it != type_end; ++type_it) {
+                Local<String> name = NanNew<String>(type_it->first.c_str());
+                Local<String> type = NanNew<String>(type_it->second.c_str());
+                decltypes->Set(name, type);
+            }
+
             if (stmt->status == SQLITE_ROW) {
                 // Create the result array from the data we acquired.
-                Local<Value> argv[] = { NanNew(NanNull()), RowToJS(&baton->row) };
-                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 2, argv);
+                Local<Value> argv[] = { NanNew(NanNull()), RowToJS(&baton->row), decltypes };
+                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 3, argv);
             }
             else {
-                Local<Value> argv[] = { NanNew(NanNull()) };
-                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 1, argv);
+                Local<Value> argv[] = { NanNew(NanNull()), NanNew(NanNull()), decltypes };
+                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 3, argv);
             }
         }
     }
@@ -518,6 +536,15 @@ void Statement::Work_All(uv_work_t* req) {
     }
 
     if (stmt->Bind(baton->parameters)) {
+        int cols = sqlite3_column_count(stmt->_handle);
+        for (int i = 0; i < cols; i++) {
+            const char *name = sqlite3_column_name(stmt->_handle, i);
+            const char *type = sqlite3_column_decltype(stmt->_handle, i);
+            if (type) {
+                baton->types[name] = type;
+            }
+        }
+
         while ((stmt->status = sqlite3_step(stmt->_handle)) == SQLITE_ROW) {
             Row* row = new Row();
             GetRow(row, stmt->_handle);
@@ -543,6 +570,15 @@ void Statement::Work_AfterAll(uv_work_t* req) {
         // Fire callbacks.
         Local<Function> cb = NanNew(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
+            Local<Object> decltypes(NanNew<Object>());
+            Decltypes::const_iterator type_it = baton->types.begin();
+            Decltypes::const_iterator type_end = baton->types.end();
+            for (; type_it != type_end; ++type_it) {
+                Local<String> name = NanNew<String>(type_it->first.c_str());
+                Local<String> type = NanNew<String>(type_it->second.c_str());
+                decltypes->Set(name, type);
+            }
+
             if (baton->rows.size()) {
                 // Create the result array from the data we acquired.
                 Local<Array> result(NanNew<Array>(baton->rows.size()));
@@ -553,16 +589,17 @@ void Statement::Work_AfterAll(uv_work_t* req) {
                     delete *it;
                 }
 
-                Local<Value> argv[] = { NanNew(NanNull()), result };
-                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 2, argv);
+                Local<Value> argv[] = { NanNew(NanNull()), result, decltypes };
+                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 3, argv);
             }
             else {
                 // There were no result rows.
                 Local<Value> argv[] = {
                     NanNew(NanNull()),
-                    NanNew<Array>(0)
+                    NanNew<Array>(0),
+                    decltypes
                 };
-                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 2, argv);
+                TRY_CATCH_CALL(NanObjectWrapHandle(stmt), cb, 3, argv);
             }
         }
     }
@@ -618,6 +655,14 @@ void Statement::Work_Each(uv_work_t* req) {
     }
 
     if (stmt->Bind(baton->parameters)) {
+        int cols = sqlite3_column_count(stmt->_handle);
+        for (int i = 0; i < cols; i++) {
+            const char *name = sqlite3_column_name(stmt->_handle, i);
+            const char *type = sqlite3_column_decltype(stmt->_handle, i);
+            if (type) {
+                async->types[name] = type;
+            }
+        }
         while (true) {
             sqlite3_mutex_enter(mtx);
             stmt->status = sqlite3_step(stmt->_handle);
@@ -670,15 +715,25 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
 
         Local<Function> cb = NanNew(async->item_cb);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[2];
+            Local<Object> decltypes(NanNew<Object>());
+            Decltypes::const_iterator type_it = async->types.begin();
+            Decltypes::const_iterator type_end = async->types.end();
+            for (; type_it != type_end; ++type_it) {
+                Local<String> name = NanNew<String>(type_it->first.c_str());
+                Local<String> type = NanNew<String>(type_it->second.c_str());
+                decltypes->Set(name, type);
+            }
+
+            Local<Value> argv[3];
             argv[0] = NanNew(NanNull());
+            argv[2] = decltypes;
 
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
             for (int i = 0; it < end; ++it, i++) {
                 argv[1] = RowToJS(*it);
                 async->retrieved++;
-                TRY_CATCH_CALL(NanObjectWrapHandle(async->stmt), cb, 2, argv);
+                TRY_CATCH_CALL(NanObjectWrapHandle(async->stmt), cb, 3, argv);
                 delete *it;
             }
         }

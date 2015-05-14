@@ -11,6 +11,7 @@
 #include <string>
 #include <queue>
 #include <vector>
+#include <map>
 
 #include <sqlite3.h>
 #include "nan.h"
@@ -68,6 +69,7 @@ namespace Values {
 
 typedef std::vector<Values::Field*> Row;
 typedef std::vector<Row*> Rows;
+typedef std::map<std::string,std::string> Decltypes;
 typedef Row Parameters;
 
 
@@ -104,6 +106,7 @@ public:
         RowBaton(Statement* stmt_, Handle<Function> cb_) :
             Baton(stmt_, cb_) {}
         Row row;
+        Decltypes types;
     };
 
     struct RunBaton : Baton {
@@ -117,6 +120,7 @@ public:
         RowsBaton(Statement* stmt_, Handle<Function> cb_) :
             Baton(stmt_, cb_) {}
         Rows rows;
+        Decltypes types;
     };
 
     struct Async;
@@ -161,6 +165,7 @@ public:
         uv_async_t watcher;
         Statement* stmt;
         Rows data;
+        Decltypes types;
         NODE_SQLITE3_MUTEX_t;
         bool completed;
         int retrieved;
