@@ -55,12 +55,12 @@ if [[ $(uname -s) == 'Linux' ]]; then
         wget https://iojs.org/download/release/${NVER}/iojs-${NVER}-${platform}-x86.tar.gz
         tar xf iojs-${NVER}-${platform}-x86.tar.gz
         # enable 32 bit iojs
-        export PATH=$(pwd)/iojs-${NVER}-${platform}-x86/bin:$PATH
+        export PATH=$(pwd)/iojs-${NVER}-${platform}-x86/bin:$(pwd)/iojs-${NVER}-${platform}-ia32/bin:$PATH
     else
         wget http://nodejs.org/dist/${NVER}/node-${NVER}-${platform}-x86.tar.gz
         tar xf node-${NVER}-${platform}-x86.tar.gz
         # enable 32 bit node
-        export PATH=$(pwd)/node-${NVER}-${platform}-x86/bin:$PATH
+        export PATH=$(pwd)/node-${NVER}-${platform}-x86/bin:$(pwd)/node-${NVER}-${platform}-ia32/bin:$PATH
     fi
     node -e "console.log(process.arch,process.execPath)"
     # install 32 bit compiler toolchain and X11
