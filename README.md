@@ -136,15 +136,38 @@ Visit the “[Using Node modules](https://github.com/rogerwang/node-webkit/wiki/
 
 ## Building for sqlcipher
 
+For instructions for building sqlcipher see
+[Building SQLCipher for node.js](https://coolaj86.com/articles/building-sqlcipher-for-node-js-on-raspberry-pi-2/)
+
 To run node-sqlite3 against sqlcipher you need to compile from source by passing build options like:
 
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/
+    
+    node -e 'require("sqlite3")'
 
-If your sqlcipher is installed in a custom location, say if you installed it with homebrew on OS X you also need to do:
+If your sqlcipher is installed in a custom location (if you compiled and installed it yourself),
+you'll also need to to set some environment variables:
+
+### On OS X with Homebrew
+
+Set the location where `brew` installed it:
 
     export LDFLAGS="-L`brew --prefix`/opt/sqlcipher/lib"
     export CPPFLAGS="-I`brew --prefix`/opt/sqlcipher/include"
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix`
+    
+    node -e 'require("sqlite3")'
+
+### On most Linuxes (including Raspberry Pi)
+
+Set the location where `make` installed it:
+
+    export LDFLAGS="-L/usr/local/lib"
+    export CPPFLAGS="-I/usr/local/include -I/usr/local/include/sqlcipher"
+    export CXXFLAGS="$CPPFLAGS"
+    npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/local --verbose
+    
+    node -e 'require("sqlite3")'
 
 # Testing
 
