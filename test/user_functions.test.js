@@ -77,9 +77,9 @@ describe('user functions', function() {
         });
     });
 
-    it.skip('reports errors thrown in functions', function(done) {
+    it('reports errors thrown in functions', function(done) {
         db.all('SELECT MY_ERROR() AS val', function(err, rows) {
-            assert.equal(err.message, 'This function always throws');
+            assert.equal(err.message, 'SQLITE_ERROR: Uncaught Error: This function always throws');
             assert.equal(rows, undefined);
             done();
         });
