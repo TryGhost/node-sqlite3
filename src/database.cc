@@ -493,10 +493,15 @@ void Database::FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocat
             argv.push_back(arg);
         }
 
-        Local<Value> result = TRY_CATCH_CALL(NanObjectWrapHandle(db), cb, argc, argv.data());
+        TryCatch trycatch;
+        Local<Value> result = cb->Call(NanObjectWrapHandle(db), argc, argv.data());
 
         // process the result
-        if (result->IsString() || result->IsRegExp()) {
+        if (trycatch.HasCaught()) {
+            String::Utf8Value message(trycatch.Message()->Get());
+            sqlite3_result_error(context, *message, message.length());
+        }
+        else if (result->IsString() || result->IsRegExp()) {
             String::Utf8Value value(result->ToString());
             sqlite3_result_text(context, *value, value.length(), SQLITE_TRANSIENT);
         }
