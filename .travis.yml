@@ -13,10 +13,10 @@ branches:
 
 env:
   matrix:
-   - NODE_VERSION="0.10.38"
-   - NODE_VERSION="0.12.2"
-   - NODE_VERSION="iojs-1.8.1"
-   - NODE_VERSION="iojs-2.0.0"
+   - NODE_VERSION="0.10.40" # ABI 11
+   - NODE_VERSION="0.12.7" # ABI 14
+   - NODE_VERSION="iojs-1.8.4" # ABI 43
+   - NODE_VERSION="iojs-2.3.4" # ABI 44
    - NODE_WEBKIT="0.8.6" TARGET_ARCH="ia32"
    - NODE_WEBKIT="0.8.6" TARGET_ARCH="x64"
    - NODE_WEBKIT="0.10.5" TARGET_ARCH="ia32"
