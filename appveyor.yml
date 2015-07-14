@@ -58,7 +58,7 @@ install:
   - SET ARCHPATH=
   - if %platform% == x64 (SET ARCHPATH=x64/)
   # install node version per visual studio toolset
-  - if "%msvs_toolset%" == "12" powershell Update-NodeJsInstallation $env:nodejs_version $env:platform
+  - if "%msvs_toolset%" == "12" powershell Install-Product node $env:nodejs_version $env:platform
   - if "%msvs_toolset%" == "14" powershell Write-Output "fetching https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/${env:ARCHPATH}node.exe"
   - if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/${env:ARCHPATH}node.exe"
   # only needed if not using 'os: Visual Studio 2014 CTP4'
