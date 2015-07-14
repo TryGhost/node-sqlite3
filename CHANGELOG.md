@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.9
+
+ - Fixed build regression against alpine linux (musl)
+ - Upgraded node-pre-gyp@0.6.8
+
 ## 3.0.8
 
  - Fixed build regression against FreeBSD
