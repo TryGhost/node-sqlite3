@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.10
+
+ - Upgraded SQLite to 3.8.11.1: https://www.sqlite.org/releaselog/3_8_11_1.html
+
 ## 3.0.9
 
  - Fixed build regression against alpine linux (musl)
@@ -136,5 +140,3 @@ Released October 22nd, 2013
 Released August 7th, 2013
 
  - Minor readme additions and code optimizations
-
-
