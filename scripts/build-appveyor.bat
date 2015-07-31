@@ -108,7 +108,7 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 ::skipping check for errorlevel npm test result when using io.js
 ::@springmeyer: how to proceed?
-IF NOT "%nodejs_version%"=="1.8.1" IF NOT "%nodejs_version%"=="2.0.0" GOTO CHECK_TEST_ERRORLEVEL
+IF NOT "%nodejs_version%"=="1.8.1" IF NOT "%nodejs_version%"=="2.0.0" GOTO CHECK_NPM_TEST_ERRORLEVEL
 
 ECHO calling npm test
 CALL npm test
@@ -123,6 +123,7 @@ ECHO ==========================================
 GOTO NPM_TEST_FINISHED
 
 
+:CHECK_NPM_TEST_ERRORLEVEL
 ECHO calling npm test
 CALL npm test
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
