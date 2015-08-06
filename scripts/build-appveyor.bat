@@ -17,6 +17,7 @@ ECHO TOOLSET_ARGS^: %TOOLSET_ARGS%
 
 
 ECHO activating VS command prompt
+:: NOTE this call makes the x64 -> X64
 IF /I "%platform%"=="x64" ECHO x64 && CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64
 IF /I "%platform%"=="x86" ECHO x86 && CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" x86
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
@@ -41,7 +42,7 @@ IF /I "%msvs_toolset%"=="12" GOTO NODE_INSTALLED
 
 ::custom node for VS2015
 SET ARCHPATH=
-IF "%platform%"=="x64" (SET ARCHPATH=x64/)
+IF "%platform%"=="X64" (SET ARCHPATH=x64/)
 SET NODE_URL=https://mapbox.s3.amazonaws.com/node-cpp11/v%nodejs_version%/%ARCHPATH%node.exe
 ECHO downloading node^: %NODE_URL%
 powershell Invoke-WebRequest "${env:NODE_URL}" -OutFile node.exe
