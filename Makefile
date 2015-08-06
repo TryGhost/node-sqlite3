@@ -23,6 +23,12 @@ clean:
 grind:
 	valgrind --leak-check=full node node_modules/.bin/_mocha
 
+testpack:
+	rm -f ./*tgz
+	npm pack
+	tar -ztvf *tgz
+	rm -f ./*tgz
+
 rebuild:
 	@make clean
 	@make
