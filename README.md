@@ -11,7 +11,7 @@ Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](
 
 The `sqlite3` module works with Node.js v0.10.x or v0.12.x and io.js v1.x or 2.x.
 
-Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/springmeyer/node-pre-gyp).
+Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/mapbox/node-pre-gyp).
 
 The `sqlite3` module also works with [node-webkit](https://github.com/rogerwang/node-webkit) if node-webkit contains a supported version of Node.js engine. [(See below.)](#building-for-node-webkit)
 
