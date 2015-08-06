@@ -3,6 +3,8 @@
 ## 3.0.10
 
  - Upgraded SQLite to 3.8.11.1: https://www.sqlite.org/releaselog/3_8_11_1.html
+ - Fixed binary compatibility regression with old centos/rhel glibc GLIBC_2.14 (re-introduced alpine linux (musl) build regression)
+ - Now providing binaries against Visual Studio 2015 (pass --toolset=v140) and use binaries from https://github.com/mapbox/node-cpp11
 
 ## 3.0.9
 
