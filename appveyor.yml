@@ -4,16 +4,16 @@ environment:
   node_pre_gyp_secretAccessKey:
     secure: 1amwJJw9fu0j6dXnc5KsAQbSYf7Cjw/dapT6OZWABa6nc52grkKeLQ+DGaOfQz8i
   matrix:
-    - nodejs_version: 0.10.36
+    - nodejs_version: 0.10.40
       platform: x86
       msvs_toolset: 12
-    - nodejs_version: 0.10.36
+    - nodejs_version: 0.10.40
       platform: x64
       msvs_toolset: 12
-    - nodejs_version: 0.12.0
+    - nodejs_version: 0.12.7
       platform: x86
       msvs_toolset: 12
-    - nodejs_version: 0.12.0
+    - nodejs_version: 0.12.7
       platform: x64
       msvs_toolset: 12
     - nodejs_version: 1.8.1
@@ -28,68 +28,28 @@ environment:
     - nodejs_version: 2.0.0
       platform: x86
       msvs_toolset: 12
-    # custom visual studio 2014 builds
-    - nodejs_version: 0.10.33
+    # custom visual studio 2015 builds
+    - nodejs_version: 0.10.40
       platform: x86
       msvs_toolset: 14
-      BUILD_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
-    - nodejs_version: 0.10.33
+      TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
+    - nodejs_version: 0.10.40
       platform: x64
       msvs_toolset: 14
-      BUILD_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
-    - nodejs_version: 0.12.0
+      TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
+    - nodejs_version: 0.12.7
       platform: x86
       msvs_toolset: 14
-      BUILD_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
-    - nodejs_version: 0.12.0
+      TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
+    - nodejs_version: 0.12.7
       platform: x64
       msvs_toolset: 14
-      BUILD_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
+      TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
 
-os: Visual Studio 2014 CTP4
+os: Visual Studio 2015
 
 install:
-  # add local node to path (since we install it for msvs_toolset == 14)
-  - SET PATH=%CD%;%PATH%;
-  # add local node-pre-gyp dir to path
-  - SET PATH=node_modules\.bin;%PATH%
-  # use 64 bit python if platform is 64 bit
-  - if "%platform%" == "x64" set PATH=C:\Python27-x64;%PATH%
-  - SET ARCHPATH=
-  - if %platform% == x64 (SET ARCHPATH=x64/)
-  # install node version per visual studio toolset
-  - if "%msvs_toolset%" == "12" powershell Install-Product node $env:nodejs_version $env:platform
-  - if "%msvs_toolset%" == "14" powershell Write-Output "fetching https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/${env:ARCHPATH}node.exe"
-  - if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/v$env:nodejs_version/${env:ARCHPATH}node.exe"
-  # only needed if not using 'os: Visual Studio 2014 CTP4'
-  #- if "%msvs_toolset%" == "14" powershell Write-Output "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:platform.exe"
-  #- if "%msvs_toolset%" == "14" powershell Start-FileDownload "https://mapbox.s3.amazonaws.com/node-cpp11/vcredist_$env:platform.exe"
-  #- if "%msvs_toolset%" == "14" .\vcredist_%platform%.exe /q /norestart
-  - node -v
-  - node -e "console.log(process.argv,process.execPath)"
-  - npm -v
-  # clear out node-gyp header cache
-  - if "%msvs_toolset%" == "14" rd /s /q %USERPROFILE%\.node-gyp
-  - SET PATH=C:\Program Files (x86)\MSBuild\%msvs_toolset%.0\bin;%PATH%
-  - SET PATH=C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\bin;%PATH%
-  - if %platform% == x64 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64
-  - if %platform% == x86 CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" amd64_x86
-  - npm install --build-from-source --msvs_version=2013 %BUILD_ARGS% --loglevel=http
-  - node_modules\.bin\node-pre-gyp reveal module --silent > module.txt
-  - SET /p MODULE=<module.txt
-  - del module.txt
-  - node -e "console.log(process.execPath)" > node_path.txt
-  - SET /p NODE_EXE_PATH=<node_path.txt
-  - del node_path.txt
-  # should display MSVCP140.dll if built with visual studio 2014 and /MD
-  - dumpbin /DEPENDENTS "%NODE_EXE_PATH%" || true
-  - dumpbin /DEPENDENTS "%MODULE%" || true
-  - npm test || true
-  - node-pre-gyp package %BUILD_ARGS%
-  # make commit message env var shorter
-  - SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
-  - if not "%CM%" == "%CM:[publish binary]=%" node-pre-gyp --msvs_version=2013 publish %BUILD_ARGS%
-  - if "%msvs_toolset%" == "12" call scripts\build_for_node_webkit.cmd %platform%
+  - scripts\build-appveyor.bat
 
 build: OFF
 test: OFF
