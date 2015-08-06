@@ -52,15 +52,10 @@ namespace Values {
 
     struct Blob : Field {
         template <class T> inline Blob(T _name, size_t len, const void* val) :
-                Field(_name, SQLITE_BLOB), length(len) {
-            value = (char*)malloc(len);
-            memcpy(value, val, len);
-        }
-        inline ~Blob() {
-            free(value);
-        }
-        int length;
-        char* value;
+            Field(_name, SQLITE_BLOB),
+            data(static_cast<const char*>(val),
+                 static_cast<const char*>(val) + len) {}
+        std::vector<char> data;
     };
 
     typedef Field Null;

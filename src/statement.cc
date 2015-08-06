@@ -288,8 +288,8 @@ bool Statement::Bind(const Parameters & parameters) {
                 } break;
                 case SQLITE_BLOB: {
                     status = sqlite3_bind_blob(_handle, pos,
-                        ((Values::Blob*)field)->value,
-                        ((Values::Blob*)field)->length, SQLITE_TRANSIENT);
+                        ((Values::Blob*)field)->data.data(),
+                        ((Values::Blob*)field)->data.size(), SQLITE_TRANSIENT);
                 } break;
                 case SQLITE_NULL: {
                     status = sqlite3_bind_null(_handle, pos);
@@ -769,7 +769,9 @@ Local<Object> Statement::RowToJS(Row* row) {
                 value = NanNew<String>(((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size());
             } break;
             case SQLITE_BLOB: {
-                value = NanNew(NanNewBufferHandle(((Values::Blob*)field)->value, ((Values::Blob*)field)->length));
+                value = NanNew(NanNewBufferHandle(
+                      ((Values::Blob*)field)->data.data(),
+                      ((Values::Blob*)field)->data.size()));
             } break;
             case SQLITE_NULL: {
                 value = NanNew(NanNull());
