@@ -6,104 +6,107 @@ const char* sqlite_authorizer_string(int type);
 
 
 #define REQUIRE_ARGUMENTS(n)                                                   \
-    if (args.Length() < (n)) {                                                 \
-        return NanThrowTypeError("Expected " #n "arguments");                  \
+    if (info.Length() < (n)) {                                                 \
+        return Nan::ThrowTypeError("Expected " #n "arguments");                \
     }
 
 
 #define REQUIRE_ARGUMENT_EXTERNAL(i, var)                                      \
-    if (args.Length() <= (i) || !args[i]->IsExternal()) {                      \
-        return NanThrowTypeError("Argument " #i " invalid");                   \
+    if (info.Length() <= (i) || !info[i]->IsExternal()) {                      \
+        return Nan::ThrowTypeError("Argument " #i " invalid");                 \
     }                                                                          \
-    Local<External> var = Local<External>::Cast(args[i]);
+    Local<External> var = Local<External>::Cast(info[i]);
 
 
 #define REQUIRE_ARGUMENT_FUNCTION(i, var)                                      \
-    if (args.Length() <= (i) || !args[i]->IsFunction()) {                      \
-        return NanThrowTypeError("Argument " #i " must be a function");        \
+    if (info.Length() <= (i) || !info[i]->IsFunction()) {                      \
+        return Nan::ThrowTypeError("Argument " #i " must be a function");      \
     }                                                                          \
-    Local<Function> var = Local<Function>::Cast(args[i]);
+    Local<Function> var = Local<Function>::Cast(info[i]);
 
 
 #define REQUIRE_ARGUMENT_STRING(i, var)                                        \
-    if (args.Length() <= (i) || !args[i]->IsString()) {                        \
-        return NanThrowTypeError("Argument " #i " must be a string");          \
+    if (info.Length() <= (i) || !info[i]->IsString()) {                        \
+        return Nan::ThrowTypeError("Argument " #i " must be a string");        \
     }                                                                          \
-    String::Utf8Value var(args[i]->ToString());
+    Nan::Utf8String var(info[i]);
 
 
 #define OPTIONAL_ARGUMENT_FUNCTION(i, var)                                     \
     Local<Function> var;                                                       \
-    if (args.Length() > i && !args[i]->IsUndefined()) {                        \
-        if (!args[i]->IsFunction()) {                                          \
-            return NanThrowTypeError("Argument " #i " must be a function");    \
+    if (info.Length() > i && !info[i]->IsUndefined()) {                        \
+        if (!info[i]->IsFunction()) {                                          \
+            return Nan::ThrowTypeError("Argument " #i " must be a function");  \
         }                                                                      \
-        var = Local<Function>::Cast(args[i]);                                  \
+        var = Local<Function>::Cast(info[i]);                                  \
     }
 
 
 #define OPTIONAL_ARGUMENT_INTEGER(i, var, default)                             \
     int var;                                                                   \
-    if (args.Length() <= (i)) {                                                \
+    if (info.Length() <= (i)) {                                                \
         var = (default);                                                       \
     }                                                                          \
-    else if (args[i]->IsInt32()) {                                             \
-        var = args[i]->Int32Value();                                           \
+    else if (info[i]->IsInt32()) {                                             \
+        var = Nan::To<int32_t>(info[i]).FromJust();                            \
     }                                                                          \
     else {                                                                     \
-        return NanThrowTypeError("Argument " #i " must be an integer");        \
+        return Nan::ThrowTypeError("Argument " #i " must be an integer");      \
     }
 
 
 #define DEFINE_CONSTANT_INTEGER(target, constant, name)                        \
-    (target)->ForceSet(                                                        \
-        NanNew(#name),                                                         \
-        NanNew<Integer>(constant),                                             \
+    Nan::ForceSet(target,                                                      \
+        Nan::New(#name).ToLocalChecked(),                                      \
+        Nan::New<Integer>(constant),                                           \
         static_cast<PropertyAttribute>(ReadOnly | DontDelete)                  \
     );
 
 #define DEFINE_CONSTANT_STRING(target, constant, name)                         \
-    (target)->ForceSet(                                                        \
-        NanNew(#name),                                                         \
-        NanNew(constant),                                                      \
+    Nan::ForceSet(target,                                                      \
+        Nan::New(#name).ToLocalChecked(),                                      \
+        Nan::New(constant).ToLocalChecked(),                                   \
         static_cast<PropertyAttribute>(ReadOnly | DontDelete)                  \
     );
 
 
 #define NODE_SET_GETTER(target, name, function)                                \
-    (target)->InstanceTemplate()                                               \
-        ->SetAccessor(NanNew(name), (function));
+    Nan::SetAccessor((target)->InstanceTemplate(),                             \
+        Nan::New(name).ToLocalChecked(), (function));
 
 #define GET_STRING(source, name, property)                                     \
-    String::Utf8Value name((source)->Get(NanNew(property)));
+    Nan::Utf8String name(Nan::Get(source,                                      \
+        Nan::New(prop).ToLocalChecked()).ToLocalChecked());
 
-#define GET_INTEGER(source, name, property)                                    \
-    int name = (source)->Get(NanNew(property))->Int32Value();
+#define GET_INTEGER(source, name, prop)                                        \
+    int name = Nan::To<int>(Nan::Get(source,                                   \
+        Nan::New(property).ToLocalChecked()).ToLocalChecked()).FromJust();
 
 #define EXCEPTION(msg, errno, name)                                            \
     Local<Value> name = Exception::Error(                                      \
         String::Concat(                                                        \
             String::Concat(                                                    \
-                NanNew(sqlite_code_string(errno)),                             \
-                NanNew(": ")                                                   \
+                Nan::New(sqlite_code_string(errno)).ToLocalChecked(),          \
+                Nan::New(": ").ToLocalChecked()                                \
             ),                                                                 \
             (msg)                                                              \
         )                                                                      \
     );                                                                         \
-    Local<Object> name ##_obj = name->ToObject();                              \
-    name ##_obj->Set(NanNew("errno"), NanNew<Integer>(errno));                 \
-    name ##_obj->Set(NanNew("code"),                                           \
-        NanNew(sqlite_code_string(errno)));
+    Local<Object> name ##_obj = name.As<Object>();                             \
+    Nan::Set(name ##_obj, Nan::New("errno").ToLocalChecked(), Nan::New(errno));\
+    Nan::Set(name ##_obj, Nan::New("code").ToLocalChecked(),                   \
+        Nan::New(sqlite_code_string(errno)).ToLocalChecked());
 
 
 #define EMIT_EVENT(obj, argc, argv)                                            \
     TRY_CATCH_CALL((obj),                                                      \
-        Local<Function>::Cast((obj)->Get(NanNew("emit"))),                     \
+        Nan::Get(obj,                                                          \
+            Nan::New("emit").ToLocalChecked()).ToLocalChecked().As<Function>(),\
         argc, argv                                                             \
     );
 
 #define TRY_CATCH_CALL(context, callback, argc, argv)                          \
-    NanMakeCallback((context), (callback), (argc), (argv))
+    Nan::MakeCallback((context), (callback), (argc), (argv))
 
 #define WORK_DEFINITION(name)                                                  \
     static NAN_METHOD(name);                                                   \
@@ -120,7 +123,8 @@ const char* sqlite_authorizer_string(int type);
     baton->stmt->locked = true;                                                \
     baton->stmt->db->pending++;                                                \
     int status = uv_queue_work(uv_default_loop(),                              \
-        &baton->request, Work_##type, (uv_after_work_cb)Work_After##type);                       \
+        &baton->request,                                                       \
+        Work_##type, reinterpret_cast<uv_after_work_cb>(Work_After##type));    \
     assert(status == 0);
 
 #define STATEMENT_INIT(type)                                                   \

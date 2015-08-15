@@ -1,7 +1,6 @@
 #ifndef NODE_SQLITE3_SRC_STATEMENT_H
 #define NODE_SQLITE3_SRC_STATEMENT_H
 
-#include <node.h>
 
 #include "database.h"
 #include "threading.h"
@@ -13,7 +12,7 @@
 #include <vector>
 
 #include <sqlite3.h>
-#include "nan.h"
+#include <nan.h>
 
 using namespace v8;
 using namespace node;
@@ -72,23 +71,23 @@ typedef Row Parameters;
 
 
 
-class Statement : public ObjectWrap {
+class Statement : public Nan::ObjectWrap {
 public:
-    static Persistent<FunctionTemplate> constructor_template;
+    static Nan::Persistent<FunctionTemplate> constructor_template;
 
-    static void Init(Handle<Object> target);
+    static NAN_MODULE_INIT(Init);
     static NAN_METHOD(New);
 
     struct Baton {
         uv_work_t request;
         Statement* stmt;
-        Persistent<Function> callback;
+        Nan::Persistent<Function> callback;
         Parameters parameters;
 
-        Baton(Statement* stmt_, Handle<Function> cb_) : stmt(stmt_) {
+        Baton(Statement* stmt_, Local<Function> cb_) : stmt(stmt_) {
             stmt->Ref();
             request.data = this;
-            NanAssignPersistent(callback, cb_);
+            callback.Reset(cb_);
         }
         virtual ~Baton() {
             for (unsigned int i = 0; i < parameters.size(); i++) {
@@ -96,25 +95,25 @@ public:
                 DELETE_FIELD(field);
             }
             stmt->Unref();
-            NanDisposePersistent(callback);
+            callback.Reset();
         }
     };
 
     struct RowBaton : Baton {
-        RowBaton(Statement* stmt_, Handle<Function> cb_) :
+        RowBaton(Statement* stmt_, Local<Function> cb_) :
             Baton(stmt_, cb_) {}
         Row row;
     };
 
     struct RunBaton : Baton {
-        RunBaton(Statement* stmt_, Handle<Function> cb_) :
+        RunBaton(Statement* stmt_, Local<Function> cb_) :
             Baton(stmt_, cb_), inserted_id(0), changes(0) {}
         sqlite3_int64 inserted_id;
         int changes;
     };
 
     struct RowsBaton : Baton {
-        RowsBaton(Statement* stmt_, Handle<Function> cb_) :
+        RowsBaton(Statement* stmt_, Local<Function> cb_) :
             Baton(stmt_, cb_) {}
         Rows rows;
     };
@@ -122,20 +121,20 @@ public:
     struct Async;
 
     struct EachBaton : Baton {
-        Persistent<Function> completed;
+        Nan::Persistent<Function> completed;
         Async* async; // Isn't deleted when the baton is deleted.
 
-        EachBaton(Statement* stmt_, Handle<Function> cb_) :
+        EachBaton(Statement* stmt_, Local<Function> cb_) :
             Baton(stmt_, cb_) {}
         virtual ~EachBaton() {
-            NanDisposePersistent(completed);
+            completed.Reset();
         }
     };
 
     struct PrepareBaton : Database::Baton {
         Statement* stmt;
         std::string sql;
-        PrepareBaton(Database* db_, Handle<Function> cb_, Statement* stmt_) :
+        PrepareBaton(Database* db_, Local<Function> cb_, Statement* stmt_) :
             Baton(db_, cb_), stmt(stmt_) {
             stmt->Ref();
         }
@@ -167,8 +166,8 @@ public:
 
         // Store the callbacks here because we don't have
         // access to the baton in the async callback.
-        Persistent<Function> item_cb;
-        Persistent<Function> completed_cb;
+        Nan::Persistent<Function> item_cb;
+        Nan::Persistent<Function> completed_cb;
 
         Async(Statement* st, uv_async_cb async_cb) :
                 stmt(st), completed(false), retrieved(0) {
@@ -180,13 +179,13 @@ public:
 
         ~Async() {
             stmt->Unref();
-            NanDisposePersistent(item_cb);
-            NanDisposePersistent(completed_cb);
+            item_cb.Reset();
+            completed_cb.Reset();
             NODE_SQLITE3_MUTEX_DESTROY
         }
     };
 
-    Statement(Database* db_) : ObjectWrap(),
+    Statement(Database* db_) : Nan::ObjectWrap(),
             db(db_),
             _handle(NULL),
             status(SQLITE_OK),
@@ -220,8 +219,8 @@ protected:
     static void Finalize(Baton* baton);
     void Finalize();
 
-    template <class T> inline Values::Field* BindParameter(const Handle<Value> source, T pos);
-    template <class T> T* Bind(_NAN_METHOD_ARGS, int start = 0, int end = -1);
+    template <class T> inline Values::Field* BindParameter(const Local<Value> source, T pos);
+    template <class T> T* Bind(Nan::NAN_METHOD_ARGS_TYPE info, int start = 0, int end = -1);
     bool Bind(const Parameters &parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);

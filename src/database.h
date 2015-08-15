@@ -2,70 +2,69 @@
 #ifndef NODE_SQLITE3_SRC_DATABASE_H
 #define NODE_SQLITE3_SRC_DATABASE_H
 
-#include <node.h>
 
 #include <string>
 #include <queue>
 
 #include <sqlite3.h>
-#include "nan.h"
+#include <nan.h>
+
 #include "async.h"
 
 using namespace v8;
-using namespace node;
 
 namespace node_sqlite3 {
 
 class Database;
 
 
-class Database : public ObjectWrap {
+class Database : public Nan::ObjectWrap {
 public:
-    static Persistent<FunctionTemplate> constructor_template;
-    static void Init(Handle<Object> target);
+    static Nan::Persistent<FunctionTemplate> constructor_template;
+    static NAN_MODULE_INIT(Init);
 
-    static inline bool HasInstance(Handle<Value> val) {
-        NanScope();
+    static inline bool HasInstance(Local<Value> val) {
+        Nan::HandleScope scope;
         if (!val->IsObject()) return false;
-        Local<Object> obj = val->ToObject();
-        return NanNew(constructor_template)->HasInstance(obj);
+        Local<Object> obj = val.As<Object>();
+        return Nan::New(constructor_template)->HasInstance(obj);
     }
 
     struct Baton {
         uv_work_t request;
         Database* db;
-        Persistent<Function> callback;
+        Nan::Persistent<Function> callback;
         int status;
         std::string message;
 
-        Baton(Database* db_, Handle<Function> cb_) :
+        Baton(Database* db_, Local<Function> cb_) :
                 db(db_), status(SQLITE_OK) {
             db->Ref();
             request.data = this;
-            NanAssignPersistent(callback, cb_);
+            callback.Reset(cb_);
         }
         virtual ~Baton() {
             db->Unref();
-            NanDisposePersistent(callback);
+            callback.Reset();
         }
     };
 
     struct OpenBaton : Baton {
         std::string filename;
         int mode;
-        OpenBaton(Database* db_, Handle<Function> cb_, const char* filename_, int mode_) :
+        OpenBaton(Database* db_, Local<Function> cb_, const char* filename_, int mode_) :
             Baton(db_, cb_), filename(filename_), mode(mode_) {}
     };
 
     struct ExecBaton : Baton {
         std::string sql;
-        ExecBaton(Database* db_, Handle<Function> cb_, const char* sql_) :
+        ExecBaton(Database* db_, Local<Function> cb_, const char* sql_) :
             Baton(db_, cb_), sql(sql_) {}
     };
 
     struct LoadExtensionBaton : Baton {
         std::string filename;
-        LoadExtensionBaton(Database* db_, Handle<Function> cb_, const char* filename_) :
+        LoadExtensionBaton(Database* db_, Local<Function> cb_, const char* filename_) :
             Baton(db_, cb_), filename(filename_) {}
     };
 
@@ -101,7 +100,7 @@ public:
     friend class Statement;
 
 protected:
-    Database() : ObjectWrap(),
+    Database() : Nan::ObjectWrap(),
         _handle(NULL),
         open(false),
         locked(false),
