@@ -308,6 +308,9 @@ bool Statement::Bind(const Parameters & parameters) {
 
 NAN_METHOD(Statement::Bind) {
     NanScope();
+    if (!Statement::HasInstance(args.This())) {
+      return NanThrowError("Statement object expected");
+    }
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<Baton>(args);
@@ -356,6 +359,9 @@ void Statement::Work_AfterBind(uv_work_t* req) {
 
 NAN_METHOD(Statement::Get) {
     NanScope();
+    if (!Statement::HasInstance(args.This())) {
+      return NanThrowError("Statement object expected");
+    }
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<RowBaton>(args);
@@ -424,6 +430,9 @@ void Statement::Work_AfterGet(uv_work_t* req) {
 
 NAN_METHOD(Statement::Run) {
     NanScope();
+    if (!Statement::HasInstance(args.This())) {
+      return NanThrowError("Statement object expected");
+    }
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<RunBaton>(args);
@@ -490,6 +499,9 @@ void Statement::Work_AfterRun(uv_work_t* req) {
 
 NAN_METHOD(Statement::All) {
     NanScope();
+    if (!Statement::HasInstance(args.This())) {
+      return NanThrowError("Statement object expected");
+    }
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     Baton* baton = stmt->Bind<RowsBaton>(args);
@@ -572,6 +584,9 @@ void Statement::Work_AfterAll(uv_work_t* req) {
 
 NAN_METHOD(Statement::Each) {
     NanScope();
+    if (!Statement::HasInstance(args.This())) {
+      return NanThrowError("Statement object expected");
+    }
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     int last = args.Length();
@@ -711,6 +726,9 @@ void Statement::Work_AfterEach(uv_work_t* req) {
 
 NAN_METHOD(Statement::Reset) {
     NanScope();
+    if (!Statement::HasInstance(args.This())) {
+      return NanThrowError("Statement object expected");
+    }
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
 
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
@@ -818,6 +836,9 @@ void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
 
 NAN_METHOD(Statement::Finalize) {
     NanScope();
+    if (!Statement::HasInstance(args.This())) {
+      return NanThrowError("Statement object expected");
+    }
     Statement* stmt = ObjectWrap::Unwrap<Statement>(args.This());
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
