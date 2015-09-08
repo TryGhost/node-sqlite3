@@ -1,6 +1,3 @@
-#include <node.h>
-#include <node_buffer.h>
-
 #include <stdint.h>
 #include <sstream>
 #include <cstring>
@@ -15,8 +12,9 @@ using namespace node_sqlite3;
 
 namespace {
 
-void RegisterModule(v8::Handle<Object> target) {
-    NanScope();
+NAN_MODULE_INIT(RegisterModule) {
+    Nan::HandleScope scope;
+
     Database::Init(target);
     Statement::Init(target);
 

@@ -1,17 +1,72 @@
 var sqlite3 = require('..');
 var assert = require('assert');
 
-function randomString() {
-    var str = '';
-    for (var i = Math.random() * 300; i > 0; i--) {
-        str += String.fromCharCode(Math.floor(Math.random() * 65536));
-    }
-    return str;
-}
-
 describe('unicode', function() {
-    var db;
+    var first_values = [],
+        trailing_values = [],
+        chars = [],
+        subranges = new Array(2),
+        len = subranges.length,
+        db,
+        i;
+
     before(function(done) { db = new sqlite3.Database(':memory:', done); });
+
+    for (i = 0x20; i < 0x80; i++) {
+        first_values.push(i);
+    }
+
+    for (i = 0xc2; i < 0xf0; i++) {
+        first_values.push(i);
+    }
+
+    for (i = 0x80; i < 0xc0; i++) {
+        trailing_values.push(i);
+    }
+
+    for (i = 0; i < len; i++) {
+        subranges[i] = [];
+    }
+
+    for (i = 0xa0; i < 0xc0; i++) {
+        subranges[0].push(i);
+    }
+
+    for (i = 0x80; i < 0xa0; i++) {
+        subranges[1].push(i);
+    }
+
+    function random_choice(arr) {
+        return arr[Math.random() * arr.length | 0];
+    }
+
+    function random_utf8() {
+        var first = random_choice(first_values);
+
+        if (first < 0x80) {
+            return String.fromCharCode(first);
+        } else if (first < 0xe0) {
+            return String.fromCharCode((first & 0x1f) << 0x6 | random_choice(trailing_values) & 0x3f);
+        } else if (first == 0xe0) {
+             return String.fromCharCode(((first & 0xf) << 0xc) | ((random_choice(subranges[0]) & 0x3f) << 6) | random_choice(trailing_values) & 0x3f);
+        } else if (first == 0xed) {
+            return String.fromCharCode(((first & 0xf) << 0xc) | ((random_choice(subranges[1]) & 0x3f) << 6) | random_choice(trailing_values) & 0x3f);
+        } else if (first < 0xf0) {
+            return String.fromCharCode(((first & 0xf) << 0xc) | ((random_choice(trailing_values) & 0x3f) << 6) | random_choice(trailing_values) & 0x3f);
+        }
+    }
+
+    function randomString() {
+        var str = '',
+        i;
+
+        for (i = Math.random() * 300; i > 0; i--) {
+            str += random_utf8();
+        }
+
+        return str;
+    }
+
 
         // Generate random data.
     var data = [];
