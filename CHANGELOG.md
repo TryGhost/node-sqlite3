@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.11
+
+ - Support for io.js 3.x (upgrade to Nan 2.x) @kkoopa
+
 ## 3.0.10
 
  - Upgraded SQLite to 3.8.11.1: https://www.sqlite.org/releaselog/3_8_11_1.html
