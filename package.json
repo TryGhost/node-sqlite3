@@ -53,11 +53,7 @@
         "pretest": "node test/support/createdb.js",
         "test": "mocha -R spec --timeout 480000"
     },
-    "licenses": [
-        {
-            "type": "BSD"
-        }
-    ],
+    "license": "BSD-3-Clause",
     "keywords": [
         "sql",
         "sqlite",
