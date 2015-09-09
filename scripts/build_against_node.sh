@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+source ~/.nvm/nvm.sh
+
 set -e -u
 
 function publish() {
