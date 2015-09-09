@@ -30,6 +30,7 @@ npm test
 
 platform=$(uname -s | sed "y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/")
 
+: '
 if [[ $(uname -s) == 'Linux' ]]; then
     # node v0.8 and above provide pre-built 32 bit and 64 bit binaries
     # so here we use the 32 bit ones to also test 32 bit builds
@@ -64,3 +65,5 @@ if [[ $(uname -s) == 'Linux' ]]; then
         npm test
     fi
 fi
+
+'
