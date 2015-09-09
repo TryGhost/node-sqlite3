@@ -28,10 +28,10 @@ environment:
     - nodejs_version: 2.0.0
       platform: x86
       msvs_toolset: 12
-    - nodejs_version: 3.1.0
+    - nodejs_version: 3.3.0
       platform: x64
       msvs_toolset: 12
-    - nodejs_version: 3.1.0
+    - nodejs_version: 3.3.0
       platform: x86
       msvs_toolset: 12
     # custom visual studio 2015 builds
