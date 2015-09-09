@@ -12,7 +12,7 @@ function publish() {
 }
 
 # test installing from source
-npm install --build-from-source
+npm install --build-from-source  --clang=1
 npm test
 
 publish
@@ -20,9 +20,9 @@ publish
 # now test building against shared sqlite
 if [[ $(uname -s) == 'Darwin' ]]; then
     brew install sqlite
-    npm install --build-from-source --sqlite=$(brew --prefix)
+    npm install --build-from-source --sqlite=$(brew --prefix) --clang=1
 else
-    npm install --build-from-source --sqlite=/usr
+    npm install --build-from-source --sqlite=/usr --clang=1
 fi
 npm test
 
@@ -45,10 +45,12 @@ if [[ $(uname -s) == 'Linux' ]]; then
         # enable 32 bit node
         export PATH=$(pwd)/node-${NVER}-${platform}-x86/bin:$(pwd)/node-${NVER}-${platform}-ia32/bin:$PATH
     fi
-    node -e "console.log(process.arch,process.execPath)"
+    which node
+    ls -l $(which node)
+    #node -e "console.log(process.arch,process.execPath)"
     # install 32 bit compiler toolchain and X11
     # test source compile in 32 bit mode with internal libsqlite3
-    CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source
+    CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source  --clang=1
     node-pre-gyp package testpackage
     npm test
     publish
@@ -56,7 +58,7 @@ if [[ $(uname -s) == 'Linux' ]]; then
     # broken for some unknown reason against io.js
     if [[ ${NODE_VERSION:0:4} != 'iojs' ]]; then
         # test source compile in 32 bit mode against external libsqlite3
-        CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source --sqlite=/usr
+        CC=gcc-4.6 CXX=g++-4.6 npm install --build-from-source --sqlite=/usr  --clang=1
         npm test
     fi
 fi
