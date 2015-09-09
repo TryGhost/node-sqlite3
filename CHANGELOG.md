@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.0
+
+ - Support for node 3.x and 4.x
+ - Stopped producing binaries for node-webkit and 32 bit linux
+
 ## 3.0.11
 
  - Support for io.js 3.x (upgrade to Nan 2.x) @kkoopa
