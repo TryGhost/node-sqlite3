@@ -24,7 +24,7 @@ matrix:
      # Linux
      - os: linux
        compiler: clang
-       env: NODE_VERSION="iojs-4.0.0" PUBLISHABLE=true
+       env: NODE_VERSION="4.0.0" PUBLISHABLE=true
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
@@ -75,10 +75,10 @@ matrix:
      # OS X
      - os: osx
        compiler: clang
-       env: NODE_VERSION="iojs-3.1.0" # node abi 46
+       env: NODE_VERSION="4.0.0" # node abi 46
      - os: osx
        compiler: clang
-       env: NODE_VERSION="iojs-4.0.0" # node abi 45
+       env: NODE_VERSION="iojs-3.1.0" # node abi 46
      - os: osx
        compiler: clang
        env: NODE_VERSION="iojs-2.4.0" # node abi 44
