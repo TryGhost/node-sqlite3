@@ -1,16 +1,17 @@
 sudo: false
+
 language: cpp
+
+git:
+  depth: 10
+
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
+    - llvm-toolchain-precise-3.5
     packages:
-    - g++-4.8
-
-# http://docs.travis-ci.com/user/multi-os/
-os:
-  - linux
-  - osx
+     - clang-3.5
 
 # don't re-build for tags so that [publish binary] is not re-run
 # https://github.com/travis-ci/travis-ci/issues/1532
@@ -18,36 +19,92 @@ branches:
   except:
     - /^v[0-9]/
 
+matrix:
+  include:
+     # Linux
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="4.0.0" PUBLISHABLE=true
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="iojs-3.1.0" PUBLISHABLE=true
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="iojs-2.4.0" PUBLISHABLE=true
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="iojs-1.8.4" PUBLISHABLE=true
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="0.12.7" PUBLISHABLE=true
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="0.10.40" PUBLISHABLE=true
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     # test building against external sqlite
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="0.10.40" EXTERNAL_SQLITE=true
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5','libsqlite3-dev']
+     # OS X
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="4.0.0" # node abi 46
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="iojs-3.1.0" # node abi 46
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="iojs-2.4.0" # node abi 44
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="iojs-1.8.4" # node abi 43
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="0.12.7" # node abi 14
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="0.10.40" # node abi 11
+
 env:
-  matrix:
-   - NODE_VERSION="0.10.40" # ABI 11
-   - NODE_VERSION="0.12.7" # ABI 14
-   - NODE_VERSION="iojs-1.8.4" # ABI 43
-   - NODE_VERSION="iojs-2.3.4" # ABI 44
-   - NODE_VERSION="iojs-3.1.0" # ABI 45
-   - NODE_WEBKIT="0.8.6" TARGET_ARCH="ia32"
-   - NODE_WEBKIT="0.8.6" TARGET_ARCH="x64"
-   - NODE_WEBKIT="0.10.5" TARGET_ARCH="ia32"
-   - NODE_WEBKIT="0.10.5" TARGET_ARCH="x64"
   global:
+    - JOBS: "8"
     - secure: PifMOSnn+mWR1RUptXse+fLvWiTrzg0R/mazO7RWhXHWBKv0uAJ/qV3dI0GIRBLtjG10Iy+tT5RNh1TIbBzB9Y67wMcGvylUPG1+3EOKoBMEPnOD9AgCEQw4SOXfGPx0cq2N6ueSKieCgu1yKN9Wq7XCbE+zTk/DiRNIdLirVoo=
     - secure: cc4esJY1vPXL31IeumAJoKWDDO2BTGFiltwfO1jbTbiV7QT911QUjTUasxXIVpOaHNCpxSTyevPwwTWfzt2EtF92Lli+qhQ2bbzMiDSBZstSrHdAe62Ai2M1oYYUwk/0cABB/2nO9uRyYwITCxpTSNzZBrYhn3C29WqBhPeVDmM=
 
-matrix:
-  exclude:
-    - env: NODE_WEBKIT="0.8.6" TARGET_ARCH="x64"
-      os: osx
-
 before_install:
-- if [[ $TRAVIS_OS_NAME == "linux" ]]; then export CXX=g++-4.8; fi
-# check if tag exists and matches package.json
+- if [[ $(uname -s) == 'Linux' ]]; then
+     export CXX="clang++-3.5";
+     export CC="clang-3.5";
+  fi;
 - scripts/validate_tag.sh
-- echo $NODE_VERSION
-# upgrade nvm
-- node --version
-- npm --version
-- npm update -g npm
-- npm --version
+- source ./scripts/install_node.sh ${NODE_VERSION}
 
 install:
 # put node-pre-gyp on path
@@ -59,4 +116,5 @@ before_script:
 
 script:
 - if [[ "${NODE_VERSION}" ]]; then ./scripts/build_against_node.sh; fi;
-- if [[ "${NODE_WEBKIT}" ]]; then ./scripts/build_against_node_webkit.sh; fi;
+# disabled for now: need to port to sudo:false
+#- if [[ "${NODE_WEBKIT}" ]]; then ./scripts/build_against_node_webkit.sh; fi;
