@@ -6,6 +6,4 @@ nvm install $1
 nvm use $1
 node --version
 npm --version
-npm update -g npm
-npm --version
 which node
