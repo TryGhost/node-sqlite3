@@ -24,42 +24,42 @@ matrix:
      # Linux
      - os: linux
        compiler: clang
-       env: NODE_VERSION="4.0.0" PUBLISHABLE=true
+       env: NODE_VERSION="4.0.0"
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
             packages: [ 'clang-3.5']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="iojs-3.1.0" PUBLISHABLE=true
+       env: NODE_VERSION="iojs-3.1.0"
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
             packages: [ 'clang-3.5']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="iojs-2.4.0" PUBLISHABLE=true
+       env: NODE_VERSION="iojs-2.4.0"
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
             packages: [ 'clang-3.5']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="iojs-1.8.4" PUBLISHABLE=true
+       env: NODE_VERSION="iojs-1.8.4"
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
             packages: [ 'clang-3.5']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="0.12.7" PUBLISHABLE=true
+       env: NODE_VERSION="0.12.7"
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
             packages: [ 'clang-3.5']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="0.10.40" PUBLISHABLE=true
+       env: NODE_VERSION="0.10.40"
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
@@ -67,7 +67,7 @@ matrix:
      # test building against external sqlite
      - os: linux
        compiler: clang
-       env: NODE_VERSION="0.10.40" EXTERNAL_SQLITE=true
+       env: NODE_VERSION="0.10.40" EXTERNAL_SQLITE=true PUBLISHABLE=false
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
@@ -99,6 +99,7 @@ env:
     - secure: cc4esJY1vPXL31IeumAJoKWDDO2BTGFiltwfO1jbTbiV7QT911QUjTUasxXIVpOaHNCpxSTyevPwwTWfzt2EtF92Lli+qhQ2bbzMiDSBZstSrHdAe62Ai2M1oYYUwk/0cABB/2nO9uRyYwITCxpTSNzZBrYhn3C29WqBhPeVDmM=
 
 before_install:
+- export PUBLISHABLE=${PUBLISHABLE:-true}
 - if [[ $(uname -s) == 'Linux' ]]; then
      export CXX="clang++-3.5";
      export CC="clang-3.5";
