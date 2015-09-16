@@ -22,10 +22,10 @@ IF /I "%platform%"=="x64" ECHO x64 && CALL "C:\Program Files (x86)\Microsoft Vis
 IF /I "%platform%"=="x86" ECHO x86 && CALL "C:\Program Files (x86)\Microsoft Visual Studio %msvs_toolset%.0\VC\vcvarsall.bat" x86
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
-ECHO using compiler^: && cl
+ECHO using compiler^: && CALL cl
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
-ECHO using MSBuild^: && msbuild /version && ECHO.
+ECHO using MSBuild^: && CALL msbuild /version && ECHO.
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 
@@ -65,7 +65,7 @@ call where node
 ECHO available npm^:
 call where npm
 
-ECHO node^: && node -v
+ECHO node^: && call node -v
 call node -e "console.log(process.argv,process.execPath)"
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
