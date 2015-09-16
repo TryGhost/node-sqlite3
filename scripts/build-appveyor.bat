@@ -43,6 +43,7 @@ IF /I "%msvs_toolset%"=="12" GOTO NODE_INSTALLED
 ::custom node for VS2015
 SET ARCHPATH=
 IF "%platform%"=="X64" (SET ARCHPATH=x64/)
+IF "%platform%"=="x64" (SET ARCHPATH=x64/)
 SET NODE_URL=https://mapbox.s3.amazonaws.com/node-cpp11/v%nodejs_version%/%ARCHPATH%node.exe
 ECHO downloading node^: %NODE_URL%
 powershell Invoke-WebRequest "${env:NODE_URL}" -OutFile node.exe
