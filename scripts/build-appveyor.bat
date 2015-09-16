@@ -61,12 +61,12 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 :NODE_INSTALLED
 
 ECHO available node.exe^:
-where node
+call where node
 ECHO available npm^:
-where npm
+call where npm
 
 ECHO node^: && node -v
-node -e "console.log(process.argv,process.execPath)"
+call node -e "console.log(process.argv,process.execPath)"
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 ECHO npm^: && CALL npm -v
