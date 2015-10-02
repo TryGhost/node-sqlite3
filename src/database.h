@@ -129,6 +129,7 @@ protected:
     void Process();
 
     static NAN_METHOD(Exec);
+    static NAN_METHOD(ExecSync);
     static void Work_BeginExec(Baton* baton);
     static void Work_Exec(uv_work_t* req);
     static void Work_AfterExec(uv_work_t* req);

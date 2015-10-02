@@ -3,9 +3,11 @@ var assert = require('assert');
 var fs = require('fs');
 
 describe('exec', function() {
-    var db;
+    var db, dbSync;
     before(function(done) {
-        db = new sqlite3.Database(':memory:', done);
+        db = new sqlite3.Database(':memory:', function () {
+            dbSync = new sqlite3.Database(':memory:', done);
+        });
     });
 
     it('Database#exec', function(done) {
@@ -13,8 +15,14 @@ describe('exec', function() {
         db.exec(sql, done);
     });
 
+    it('Database#execSync', function(done) {
+        var sql = fs.readFileSync('test/support/script.sql', 'utf8');
+        dbSync.execSync(sql);
+        done();
+    });
+
     it('retrieve database structure', function(done) {
-        db.all("SELECT type, name FROM sqlite_master ORDER BY type, name", function(err, rows) {
+        var callback = function(err, rows) {
             if (err) throw err;
             assert.deepEqual(rows, [
                 { type: 'index', name: 'grid_key_lookup' },
@@ -33,7 +41,11 @@ describe('exec', function() {
                 { type: 'view', name: 'grids' },
                 { type: 'view', name: 'tiles' }
             ]);
-            done();
+        };
+
+        [db, dbSync].forEach(function(_db) {
+            _db.all("SELECT type, name FROM sqlite_master ORDER BY type, name", callback);
         });
+        done();
     });
 });

@@ -18,6 +18,7 @@ NAN_MODULE_INIT(Database::Init) {
 
     Nan::SetPrototypeMethod(t, "close", Close);
     Nan::SetPrototypeMethod(t, "exec", Exec);
+    Nan::SetPrototypeMethod(t, "execSync", ExecSync);
     Nan::SetPrototypeMethod(t, "wait", Wait);
     Nan::SetPrototypeMethod(t, "loadExtension", LoadExtension);
     Nan::SetPrototypeMethod(t, "serialize", Serialize);
@@ -493,6 +494,22 @@ NAN_METHOD(Database::Exec) {
 
     Baton* baton = new ExecBaton(db, callback, *sql);
     db->Schedule(Work_BeginExec, baton, true);
+
+    info.GetReturnValue().Set(info.This());
+}
+
+NAN_METHOD(Database::ExecSync) {
+    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+
+    REQUIRE_ARGUMENT_STRING(0, sql);
+
+    char *message = NULL;
+    int status = sqlite3_exec(db->_handle, *sql, NULL, NULL, &message);
+
+    if (status != SQLITE_OK && message != NULL) {
+        EXCEPTION(Nan::New(message).ToLocalChecked(), status, exception);
+        sqlite3_free(message);
+    }
 
     info.GetReturnValue().Set(info.This());
 }
