@@ -22,6 +22,7 @@ NAN_MODULE_INIT(Statement::Init) {
     Nan::SetPrototypeMethod(t, "bind", Bind);
     Nan::SetPrototypeMethod(t, "get", Get);
     Nan::SetPrototypeMethod(t, "run", Run);
+    Nan::SetPrototypeMethod(t, "runSync", RunSync);
     Nan::SetPrototypeMethod(t, "all", All);
     Nan::SetPrototypeMethod(t, "each", Each);
     Nan::SetPrototypeMethod(t, "reset", Reset);
@@ -434,13 +435,29 @@ NAN_METHOD(Statement::Run) {
     }
 }
 
-void Statement::Work_BeginRun(Baton* baton) {
-    STATEMENT_BEGIN(Run);
+NAN_METHOD(Statement::RunSync) {
+    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+
+    RunBaton* baton = stmt->Bind<RunBaton>(info);
+    if (baton == NULL) {
+        return Nan::ThrowError("Data type is not supported");
+    }
+
+    stmt->DoRun(stmt, baton);
+
+    if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
+        Error(baton);
+    } else {
+        stmt->AssignBatonValuesToHandler(stmt, baton);
+        stmt->status = SQLITE_OK;
+    }
+
+    delete baton;
+
+    info.GetReturnValue().Set(info.This());
 }
 
-void Statement::Work_Run(uv_work_t* req) {
-    STATEMENT_INIT(RunBaton);
-
+void Statement::DoRun(Statement* stmt, RunBaton* baton) {
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
     sqlite3_mutex_enter(mtx);
 
@@ -464,6 +481,20 @@ void Statement::Work_Run(uv_work_t* req) {
     sqlite3_mutex_leave(mtx);
 }
 
+void Statement::AssignBatonValuesToHandler(Statement* stmt, RunBaton* baton) {
+    Nan::Set(stmt->handle(), Nan::New("lastID").ToLocalChecked(), Nan::New<Number>(baton->inserted_id));
+    Nan::Set(stmt->handle(), Nan::New("changes").ToLocalChecked(), Nan::New(baton->changes));
+}
+
+void Statement::Work_BeginRun(Baton* baton) {
+    STATEMENT_BEGIN(Run);
+}
+
+void Statement::Work_Run(uv_work_t* req) {
+    STATEMENT_INIT(RunBaton);
+    stmt->DoRun(stmt, baton);
+}
+
 void Statement::Work_AfterRun(uv_work_t* req) {
     Nan::HandleScope scope;
 
@@ -476,8 +507,7 @@ void Statement::Work_AfterRun(uv_work_t* req) {
         // Fire callbacks.
         Local<Function> cb = Nan::New(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            Nan::Set(stmt->handle(), Nan::New("lastID").ToLocalChecked(), Nan::New<Number>(baton->inserted_id));
-            Nan::Set(stmt->handle(), Nan::New("changes").ToLocalChecked(), Nan::New(baton->changes));
+            stmt->AssignBatonValuesToHandler(stmt, baton);
 
             Local<Value> argv[] = { Nan::Null() };
             TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
