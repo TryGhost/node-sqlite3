@@ -21,6 +21,7 @@ NAN_MODULE_INIT(Statement::Init) {
 
     Nan::SetPrototypeMethod(t, "bind", Bind);
     Nan::SetPrototypeMethod(t, "get", Get);
+    Nan::SetPrototypeMethod(t, "getSync", GetSync);
     Nan::SetPrototypeMethod(t, "run", Run);
     Nan::SetPrototypeMethod(t, "runSync", RunSync);
     Nan::SetPrototypeMethod(t, "all", All);
@@ -367,13 +368,34 @@ NAN_METHOD(Statement::Get) {
     }
 }
 
+NAN_METHOD(Statement::GetSync) {
+    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+
+    RowBaton* baton = stmt->Bind<RowBaton>(info);
+    if (baton == NULL) {
+        return Nan::ThrowError("Data type is not supported");
+    }
+
+    stmt->DoGet(stmt, baton);
+    if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
+        Error(baton);
+    } else {
+        stmt->status = SQLITE_OK;
+    }
+
+    info.GetReturnValue().Set(RowToJS(&baton->row));
+}
+
 void Statement::Work_BeginGet(Baton* baton) {
     STATEMENT_BEGIN(Get);
 }
 
 void Statement::Work_Get(uv_work_t* req) {
     STATEMENT_INIT(RowBaton);
+    stmt->DoGet(stmt, baton);
+}
 
+void Statement::DoGet(Statement* stmt, RowBaton* baton) {
     if (stmt->status != SQLITE_DONE || baton->parameters.size()) {
         sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
         sqlite3_mutex_enter(mtx);

@@ -78,6 +78,7 @@ public:
     static NAN_MODULE_INIT(Init);
     static NAN_METHOD(New);
     static NAN_METHOD(RunSync);
+    static NAN_METHOD(GetSync);
 
     struct Baton {
         uv_work_t request;
@@ -217,6 +218,7 @@ protected:
     static void AsyncEach(uv_async_t* handle, int status);
     static void CloseCallback(uv_handle_t* handle);
     static void DoRun(Statement* stmt, RunBaton* baton);
+    static void DoGet(Statement* stmt, RowBaton* baton);
     static void AssignBatonValuesToHandler(Statement* stmt, RunBaton* baton);
 
     static void Finalize(Baton* baton);

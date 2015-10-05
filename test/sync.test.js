@@ -18,4 +18,12 @@ describe('sync', function() {
             done();
         });
     });
+
+    it('Database#getSync', function(done) {
+        var row = db.getSync('SELECT id, txt FROM foo LIMIT 1');
+        assert.equal(row['id'], 1);
+        assert.equal(row['txt'], 'bar');
+
+        done();
+    });
 });
