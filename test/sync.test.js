@@ -10,9 +10,9 @@ describe('sync', function() {
 
     it('Database#runSync', function(done) {
         db.runSync("CREATE TABLE foo (id INT, txt TEXT)");
-        db.runSync("INSERT INTO foo VALUES(1, ?);", "bar");
+        db.runSync("INSERT INTO foo VALUES(1, ?), (2, ?);", "bar", "baz");
 
-        db.get('SELECT id, txt FROM foo LIMIT 1', function (err, row) {
+        db.get('SELECT id, txt FROM foo ORDER BY id ASC LIMIT 1', function (err, row) {
             assert.equal(row['id'], 1);
             assert.equal(row['txt'], 'bar');
             done();
@@ -20,9 +20,19 @@ describe('sync', function() {
     });
 
     it('Database#getSync', function(done) {
-        var row = db.getSync('SELECT id, txt FROM foo LIMIT 1');
+        var row = db.getSync('SELECT id, txt FROM foo ORDER BY id ASC LIMIT 1');
         assert.equal(row['id'], 1);
         assert.equal(row['txt'], 'bar');
+
+        done();
+    });
+
+    it('Database#allSync', function(done) {
+        var rows = db.allSync('SELECT id, txt FROM foo ORDER BY id ASC');
+        assert.equal(rows[0]['id'], 1);
+        assert.equal(rows[0]['txt'], 'bar');
+        assert.equal(rows[1]['id'], 2);
+        assert.equal(rows[1]['txt'], 'baz');
 
         done();
     });

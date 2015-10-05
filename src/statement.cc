@@ -25,6 +25,7 @@ NAN_MODULE_INIT(Statement::Init) {
     Nan::SetPrototypeMethod(t, "run", Run);
     Nan::SetPrototypeMethod(t, "runSync", RunSync);
     Nan::SetPrototypeMethod(t, "all", All);
+    Nan::SetPrototypeMethod(t, "allSync", AllSync);
     Nan::SetPrototypeMethod(t, "each", Each);
     Nan::SetPrototypeMethod(t, "reset", Reset);
     Nan::SetPrototypeMethod(t, "finalize", Finalize);
@@ -552,13 +553,42 @@ NAN_METHOD(Statement::All) {
     }
 }
 
+NAN_METHOD(Statement::AllSync) {
+    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+
+    RowsBaton* baton = stmt->Bind<RowsBaton>(info);
+    if (baton == NULL) {
+        return Nan::ThrowError("Data type is not supported");
+    }
+
+    stmt->DoAll(stmt, baton);
+    if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
+        Error(baton);
+    } else {
+        stmt->status = SQLITE_OK;
+    }
+
+    // Create the result array from the data we acquired.
+    Local<Array> result(Nan::New<Array>(baton->rows.size()));
+    Rows::const_iterator it = baton->rows.begin();
+    Rows::const_iterator end = baton->rows.end();
+    for (int i = 0; it < end; ++it, i++) {
+        Nan::Set(result, i, RowToJS(*it));
+        delete *it;
+    }
+    info.GetReturnValue().Set(result);
+}
+
 void Statement::Work_BeginAll(Baton* baton) {
     STATEMENT_BEGIN(All);
 }
 
 void Statement::Work_All(uv_work_t* req) {
     STATEMENT_INIT(RowsBaton);
+    stmt->DoAll(stmt, baton);
+}
 
+void Statement::DoAll(Statement* stmt, RowsBaton* baton) {
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
     sqlite3_mutex_enter(mtx);
 
