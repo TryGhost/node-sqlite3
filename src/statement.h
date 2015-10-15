@@ -210,6 +210,7 @@ public:
     WORK_DEFINITION(Reset);
 
     static NAN_METHOD(Finalize);
+    static NAN_METHOD(FinalizeSync);
 
 protected:
     static void Work_BeginPrepare(Database::Baton* baton);

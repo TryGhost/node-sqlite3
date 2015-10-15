@@ -29,6 +29,7 @@ NAN_MODULE_INIT(Statement::Init) {
     Nan::SetPrototypeMethod(t, "each", Each);
     Nan::SetPrototypeMethod(t, "reset", Reset);
     Nan::SetPrototypeMethod(t, "finalize", Finalize);
+    Nan::SetPrototypeMethod(t, "finalizeSync", FinalizeSync);
 
     constructor_template.Reset(t);
     Nan::Set(target, Nan::New("Statement").ToLocalChecked(),
@@ -377,7 +378,7 @@ NAN_METHOD(Statement::GetSync) {
         return Nan::ThrowError("Data type is not supported");
     }
 
-    stmt->DoGet(stmt, baton);
+    stmt->DoGet(baton->stmt, baton);
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton);
     } else {
@@ -466,7 +467,7 @@ NAN_METHOD(Statement::RunSync) {
         return Nan::ThrowError("Data type is not supported");
     }
 
-    stmt->DoRun(stmt, baton);
+    stmt->DoRun(baton->stmt, baton);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton);
@@ -561,7 +562,7 @@ NAN_METHOD(Statement::AllSync) {
         return Nan::ThrowError("Data type is not supported");
     }
 
-    stmt->DoAll(stmt, baton);
+    stmt->DoAll(baton->stmt, baton);
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton);
     } else {
@@ -904,6 +905,13 @@ NAN_METHOD(Statement::Finalize) {
 
     Baton* baton = new Baton(stmt, callback);
     stmt->Schedule(Finalize, baton);
+
+    info.GetReturnValue().Set(stmt->db->handle());
+}
+
+NAN_METHOD(Statement::FinalizeSync) {
+    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+    stmt->Finalize();
 
     info.GetReturnValue().Set(stmt->db->handle());
 }
