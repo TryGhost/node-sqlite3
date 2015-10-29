@@ -157,7 +157,7 @@ Set the location where `brew` installed it:
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix`
     
     node -e 'require("sqlite3")'
-
+On some configurations if node-pre-gyp building fails you will need to run `npm install sqlite3` as root (using `sudo`).
 ### On most Linuxes (including Raspberry Pi)
 
 Set the location where `make` installed it:
