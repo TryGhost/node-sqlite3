@@ -1,6 +1,6 @@
 var sqlite3 = require('..');
 
-describe('json', function() {
+describe.skip('json', function() {
     var db;
 
     before(function(done) {
