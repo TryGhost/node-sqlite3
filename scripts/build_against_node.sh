@@ -15,9 +15,9 @@ function publish() {
 
 # test installing from source
 if [[ ${COVERAGE} == true ]]; then
-    CXXFLAGS="--coverage" LDFLAGS="--coverage" npm install --build-from-source  --clang=1 --verbose
+    CXXFLAGS="--coverage" LDFLAGS="--coverage" npm install --build-from-source  --clang=1
     npm test
-    ./py-local/bin/cpp-coveralls --exclude node_modules --exclude tests --build-root build --gcov-options '\-lp' --exclude docs --exclude build/Release/obj/gen --exclude deps
+    ./py-local/bin/cpp-coveralls --exclude node_modules --exclude tests --build-root build --gcov-options '\-lp' --exclude docs --exclude build/Release/obj/gen --exclude deps  > /dev/null
 else
     npm install --build-from-source  --clang=1
     npm test
