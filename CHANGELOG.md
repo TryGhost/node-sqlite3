@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.1
+
+ - Support for node 5.x
+
 ## 3.1.0
 
  - Support for node 3.x and 4.x
