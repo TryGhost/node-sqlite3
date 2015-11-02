@@ -1,6 +1,7 @@
 sudo: false
 
-language: cpp
+# Using c here rather than cpp to avoid Travis exporting CXX after matrix env
+language: c
 
 git:
   depth: 10
