@@ -17,7 +17,7 @@ function publish() {
 if [[ ${COVERAGE} == true ]]; then
     CXXFLAGS="--coverage" LDFLAGS="--coverage" npm install --build-from-source  --clang=1 --verbose
     npm test
-    ./mason_packages/.link/bin/cpp-coveralls --exclude node_modules --exclude tests --build-root build --gcov-options '\-lp' --exclude docs --exclude build/Release/obj/gen --exclude deps
+    ./py-local/bin/cpp-coveralls --exclude node_modules --exclude tests --build-root build --gcov-options '\-lp' --exclude docs --exclude build/Release/obj/gen --exclude deps
 else
     npm install --build-from-source  --clang=1
     npm test

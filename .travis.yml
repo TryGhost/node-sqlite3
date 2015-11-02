@@ -37,8 +37,11 @@ before_install:
 - export PUBLISHABLE=${PUBLISHABLE:-true}
 - export COVERAGE=${COVERAGE:-false}
 - if [[ $(uname -s) == 'Linux' ]]; then
-     export CXX="clang++-3.5";
-     export CC="clang-3.5";
+    export CXX="clang++-3.5";
+    export CC="clang-3.5";
+    export PYTHONPATH=$(pwd)/py-local/lib/python2.7/site-packages;
+  else
+    export PYTHONPATH=$(pwd)/py-local/lib/python/site-packages;
   fi;
 - scripts/validate_tag.sh
 - source ./scripts/install_node.sh ${NODE_VERSION}
@@ -52,9 +55,9 @@ before_script:
 - export COMMIT_MESSAGE=$(git show -s --format=%B $TRAVIS_COMMIT | tr -d '\n')
 - if [[ ${COVERAGE} == true ]]; then
      if [[ $(uname -s) == 'Linux' ]]; then
-       PYTHONUSERBASE=$(pwd)/mason_packages/.link pip install --user cpp-coveralls;
+       PYTHONUSERBASE=$(pwd)/py-local pip install --user cpp-coveralls;
      else
-       PYTHONUSERBASE=$(pwd)/mason_packages/.link easy_install --user cpp-coveralls;
+       PYTHONUSERBASE=$(pwd)/py-local easy_install --user cpp-coveralls;
      fi;
    fi
 
