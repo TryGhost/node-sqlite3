@@ -21,89 +21,10 @@ branches:
 
 matrix:
   include:
-     # Linux
-     - os: linux
-       compiler: clang
-       env: NODE_VERSION="5"
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
-     - os: linux
-       compiler: clang
-       env: NODE_VERSION="4"
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
-     - os: linux
-       compiler: clang
-       env: NODE_VERSION="iojs-3.1.0"
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
-     - os: linux
-       compiler: clang
-       env: NODE_VERSION="iojs-2.4.0"
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
-     - os: linux
-       compiler: clang
-       env: NODE_VERSION="iojs-1.8.4"
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
-     - os: linux
-       compiler: clang
-       env: NODE_VERSION="0.12.7"
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
-     - os: linux
-       compiler: clang
-       env: NODE_VERSION="0.10.40"
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
-     # test building against external sqlite
-     - os: linux
-       compiler: clang
-       env: NODE_VERSION="0.10.40" EXTERNAL_SQLITE=true PUBLISHABLE=false
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5','libsqlite3-dev']
-     # OS X
+      # OS X
      - os: osx
        compiler: clang
-       env: NODE_VERSION="5" COVERAGE=True PUBLISHABLE=false CXXFLAGS="--coverage" LDFLAGS="--coverage" # node abi 47
-     - os: osx
-       compiler: clang
-       env: NODE_VERSION="5" # node abi 47
-     - os: osx
-       compiler: clang
-       env: NODE_VERSION="4" # node abi 46
-     - os: osx
-       compiler: clang
-       env: NODE_VERSION="iojs-3.1.0" # node abi 46
-     - os: osx
-       compiler: clang
-       env: NODE_VERSION="iojs-2.4.0" # node abi 44
-     - os: osx
-       compiler: clang
-       env: NODE_VERSION="iojs-1.8.4" # node abi 43
-     - os: osx
-       compiler: clang
-       env: NODE_VERSION="0.12.7" # node abi 14
-     - os: osx
-       compiler: clang
-       env: NODE_VERSION="0.10.40" # node abi 11
+       env: NODE_VERSION="5" COVERAGE=True PUBLISHABLE=false # node abi 47
 
 env:
   global:
@@ -138,6 +59,5 @@ before_script:
 
 script:
 - if [[ "${NODE_VERSION}" ]]; then ./scripts/build_against_node.sh; fi;
-- if [[ ${COVERAGE} == true ]]; then ./mason_packages/.link/bin/cpp-coveralls --exclude node_modules --exclude tests --build-root build --gcov-options '\-lp' --exclude docs --exclude build/Release/obj/gen --exclude deps > /dev/null; fi;
 # disabled for now: need to port to sudo:false
 #- if [[ "${NODE_WEBKIT}" ]]; then ./scripts/build_against_node_webkit.sh; fi;
