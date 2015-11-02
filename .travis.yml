@@ -21,10 +21,10 @@ branches:
 
 matrix:
   include:
-      # OS X
+     # OS X
      - os: osx
        compiler: clang
-       env: NODE_VERSION="5" COVERAGE=True PUBLISHABLE=false # node abi 47
+       env: NODE_VERSION="5" COVERAGE=true PUBLISHABLE=false # node abi 47
 
 env:
   global:
