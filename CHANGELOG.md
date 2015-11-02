@@ -3,6 +3,8 @@
 ## 3.1.1
 
  - Support for node 5.x
+ - Upgraded SQLite to 3.9.1: https://www.sqlite.org/releaselog/3_9_1.html
+ - Enabled json1 extension by default 
 
 ## 3.1.0
 
