@@ -17,6 +17,9 @@
           '-DNDEBUG'
         ],
         'xcode_settings': {
+          'OTHER_CFLAGS': [
+            '-DHAVE_USLEEP=1'
+          ],
           'OTHER_CPLUSPLUSFLAGS!': [
             '-O3',
             '-Os',
@@ -36,6 +39,9 @@
           'NDEBUG'
         ],
         'xcode_settings': {
+          'OTHER_CFLAGS': [
+            '-DHAVE_USLEEP=1'
+          ],
           'OTHER_CPLUSPLUSFLAGS!': [
             '-Os',
             '-O2'
