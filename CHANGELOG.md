@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.2
+
+ - Only providing binaries for node v0.10x, v0.12.x, v4, and v5
+ - Upgrade to nan@2.2.x
+ - Upgrade to node-pre-gyp@0.6.24
+
+
 ## 3.1.1
 
  - Support for node 5.x
