@@ -16,24 +16,6 @@ environment:
     - nodejs_version: 0.12.7
       platform: x64
       msvs_toolset: 12
-    - nodejs_version: 1.8.1
-      platform: x86
-      msvs_toolset: 12
-    - nodejs_version: 1.8.1
-      platform: x64
-      msvs_toolset: 12
-    - nodejs_version: 2.0.0
-      platform: x64
-      msvs_toolset: 12
-    - nodejs_version: 2.0.0
-      platform: x86
-      msvs_toolset: 12
-    - nodejs_version: 3.3.0
-      platform: x64
-      msvs_toolset: 12
-    - nodejs_version: 3.3.0
-      platform: x86
-      msvs_toolset: 12
     - nodejs_version: 4.0.0
       platform: x64
       msvs_toolset: 12
