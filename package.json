@@ -38,7 +38,7 @@
     },
     "dependencies": {
         "nan": "~2.2.0",
-        "node-pre-gyp": "~0.6.18"
+        "node-pre-gyp": "~0.6.25"
     },
     "bundledDependencies": [
         "node-pre-gyp"
