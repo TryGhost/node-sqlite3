@@ -16,10 +16,10 @@ environment:
     - nodejs_version: 0.12.7
       platform: x64
       msvs_toolset: 12
-    - nodejs_version: 4.4.1
+    - nodejs_version: 4.0.0
       platform: x64
       msvs_toolset: 12
-    - nodejs_version: 4.4.1
+    - nodejs_version: 4.0.0
       platform: x86
       msvs_toolset: 12
     - nodejs_version: 5.0.0
@@ -42,14 +42,6 @@ environment:
       msvs_toolset: 14
       TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
     - nodejs_version: 0.12.7
-      platform: x64
-      msvs_toolset: 14
-      TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
-    - nodejs_version: 4.4.1
-      platform: x86
-      msvs_toolset: 14
-      TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
-    - nodejs_version: 4.4.1
       platform: x64
       msvs_toolset: 14
       TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
