@@ -38,7 +38,7 @@
     },
     "dependencies": {
         "nan": "~2.2.0",
-        "node-pre-gyp": "~0.6.25"
+        "node-pre-gyp": "https://github.com/mapbox/node-pre-gyp/tarball/v0.7.x"
     },
     "bundledDependencies": [
         "node-pre-gyp"
@@ -49,6 +49,7 @@
     },
     "scripts": {
         "prepublish":"npm ls",
+        "preinstall": "npm install node-pre-gyp",
         "install": "node-pre-gyp install --fallback-to-build",
         "pretest": "node test/support/createdb.js",
         "test": "mocha -R spec --timeout 480000"

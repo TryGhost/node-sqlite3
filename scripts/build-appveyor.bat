@@ -6,7 +6,7 @@ ECHO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %~f0 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 SET PATH=%CD%;%PATH%
 SET msvs_version=2013
-IF "%msvs_toolset"=="14" SET msvs_version=2015
+IF "%msvs_toolset%"=="14" SET msvs_version=2015
 
 ECHO APPVEYOR^: %APPVEYOR%
 ECHO nodejs_version^: %nodejs_version%
@@ -59,10 +59,17 @@ ECHO deleting node ...
 SET NODE_EXE_PRG=%ProgramFiles%\nodejs\node.exe
 IF EXIST "%NODE_EXE_PRG%" ECHO found %NODE_EXE_PRG%, deleting... && DEL /F "%NODE_EXE_PRG%"
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+IF EXIST "%ProgramFiles%\nodejs" ECHO copy custom node.exe to %ProgramFiles%\nodejs\ && COPY node.exe "%ProgramFiles%\nodejs\"
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+
 SET NODE_EXE_PRG=%ProgramFiles(x86)%\nodejs\node.exe
 IF EXIST "%NODE_EXE_PRG%" ECHO found %NODE_EXE_PRG%, deleting... && DEL /F "%NODE_EXE_PRG%"
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+IF EXIST "%ProgramFiles(x86)%\nodejs" ECHO copy custom node.exe to %ProgramFiles(x86)%\nodejs\ && COPY node.exe "%ProgramFiles(x86)%\nodejs\"
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
+ECHO delete node.exe in current directory && DEL node.exe
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 :NODE_INSTALLED
 
@@ -72,7 +79,7 @@ ECHO available npm^:
 call where npm
 
 ECHO node^: && call node -v
-call node -e "console.log(process.argv,process.execPath)"
+call node -e "console.log('  - arch:',process.arch,'\n  - argv:',process.argv,'\n  - execPath:',process.execPath)"
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 ECHO npm^: && CALL npm -v
