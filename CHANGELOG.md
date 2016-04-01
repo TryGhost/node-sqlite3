@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.3
+
+ - Upgrade to node-pre-gyp@0.6.26 with better support for Electron
+
 ## 3.1.2
 
  - Only providing binaries for node v0.10x, v0.12.x, v4, and v5
