@@ -23,6 +23,7 @@ NAN_MODULE_INIT(Database::Init) {
     Nan::SetPrototypeMethod(t, "serialize", Serialize);
     Nan::SetPrototypeMethod(t, "parallelize", Parallelize);
     Nan::SetPrototypeMethod(t, "configure", Configure);
+    Nan::SetPrototypeMethod(t, "interrupt", Interrupt);
 
     NODE_SET_GETTER(t, "open", OpenGetter);
 
@@ -224,6 +225,8 @@ void Database::Work_BeginClose(Baton* baton) {
     assert(baton->db->pending == 0);
 
     baton->db->RemoveCallbacks();
+    baton->db->closing = true;
+
     int status = uv_queue_work(uv_default_loop(),
         &baton->request, Work_Close, (uv_after_work_cb)Work_AfterClose);
     assert(status == 0);
@@ -248,6 +251,8 @@ void Database::Work_AfterClose(uv_work_t* req) {
 
     Baton* baton = static_cast<Baton*>(req->data);
     Database* db = baton->db;
+
+    db->closing = false;
 
     Local<Value> argv[1];
     if (baton->status != SQLITE_OK) {
@@ -348,6 +353,21 @@ NAN_METHOD(Database::Configure) {
 
     db->Process();
 
+    info.GetReturnValue().Set(info.This());
+}
+
+NAN_METHOD(Database::Interrupt) {
+    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+
+    if (!db->open) {
+        return Nan::ThrowError("Database is not open");
+    }
+
+    if (db->closing) {
+        return Nan::ThrowError("Database is closing");
+    }
+
+    sqlite3_interrupt(db->_handle);
     info.GetReturnValue().Set(info.This());
 }
 
