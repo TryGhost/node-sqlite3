@@ -104,7 +104,6 @@ protected:
         _handle(NULL),
         open(false),
         locked(false),
-        closing(false),
         pending(0),
         serialize(false),
         debug_trace(NULL),
@@ -152,8 +151,6 @@ protected:
 
     static NAN_METHOD(Configure);
 
-    static NAN_METHOD(Interrupt);
-
     static void SetBusyTimeout(Baton* baton);
 
     static void RegisterTraceCallback(Baton* baton);
@@ -174,7 +171,6 @@ protected:
     sqlite3* _handle;
 
     bool open;
-    bool closing;
     bool locked;
     unsigned int pending;
 
