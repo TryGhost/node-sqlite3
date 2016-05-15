@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.4
+
+ - Added support for node v6
+
 ## 3.1.3
 
  - Upgrade to node-pre-gyp@0.6.26 with better support for Electron
