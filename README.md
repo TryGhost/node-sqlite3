@@ -90,6 +90,8 @@ If building against an external sqlite3 make sure to have the development header
 Note, if building against homebrew-installed sqlite on OS X you can do:
 
     npm install --build-from-source --sqlite=/usr/local/opt/sqlite/
+    
+Note, if building on OS X, make sure you have the latest version of Xcode installed.
 
 ## Building for node-webkit
 
