@@ -13,29 +13,34 @@ describe('interrupt', function() {
             for (var i = 0; i < 8; i += 1) {
                 setup += 'insert into t values (' + i + ');';
             }
-            db.exec(setup);
 
-            var query = 'select last.n ' +
-                'from t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t as last';
-
-            db.each(query, function(err) {
+            db.exec(setup, function(err) {
                 if (err) {
-                    saved = err;
-                } else if (!interrupted) {
-                    interrupted = true;
-                    db.interrupt();
+                    return done(err);
                 }
-            });
 
-            db.close(function() {
-                if (saved) {
-                    assert.equal(saved.message, 'SQLITE_INTERRUPT: interrupted');
-                    assert.equal(saved.errno, sqlite3.INTERRUPT);
-                    assert.equal(saved.code, 'SQLITE_INTERRUPT');
-                    done();
-                } else {
-                    done(new Error('Completed query without error, but expected error'));
-                }
+                var query = 'select last.n ' +
+                    'from t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t,t as last';
+
+                db.each(query, function(err) {
+                    if (err) {
+                        saved = err;
+                    } else if (!interrupted) {
+                        interrupted = true;
+                        db.interrupt();
+                    }
+                });
+
+                db.close(function() {
+                    if (saved) {
+                        assert.equal(saved.message, 'SQLITE_INTERRUPT: interrupted');
+                        assert.equal(saved.errno, sqlite3.INTERRUPT);
+                        assert.equal(saved.code, 'SQLITE_INTERRUPT');
+                        done();
+                    } else {
+                        done(new Error('Completed query without error, but expected error'));
+                    }
+                });
             });
         });
     });
