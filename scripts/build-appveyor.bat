@@ -42,6 +42,10 @@ IF /I "%platform%"=="x64" powershell Install-Product node $env:nodejs_version x6
 IF /I "%platform%"=="x86" powershell Install-Product node $env:nodejs_version x86
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
+SET NODE_MAJOR=%nodejs_version:~0,1%
+ECHO node major version^: %NODE_MAJOR%
+IF %NODE_MAJOR% GTR 0 ECHO node version greater than zero, not updating npm && GOTO SKIP_APPVEYOR_INSTALL
+
 powershell Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 CALL npm install --global --production npm-windows-upgrade
