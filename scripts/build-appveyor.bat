@@ -42,6 +42,13 @@ IF /I "%platform%"=="x64" powershell Install-Product node $env:nodejs_version x6
 IF /I "%platform%"=="x86" powershell Install-Product node $env:nodejs_version x86
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
+powershell Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+CALL npm install --global --production npm-windows-upgrade
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+CALL npm-windows-upgrade --npm-version 2.15.6 --no-dns-check --no-prompt
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+
 :SKIP_APPVEYOR_INSTALL
 IF /I "%msvs_toolset%"=="12" GOTO NODE_INSTALLED
 
