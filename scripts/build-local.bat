@@ -38,7 +38,7 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 ECHO                 ============================
 ECHO                           VS2015
 ECHO                 ============================
-SET nodejs_version=4.4.1
+SET nodejs_version=0.10.40
 ECHO SET nodejs_version^: %nodejs_version%
 SET platform=x64
 ECHO SET platform^: %platform%
