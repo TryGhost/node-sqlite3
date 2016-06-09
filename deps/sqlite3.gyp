@@ -81,7 +81,8 @@
           'SQLITE_THREADSAFE=1',
           'SQLITE_ENABLE_FTS3',
           'SQLITE_ENABLE_JSON1',
-          'SQLITE_ENABLE_RTREE'
+          'SQLITE_ENABLE_RTREE',
+          'SQLITE_DEFAULT_FOREIGN_KEYS=1'
         ],
       },
       'cflags_cc': [
@@ -93,7 +94,8 @@
         'SQLITE_THREADSAFE=1',
         'SQLITE_ENABLE_FTS3',
         'SQLITE_ENABLE_JSON1',
-        'SQLITE_ENABLE_RTREE'
+        'SQLITE_ENABLE_RTREE',
+        'SQLITE_DEFAULT_FOREIGN_KEYS=1'
       ],
       'export_dependent_settings': [
         'action_before_build',
