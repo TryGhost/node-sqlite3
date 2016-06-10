@@ -47,7 +47,7 @@
     "scripts": {
         "prepublish":"npm ls",
         "preinstall":"npm install node-pre-gyp",
-        "install": "node-pre-gyp install --fallback-to-build",
+        "install": "node-pre-gyp install --build-from-source",
         "pretest": "node test/support/createdb.js",
         "test": "mocha -R spec --timeout 480000"
     },
