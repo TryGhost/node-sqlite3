@@ -106,7 +106,9 @@ const char* sqlite_authorizer_string(int type);
     );
 
 #define TRY_CATCH_CALL(context, callback, argc, argv)                          \
-    Nan::MakeCallback((context), (callback), (argc), (argv))
+    if(!callback.IsEmpty() && callback->IsFunction()){                         \
+        (callback)->Call((context), (argc), (argv));                           \
+    }
 
 #define WORK_DEFINITION(name)                                                  \
     static NAN_METHOD(name);                                                   \
