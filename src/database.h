@@ -67,6 +67,13 @@ public:
         LoadExtensionBaton(Database* db_, Local<Function> cb_, const char* filename_) :
             Baton(db_, cb_), filename(filename_) {}
     };
+    
+    struct FunctionInvocation {
+        sqlite3_context *context;
+        sqlite3_value **argv;
+        int argc;
+        bool complete;
+    };
 
     typedef void (*Work_Callback)(Baton* baton);
 
