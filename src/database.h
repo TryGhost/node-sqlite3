@@ -75,6 +75,26 @@ public:
         bool complete;
     };
 
+    struct FunctionBaton {
+        Database* db;
+        std::string name;
+        Nan::Persistent<Function> callback;
+        uv_async_t async;
+        uv_mutex_t mutex;
+        uv_cond_t condition;
+        std::queue<FunctionInvocation*> queue;
+
+        FunctionBaton(Database* db_, const char* name_, Local<Function> cb_) :
+                db(db_), name(name_) {
+            async.data = this;
+            callback.Reset(cb_);
+        }
+
+        virtual ~FunctionBaton() {
+            callback.Reset();
+        }
+    };
+
     typedef void (*Work_Callback)(Baton* baton);
 
     struct Call {
