@@ -24,6 +24,7 @@ NAN_MODULE_INIT(Database::Init) {
     Nan::SetPrototypeMethod(t, "parallelize", Parallelize);
     Nan::SetPrototypeMethod(t, "configure", Configure);
     Nan::SetPrototypeMethod(t, "interrupt", Interrupt);
+    Nan::SetPrototypeMethod(t, "registerFunction", RegisterFunction);
 
     NODE_SET_GETTER(t, "open", OpenGetter);
 
@@ -370,6 +371,77 @@ NAN_METHOD(Database::Interrupt) {
     sqlite3_interrupt(db->_handle);
     info.GetReturnValue().Set(info.This());
 }
+
+NAN_METHOD(Database::RegisterFunction) {
+    Nan::HandleScope scope;
+    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+
+    REQUIRE_ARGUMENTS(2);
+    REQUIRE_ARGUMENT_STRING(0, functionName);
+    REQUIRE_ARGUMENT_FUNCTION(1, callback);
+
+    FunctionBaton *baton = new FunctionBaton(db, *functionName, callback);
+    /*sqlite3_create_function(
+        db->_handle,
+        *functionName,
+        -1, // arbitrary number of args
+        SQLITE_UTF8 | SQLITE_DETERMINISTIC,
+        baton,
+        FunctionEnqueue,
+        NULL,
+        NULL);
+
+    uv_mutex_init(&baton->mutex);
+    uv_cond_init(&baton->condition);
+    uv_async_init(uv_default_loop(), &baton->async, (uv_async_cb)Database::AsyncFunctionProcessQueue);*/
+
+    info.GetReturnValue().Set(info.This());
+}
+
+/*void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    // the JS function can only be safely executed on the main thread
+    // (uv_default_loop), so setup an invocation w/ the relevant information,
+    // enqueue it and signal the main thread to process the invocation queue.
+    // sqlite3 requires the result to be set before this function returns, so
+    // wait for the invocation to be completed.
+    FunctionBaton *baton = (FunctionBaton *)sqlite3_user_data(context);
+    FunctionInvocation invocation = {};
+    invocation.context = context;
+    invocation.argc = argc;
+    invocation.argv = argv;
+
+    uv_async_send(&baton->async);
+    uv_mutex_lock(&baton->mutex);
+    baton->queue.push(&invocation);
+    while (!invocation.complete) {
+        uv_cond_wait(&baton->condition, &baton->mutex);
+    }
+    uv_mutex_unlock(&baton->mutex);
+}
+
+void Database::AsyncFunctionProcessQueue(uv_async_t *async) {
+    FunctionBaton *baton = (FunctionBaton *)async->data;
+
+    for (;;) {
+        FunctionInvocation *invocation = NULL;
+
+        uv_mutex_lock(&baton->mutex);
+        if (!baton->queue.empty()) {
+            invocation = baton->queue.front();
+            baton->queue.pop();
+        }
+        uv_mutex_unlock(&baton->mutex);
+
+        if (!invocation) { break; }
+
+        // Database::FunctionExecute(baton, invocation);
+
+        uv_mutex_lock(&baton->mutex);
+        invocation->complete = true;
+        uv_cond_signal(&baton->condition); // allow paused thread to complete
+        uv_mutex_unlock(&baton->mutex);
+    }
+}*/
 
 void Database::SetBusyTimeout(Baton* baton) {
     assert(baton->db->open);
