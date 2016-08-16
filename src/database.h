@@ -49,7 +49,7 @@ public:
         }
     };
 
-    struct FunctionInvocation {
+    /*struct FunctionInvocation {
         sqlite3_context *context;
         sqlite3_value **argv;
         int argc;
@@ -74,7 +74,7 @@ public:
         virtual ~FunctionBaton() {
             callback.Reset();
         }
-    };
+    };*/
 
     struct OpenBaton : Baton {
         std::string filename;
