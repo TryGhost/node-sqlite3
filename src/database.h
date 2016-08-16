@@ -185,6 +185,7 @@ protected:
 
     static void FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv);
     static void AsyncFunctionProcessQueue(uv_async_t *async);
+    static void FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocation);
 
     static void SetBusyTimeout(Baton* baton);
 

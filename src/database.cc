@@ -434,12 +434,94 @@ void Database::AsyncFunctionProcessQueue(uv_async_t *async) {
 
         if (!invocation) { break; }
 
-        // Database::FunctionExecute(baton, invocation);
+        Database::FunctionExecute(baton, invocation);
 
         uv_mutex_lock(&baton->mutex);
         invocation->complete = true;
         uv_cond_signal(&baton->condition); // allow paused thread to complete
         uv_mutex_unlock(&baton->mutex);
+    }
+}
+
+void Database::FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocation) {
+    Nan::HandleScope scope;
+    Database *db = baton->db;
+    Local<Function> cb = Nan::New(baton->callback);
+    sqlite3_context *context = invocation->context;
+    sqlite3_value **values = invocation->argv;
+    int argc = invocation->argc;
+
+    if (!cb.IsEmpty() && cb->IsFunction()) {
+
+        // build the argument list for the function call
+        typedef Local<Value> LocalValue;
+        std::vector<LocalValue> argv;
+        for (int i = 0; i < argc; i++) {
+            sqlite3_value *value = values[i];
+            int type = sqlite3_value_type(value);
+            Local<Value> arg;
+            switch(type) {
+                case SQLITE_INTEGER: {
+                    arg = Nan::New<Number>(sqlite3_value_int64(value));
+                } break;
+                case SQLITE_FLOAT: {
+                    arg = Nan::New<Number>(sqlite3_value_double(value));
+                } break;
+                case SQLITE_TEXT: {
+                    const char* text = (const char*)sqlite3_value_text(value);
+                    int length = sqlite3_value_bytes(value);
+                    arg = Nan::New(text).ToLocalChecked();
+                } break;
+                case SQLITE_BLOB: {
+                    const void *blob = sqlite3_value_blob(value);
+                    int length = sqlite3_value_bytes(value);
+                    arg = Nan::CopyBuffer((char *)blob, length).ToLocalChecked();
+                } break;
+                case SQLITE_NULL: {
+                    arg = Nan::Null();
+                } break;
+            }
+
+            argv.push_back(arg);
+        }
+
+        TryCatch trycatch;
+
+        Local<Value> result = cb->Call(db->handle(), argc, argv.data());
+
+        // process the result
+        if (trycatch.HasCaught()) {
+            String::Utf8Value message(trycatch.Message()->Get());
+            sqlite3_result_error(context, *message, message.length());
+        }
+        else if (result->IsString() || result->IsRegExp()) {
+            String::Utf8Value value(result->ToString());
+            sqlite3_result_text(context, *value, value.length(), SQLITE_TRANSIENT);
+        }
+        else if (result->IsInt32()) {
+            sqlite3_result_int(context, result->Int32Value());
+        }
+        else if (result->IsNumber() || result->IsDate()) {
+            sqlite3_result_double(context, result->NumberValue());
+        }
+        else if (result->IsBoolean()) {
+            sqlite3_result_int(context, result->BooleanValue());
+        }
+        else if (result->IsNull() || result->IsUndefined()) {
+            sqlite3_result_null(context);
+        }
+        else if (Buffer::HasInstance(result)) {
+            Local<Object> buffer = result->ToObject();
+            sqlite3_result_blob(context,
+                Buffer::Data(buffer),
+                Buffer::Length(buffer),
+                SQLITE_TRANSIENT);
+        }
+        else {
+            std::string message("invalid return type in user function");
+            message = message + " " + baton->name;
+            sqlite3_result_error(context, message.c_str(), message.length());
+        }
     }
 }
 
