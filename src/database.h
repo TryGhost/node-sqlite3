@@ -48,7 +48,14 @@ public:
             callback.Reset();
         }
     };
-    
+
+    struct FunctionInvocation {
+        sqlite3_context *context;
+        sqlite3_value **argv;
+        int argc;
+        bool complete;
+    };
+
     struct FunctionBaton {
         Database* db;
         std::string name;
@@ -169,6 +176,11 @@ protected:
 
     static NAN_METHOD(Serialize);
     static NAN_METHOD(Parallelize);
+
+    static NAN_METHOD(RegisterFunction);
+    static void FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv);
+    static void FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocation);
+    static void AsyncFunctionProcessQueue(uv_async_t *async);
 
     static NAN_METHOD(Configure);
 
