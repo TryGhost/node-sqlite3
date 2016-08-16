@@ -381,7 +381,7 @@ NAN_METHOD(Database::RegisterFunction) {
     REQUIRE_ARGUMENT_FUNCTION(1, callback);
 
     FunctionBaton *baton = new FunctionBaton(db, *functionName, callback);
-    /*sqlite3_create_function(
+    sqlite3_create_function(
         db->_handle,
         *functionName,
         -1, // arbitrary number of args
@@ -393,12 +393,12 @@ NAN_METHOD(Database::RegisterFunction) {
 
     uv_mutex_init(&baton->mutex);
     uv_cond_init(&baton->condition);
-    uv_async_init(uv_default_loop(), &baton->async, (uv_async_cb)Database::AsyncFunctionProcessQueue);*/
+    uv_async_init(uv_default_loop(), &baton->async, (uv_async_cb)Database::AsyncFunctionProcessQueue);
 
     info.GetReturnValue().Set(info.This());
 }
 
-/*void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv) {
+void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv) {
     // the JS function can only be safely executed on the main thread
     // (uv_default_loop), so setup an invocation w/ the relevant information,
     // enqueue it and signal the main thread to process the invocation queue.
@@ -441,7 +441,7 @@ void Database::AsyncFunctionProcessQueue(uv_async_t *async) {
         uv_cond_signal(&baton->condition); // allow paused thread to complete
         uv_mutex_unlock(&baton->mutex);
     }
-}*/
+}
 
 void Database::SetBusyTimeout(Baton* baton) {
     assert(baton->db->open);
