@@ -103,5 +103,7 @@ describe('user functions', function() {
         });
     });
 
-    after(function(done) { db.close(done); });
+    after(function(done) {
+        db.close(done);
+    });
 });
