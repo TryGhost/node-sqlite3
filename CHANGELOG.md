@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.5
+
+ - Added Support for registering function according to wbyoung's work
+   here : https://github.com/wbyoung/node-sqlite3/tree/user-functions-isolate
+
 ## 3.1.4
 
  - Added support for node v6
