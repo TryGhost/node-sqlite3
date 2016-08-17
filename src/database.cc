@@ -4,6 +4,10 @@
 #include "database.h"
 #include "statement.h"
 
+#ifndef SQLITE_DETERMINISTIC
+#define SQLITE_DETERMINISTIC 0x800
+#endif
+
 using namespace node_sqlite3;
 
 Nan::Persistent<FunctionTemplate> Database::constructor_template;
