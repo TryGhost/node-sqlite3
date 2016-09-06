@@ -36,11 +36,6 @@ public:
         rows.swap(async->data);
         NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
         for (unsigned int i = 0, size = rows.size(); i < size; i++) {
-#if NODE_VERSION_AT_LEAST(0, 7, 9)
-            uv_unref((uv_handle_t *)&async->watcher);
-#else
-            uv_unref(uv_default_loop());
-#endif
             async->callback(async->parent, rows[i]);
         }
     }
@@ -61,12 +56,6 @@ public:
     }
 
     void add(Item* item) {
-        // Make sure node runs long enough to deliver the messages.
-#if NODE_VERSION_AT_LEAST(0, 7, 9)
-        uv_ref((uv_handle_t *)&watcher);
-#else
-        uv_ref(uv_default_loop());
-#endif
         NODE_SQLITE3_MUTEX_LOCK(&mutex);
         data.push_back(item);
         NODE_SQLITE3_MUTEX_UNLOCK(&mutex)
