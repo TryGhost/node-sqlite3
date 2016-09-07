@@ -335,6 +335,11 @@ NAN_METHOD(Database::Configure) {
         Baton* baton = new Baton(db, handle);
         db->Schedule(RegisterProfileCallback, baton);
     }
+    else if(Nan::Equals(info[0], Nan::New("preupdate").ToLocalChecked()).FromJust()) {
+        Local<Function> handle;
+        Baton* baton = new Baton(db, handle);
+        db->Schedule(RegisterPreUpdateCallback, baton);
+    }
     else if (Nan::Equals(info[0], Nan::New("busyTimeout").ToLocalChecked()).FromJust()) {
         if (!info[1]->IsInt32()) {
             return Nan::ThrowTypeError("Value must be an integer");
@@ -457,6 +462,151 @@ void Database::ProfileCallback(Database *db, ProfileInfo* info) {
         Nan::New<Number>((double)info->nsecs / 1000000.0)
     };
     EMIT_EVENT(db->handle(), 3, argv);
+    delete info;
+}
+
+static void addRowValue(Row *row, sqlite3_value *val) {
+    int type = sqlite3_value_type(val);
+    const char *name = "placeholder";
+
+    switch (type) {
+    case SQLITE_INTEGER: {
+        row->push_back(new Values::Integer(name, sqlite3_value_int(val)));
+    } break;
+    case SQLITE_FLOAT: {
+        row->push_back(new Values::Float(name, sqlite3_value_double(val)));
+    } break;
+    case SQLITE_TEXT: {
+        const char* text = (const char*)sqlite3_value_text(val);
+        int length = sqlite3_value_bytes(val);
+        row->push_back(new Values::Text(name, length, text));
+    } break;
+    case SQLITE_BLOB: {
+        const void* blob = sqlite3_value_blob(val);
+        int length = sqlite3_value_bytes(val);
+        row->push_back(new Values::Blob(name, length, blob));
+    } break;
+    case SQLITE_NULL: {
+        row->push_back(new Values::Null(name));
+    } break;
+    default:
+        assert(false);
+    }
+
+}
+
+Local<Value> rowToArray(Row *row) {
+    Nan::EscapableHandleScope scope;
+
+    if(row == NULL) {
+        return Nan::Null();
+    }
+
+    Local<Array> arr(Nan::New<Array>(row->size()));
+    Row::const_iterator it = row->begin();
+    Row::const_iterator end = row->end();
+    for (int i = 0; it < end; ++it, i++) {
+        Values::Field* field = *it;
+        Local<Value> value;
+
+        switch (field->type) {
+            case SQLITE_INTEGER: {
+                value = Nan::New<Number>(((Values::Integer*)field)->value);
+            } break;
+            case SQLITE_FLOAT: {
+                value = Nan::New<Number>(((Values::Float*)field)->value);
+            } break;
+            case SQLITE_TEXT: {
+                value = Nan::New<String>(((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size()).ToLocalChecked();
+            } break;
+            case SQLITE_BLOB: {
+                value = Nan::CopyBuffer(((Values::Blob*)field)->value, ((Values::Blob*)field)->length).ToLocalChecked();
+            } break;
+            case SQLITE_NULL: {
+                value = Nan::Null();
+            } break;
+        }
+
+        Nan::Set(arr, i, value);
+
+        DELETE_FIELD(field);
+    }
+
+    return scope.Escape(arr);
+}
+
+void Database::RegisterPreUpdateCallback(Baton* baton) {
+    assert(baton->db->open);
+    assert(baton->db->_handle);
+    Database* db = baton->db;
+
+    if (db->preupdate_event == NULL) {
+        // Add it.
+        db->preupdate_event = new AsyncPreUpdate(db, PreUpdateCallback);
+        sqlite3_preupdate_hook(db->_handle, PreUpdateCallback, db);
+    }
+    else {
+        // Remove it.
+        sqlite3_preupdate_hook(db->_handle, NULL, NULL);
+        db->preupdate_event->finish();
+        db->preupdate_event = NULL;
+    }
+
+    delete baton;
+}
+
+void Database::PreUpdateCallback(void* db_, sqlite3 *handle, int type, const char* database,
+                                 const char* table, sqlite3_int64 key1, sqlite3_int64 key2) {
+    Database* db = static_cast<Database*>(db_);
+
+    // Note: This function is called in the thread pool.
+    PreUpdateInfo* info = new PreUpdateInfo();
+    info->type = type;
+    info->database = std::string(database);
+    info->table = std::string(table);
+
+    int count = sqlite3_preupdate_count(db->_handle);
+
+    Row *oldValues = (type != SQLITE_INSERT) ? new Row() : NULL;
+    Row *newValues = (type != SQLITE_DELETE) ? new Row() : NULL;
+    for(int i=0; i<count; i++) {
+        if(type != SQLITE_INSERT) {
+            sqlite3_value *old;
+            sqlite3_preupdate_old(db->_handle, i, &old);
+            addRowValue(oldValues, old);
+        }
+
+        if(type != SQLITE_DELETE) {
+            sqlite3_value *new_;
+            sqlite3_preupdate_new(db->_handle, i, &new_);
+            addRowValue(newValues, new_);
+        }
+    }
+
+    info->oldValues = oldValues;
+    info->newValues = newValues;
+    info->oldRowId = key1;
+    info->newRowId = key2;
+
+    static_cast<Database*>(db)->preupdate_event->send(info);
+}
+
+void Database::PreUpdateCallback(Database *db, PreUpdateInfo* info) {
+    Nan::HandleScope scope;
+
+    Local<Value> argv[] = {
+        Nan::New("preupdate").ToLocalChecked(),
+        Nan::New(sqlite_authorizer_string(info->type)).ToLocalChecked(),
+        Nan::New(info->database.c_str()).ToLocalChecked(),
+        Nan::New(info->table.c_str()).ToLocalChecked(),
+        rowToArray(info->oldValues),
+        rowToArray(info->newValues),
+        Nan::New<Number>(info->oldRowId),
+        Nan::New<Number>(info->newRowId)
+    };
+    EMIT_EVENT(db->handle(), 8, argv);
+    delete info->oldValues;
+    delete info->newValues;
     delete info;
 }
 
@@ -685,5 +835,9 @@ void Database::RemoveCallbacks() {
     if (debug_profile) {
         debug_profile->finish();
         debug_profile = NULL;
+    }
+    if (preupdate_event) {
+        preupdate_event->finish();
+        preupdate_event = NULL;
     }
 }

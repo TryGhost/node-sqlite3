@@ -15,6 +15,57 @@ using namespace v8;
 
 namespace node_sqlite3 {
 
+namespace Values {
+    struct Field {
+        inline Field(unsigned short _index, unsigned short _type = SQLITE_NULL) :
+            type(_type), index(_index) {}
+        inline Field(const char* _name, unsigned short _type = SQLITE_NULL) :
+            type(_type), index(0), name(_name) {}
+
+        unsigned short type;
+        unsigned short index;
+        std::string name;
+    };
+
+    struct Integer : Field {
+        template <class T> inline Integer(T _name, int64_t val) :
+            Field(_name, SQLITE_INTEGER), value(val) {}
+        int64_t value;
+    };
+
+    struct Float : Field {
+        template <class T> inline Float(T _name, double val) :
+            Field(_name, SQLITE_FLOAT), value(val) {}
+        double value;
+    };
+
+    struct Text : Field {
+        template <class T> inline Text(T _name, size_t len, const char* val) :
+            Field(_name, SQLITE_TEXT), value(val, len) {}
+        std::string value;
+    };
+
+    struct Blob : Field {
+        template <class T> inline Blob(T _name, size_t len, const void* val) :
+                Field(_name, SQLITE_BLOB), length(len) {
+            value = (char*)malloc(len);
+            memcpy(value, val, len);
+        }
+        inline ~Blob() {
+            free(value);
+        }
+        int length;
+        char* value;
+    };
+
+    typedef Field Null;
+}
+
+typedef std::vector<Values::Field*> Row;
+typedef std::vector<Row*> Rows;
+typedef Row Parameters;
+
+
 class Database;
 
 
@@ -90,12 +141,23 @@ public:
         sqlite3_int64 rowid;
     };
 
+    struct PreUpdateInfo {
+        int type;
+        std::string database;
+        std::string table;
+        sqlite3_int64 oldRowId;
+        sqlite3_int64 newRowId;
+        Row* oldValues;
+        Row* newValues;
+    };
+
     bool IsOpen() { return open; }
     bool IsLocked() { return locked; }
 
     typedef Async<std::string, Database> AsyncTrace;
     typedef Async<ProfileInfo, Database> AsyncProfile;
     typedef Async<UpdateInfo, Database> AsyncUpdate;
+    typedef Async<PreUpdateInfo, Database> AsyncPreUpdate;
 
     friend class Statement;
 
@@ -109,7 +171,8 @@ protected:
         serialize(false),
         debug_trace(NULL),
         debug_profile(NULL),
-        update_event(NULL) {
+        update_event(NULL),
+        preupdate_event(NULL) {
     }
 
     ~Database() {
@@ -168,6 +231,11 @@ protected:
     static void UpdateCallback(void* db, int type, const char* database, const char* table, sqlite3_int64 rowid);
     static void UpdateCallback(Database* db, UpdateInfo* info);
 
+    static void RegisterPreUpdateCallback(Baton* baton);
+    static void PreUpdateCallback(void* db, sqlite3 *handle, int type, const char* database,
+                                  const char* table, sqlite3_int64 key1, sqlite3_int64 key2);
+    static void PreUpdateCallback(Database* db, PreUpdateInfo* info);
+
     void RemoveCallbacks();
 
 protected:
@@ -185,6 +253,7 @@ protected:
     AsyncTrace* debug_trace;
     AsyncProfile* debug_profile;
     AsyncUpdate* update_event;
+    AsyncPreUpdate* preupdate_event;
 };
 
 }

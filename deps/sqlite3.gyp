@@ -81,7 +81,8 @@
           'SQLITE_THREADSAFE=1',
           'SQLITE_ENABLE_FTS3',
           'SQLITE_ENABLE_JSON1',
-          'SQLITE_ENABLE_RTREE'
+          'SQLITE_ENABLE_RTREE',
+          'SQLITE_ENABLE_PREUPDATE_HOOK'
         ],
       },
       'cflags_cc': [
@@ -93,7 +94,8 @@
         'SQLITE_THREADSAFE=1',
         'SQLITE_ENABLE_FTS3',
         'SQLITE_ENABLE_JSON1',
-        'SQLITE_ENABLE_RTREE'
+        'SQLITE_ENABLE_RTREE',
+        'SQLITE_ENABLE_PREUPDATE_HOOK'
       ],
       'export_dependent_settings': [
         'action_before_build',
