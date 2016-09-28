@@ -50,7 +50,7 @@
     "preinstall": "npm install node-pre-gyp",
     "install": "node-pre-gyp install --fallback-to-build",
     "pretest": "node test/support/createdb.js",
-    "test": "eslint lib && mocha -R spec --timeout 480000"
+    "test": "mocha -R spec --timeout 480000"
   },
   "license": "BSD-3-Clause",
   "keywords": [
