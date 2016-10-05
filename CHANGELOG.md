@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.5
+
+- [Added support for sqlite3_interrupt](https://github.com/mapbox/node-sqlite3/pull/518): this makes
+  it possible to interrupt a long-running query.
+- [Fixes uv_ref race](https://github.com/mapbox/node-sqlite3/pull/705).
+
 ## 3.1.4
 
  - Added support for node v6
