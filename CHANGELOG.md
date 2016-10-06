@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.6
+
+- Starts bundling node-pre-gyp again to avoid #720
+
 ## 3.1.5
 
 - [Added support for sqlite3_interrupt](https://github.com/mapbox/node-sqlite3/pull/518): this makes
