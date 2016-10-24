@@ -37,17 +37,16 @@
     "url": "git://github.com/mapbox/node-sqlite3.git"
   },
   "dependencies": {
-    "nan": "~2.3.3",
-    "node-pre-gyp": "~0.6.28"
+    "nan": "~2.4.0",
+    "node-pre-gyp": "~0.6.31"
   },
   "devDependencies": {
     "aws-sdk": "2.x",
     "eslint": "3.5.0",
-    "mocha": "2.x"
+    "mocha": "3.x"
   },
   "scripts": {
     "prepublish": "npm ls",
-    "preinstall": "npm install node-pre-gyp",
     "install": "node-pre-gyp install --fallback-to-build",
     "pretest": "node test/support/createdb.js",
     "test": "mocha -R spec --timeout 480000"
