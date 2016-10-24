@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.7
+
+- Upgrade sqlite to 3.15, enable FTS4, FTS5 (@wmertens)
+- Upgrade to node-pre-gyp@0.6.31 and nan@2.4.0
+
 ## 3.1.6
 
 - Starts bundling node-pre-gyp again to avoid #720
