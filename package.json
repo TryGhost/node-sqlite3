@@ -40,6 +40,9 @@
     "nan": "~2.4.0",
     "node-pre-gyp": "~0.6.31"
   },
+  "bundledDependencies": [		
+      "node-pre-gyp"		
+  ],
   "devDependencies": {
     "aws-sdk": "2.x",
     "eslint": "3.5.0",
