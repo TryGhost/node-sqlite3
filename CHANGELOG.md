@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.8
+
+- Added support for node v7 (pre-compiled binaries available)
+
 ## 3.1.7
 
 - Upgrade sqlite to 3.15, enable FTS4, FTS5 (@wmertens)
