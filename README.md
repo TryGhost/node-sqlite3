@@ -7,10 +7,9 @@ Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](
 [![Coverage Status](https://coveralls.io/repos/mapbox/node-sqlite3/badge.svg?branch=master&service=github)](https://coveralls.io/github/mapbox/node-sqlite3?branch=master)
 [![Dependencies](https://david-dm.org/mapbox/node-sqlite3.svg)](https://david-dm.org/mapbox/node-sqlite3)
 
-
 ## Supported platforms
 
-The `sqlite3` module works with Node.js v0.10.x, v0.12.x, v4.x, and v5.x.
+The `sqlite3` module works with Node.js v0.10.x, v0.12.x, v4.x, v5.x, v6.x and v7.x.
 
 Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/mapbox/node-pre-gyp).
 
@@ -52,13 +51,11 @@ db.close();
  - [Extension support](https://github.com/mapbox/node-sqlite3/wiki/Extensions)
  - Big test suite
  - Written in modern C++ and tested for memory leaks
- - Bundles Sqlite3 3.9.1 as a fallback if the installing system doesn't include SQLite
-
+ - Bundles Sqlite3 3.15.0 as a fallback if the installing system doesn't include SQLite
 
 # API
 
 See the [API documentation](https://github.com/mapbox/node-sqlite3/wiki) in the wiki.
-
 
 # Installing
 
@@ -168,7 +165,6 @@ In sqlite3's directory (where its `package.json` resides) run the following:
     npm install mocha
     npm test
 
-
 # Contributors
 
 * [Konstantin Käfer](https://github.com/kkaefer)
@@ -185,7 +181,6 @@ In sqlite3's directory (where its `package.json` resides) run the following:
 * [Johannes Schauer](https://github.com/pyneo)
 * [Mithgol](https://github.com/Mithgol)
 
-
 # Acknowledgments
 
 Thanks to [Orlando Vazquez](https://github.com/orlandov),
@@ -193,7 +188,6 @@ Thanks to [Orlando Vazquez](https://github.com/orlandov),
 [Ryan Dahl](https://github.com/ry) for their SQLite bindings for node, and to mraleph on Freenode's #v8 for answering questions.
 
 Development of this module is sponsored by [MapBox](http://mapbox.org/).
-
 
 # License
 
