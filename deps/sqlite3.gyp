@@ -2,9 +2,16 @@
   'includes': [ 'common-sqlite.gypi' ],
   'target_defaults': {
     'default_configuration': 'Release',
-    'cflags':[
-      '-std=c99'
-    ],
+    'conditions':[
+      'OS=="os390"', {
+        'cflags':[
+          '-qlanglvl=stdc99'
+        ]
+      }, {
+        'cflags':[
+          '-std=c99'
+        ]
+    }],
     'configurations': {
       'Debug': {
         'defines': [ 'DEBUG', '_DEBUG' ],
@@ -71,7 +78,11 @@
       'dependencies': [
         'action_before_build'
       ],
-      'cflags': [ '-include ../src/gcc-preinclude.h' ],
+      'conditions': [
+        ['OS!="os390"', {
+          'cflags': [ '-include ../src/gcc-preinclude.h' ],
+        }],
+      ],
       'sources': [
         '<(SHARED_INTERMEDIATE_DIR)/sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
       ],
