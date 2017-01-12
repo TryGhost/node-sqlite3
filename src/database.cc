@@ -3,6 +3,7 @@
 #include "macros.h"
 #include "database.h"
 #include "statement.h"
+#include "import.h"
 
 using namespace node_sqlite3;
 
@@ -20,6 +21,7 @@ NAN_MODULE_INIT(Database::Init) {
     Nan::SetPrototypeMethod(t, "exec", Exec);
     Nan::SetPrototypeMethod(t, "wait", Wait);
     Nan::SetPrototypeMethod(t, "loadExtension", LoadExtension);
+    Nan::SetPrototypeMethod(t, "import", Import);
     Nan::SetPrototypeMethod(t, "serialize", Serialize);
     Nan::SetPrototypeMethod(t, "parallelize", Parallelize);
     Nan::SetPrototypeMethod(t, "configure", Configure);
@@ -679,6 +681,74 @@ void Database::Work_AfterLoadExtension(uv_work_t* req) {
 
     delete baton;
 }
+
+NAN_METHOD(Database::Import) {
+    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+
+    REQUIRE_ARGUMENT_STRING(0, filename);
+    REQUIRE_ARGUMENT_STRING(1, tablename);
+    OPTIONAL_ARGUMENT_FUNCTION(2, callback);
+
+    Baton* baton = new ImportBaton(db, callback, *filename, *tablename);
+    db->Schedule(Work_BeginImport, baton, true);
+
+    info.GetReturnValue().Set(info.This());
+}
+
+void Database::Work_BeginImport(Baton* baton) {
+    assert(baton->db->locked);
+    assert(baton->db->open);
+    assert(baton->db->_handle);
+    assert(baton->db->pending == 0);
+    int status = uv_queue_work(uv_default_loop(),
+        &baton->request, Work_Import, reinterpret_cast<uv_after_work_cb>(Work_AfterImport));
+    assert(status == 0);
+}
+
+void Database::Work_Import(uv_work_t* req) {
+    ImportBaton* baton = static_cast<ImportBaton*>(req->data);
+
+    printf("Work_Import: \"%s\" --> %s\n",
+      baton->filename.c_str(),
+      baton->tablename.c_str());
+
+    int rc = sqlite_import(baton->db->_handle, baton->filename.c_str(),
+          baton->tablename.c_str());
+
+    // TODO: really need proper check of rc here!
+    baton->status = SQLITE_OK;
+}
+
+void Database::Work_AfterImport(uv_work_t* req) {
+    Nan::HandleScope scope;
+
+    ImportBaton* baton = static_cast<ImportBaton*>(req->data);
+    Database* db = baton->db;
+    Local<Function> cb = Nan::New(baton->callback);
+
+    if (baton->status != SQLITE_OK) {
+        EXCEPTION(Nan::New(baton->message.c_str()).ToLocalChecked(), baton->status, exception);
+
+        if (!cb.IsEmpty() && cb->IsFunction()) {
+            Local<Value> argv[] = { exception };
+            TRY_CATCH_CALL(db->handle(), cb, 1, argv);
+        }
+        else {
+            Local<Value> info[] = { Nan::New("error").ToLocalChecked(), exception };
+            EMIT_EVENT(db->handle(), 2, info);
+        }
+    }
+    else if (!cb.IsEmpty() && cb->IsFunction()) {
+        Local<Value> argv[] = { Nan::Null() };
+        TRY_CATCH_CALL(db->handle(), cb, 1, argv);
+    }
+
+    db->Process();
+
+    delete baton;
+}
+
+
 
 void Database::RemoveCallbacks() {
     if (debug_trace) {

@@ -68,6 +68,14 @@ public:
             Baton(db_, cb_), filename(filename_) {}
     };
 
+    struct ImportBaton : Baton {
+        std::string filename;
+        std::string tablename;
+        ImportBaton(Database* db_, Local<Function> cb_,
+          const char* filename_, const char *tablename_) :
+            Baton(db_, cb_), filename(filename_), tablename(tablename_) {}
+    };
+
     typedef void (*Work_Callback)(Baton* baton);
 
     struct Call {
@@ -147,6 +155,11 @@ protected:
     static void Work_BeginLoadExtension(Baton* baton);
     static void Work_LoadExtension(uv_work_t* req);
     static void Work_AfterLoadExtension(uv_work_t* req);
+
+    static NAN_METHOD(Import);
+    static void Work_BeginImport(Baton* baton);
+    static void Work_Import(uv_work_t* req);
+    static void Work_AfterImport(uv_work_t* req);
 
     static NAN_METHOD(Serialize);
     static NAN_METHOD(Parallelize);
