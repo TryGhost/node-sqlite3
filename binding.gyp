@@ -36,7 +36,7 @@
         "src/database.cc",
         "src/node_sqlite3.cc",
         "src/statement.cc",
-        "src/import.c"
+        "src/import.cc"
       ]
     },
     {

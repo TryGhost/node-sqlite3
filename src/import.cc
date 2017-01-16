@@ -7,6 +7,24 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <regex>
+#include <vector>
+
+enum ColType { CT_NONE, CT_INT, CT_REAL, CT_TEXT };
+
+// Number of rows to examine when determining column types
+// Probably conservative by an order of magnitude; tune with real corpus of CSVs.
+const int METASCAN_ROWS = 1024;
+
+const char *colTypeName(ColType ct) {
+  switch (ct) {
+    case CT_NONE: return "NONE";
+    case CT_INT:  return "integer";
+    case CT_REAL: return "real";
+    case CT_TEXT: return "text";
+    default:  return "UNKNOWN";
+  }
+}
 
 /*
 ** Render output like fprintf().  Except, if the output is going to the
@@ -117,7 +135,7 @@ struct ImportCtx {
 static void import_append_char(ImportCtx *p, int c){
   if( p->n+1>=p->nAlloc ){
     p->nAlloc += p->nAlloc + 100;
-    p->z = sqlite3_realloc64(p->z, p->nAlloc);
+    p->z = reinterpret_cast<char*>(sqlite3_realloc64(p->z, p->nAlloc));
     if( p->z==0 ){
       raw_printf(stderr, "out of memory\n");
       exit(1);
@@ -139,7 +157,7 @@ static void import_append_char(ImportCtx *p, int c){
 **      EOF on end-of-file.
 **   +  Report syntax errors on stderr
 */
-static char *SQLITE_CDECL csv_read_one_field(ImportCtx *p){
+static char *csv_read_one_field(ImportCtx *p){
   int c;
   int cSep = p->cColSep;
   int rSep = p->cRowSep;
@@ -201,39 +219,76 @@ static char *SQLITE_CDECL csv_read_one_field(ImportCtx *p){
   return p->z;
 }
 
-/* Read a single field of ASCII delimited text.
-**
-**   +  Input comes from p->in.
-**   +  Store results in p->z of length p->n.  Space to hold p->z comes
-**      from sqlite3_malloc64().
-**   +  Use p->cSep as the column separator.  The default is "\x1F".
-**   +  Use p->rSep as the row separator.  The default is "\x1E".
-**   +  Keep track of the row number in p->nLine.
-**   +  Store the character that terminates the field in p->cTerm.  Store
-**      EOF on end-of-file.
-**   +  Report syntax errors on stderr
-*/
-static char *SQLITE_CDECL ascii_read_one_field(ImportCtx *p){
-  int c;
-  int cSep = p->cColSep;
-  int rSep = p->cRowSep;
-  p->n = 0;
-  c = fgetc(p->in);
-  if( c==EOF || seenInterrupt ){
-    p->cTerm = EOF;
-    return 0;
+std::regex intRE("^(\\+|-)?\\$?[[:digit:],]+$");
+std::regex realRE("(^\\+|-)?\\$?[[:digit:],]*\\.?[[:digit:]]+([eE][-+]?[[:digit:]]+)?$");
+/**
+ * Given the current guess for a column type and cell value string cs
+ * make a conservative guess at column type.
+ * We use the order none <: int <: real <: text, and a guess will only become more general.
+ * TODO: support various date formats
+ */
+ColType guess_column_type(ColType cg, const char *s) {
+  if (cg == CT_TEXT) {
+    return cg;
   }
-  while( c!=EOF && c!=cSep && c!=rSep ){
-    import_append_char(p, c);
-    c = fgetc(p->in);
+  if ((s==NULL) || strlen30(s)==0) {
+    return cg;
   }
-  if( c==rSep ){
-    p->nLine++;
+  if ((cg == CT_NONE) || (cg == CT_INT)) {
+    if (regex_match(s, intRE)) {
+      return CT_INT;
+    }
   }
-  p->cTerm = c;
-  if( p->z ) p->z[p->n] = 0;
-  return p->z;
+  if ((cg == CT_NONE) || (cg == CT_INT) || (cg == CT_REAL)) {
+    if (regex_match(s, realRE)) {
+      return CT_REAL;
+    }
+  }
+  return CT_TEXT;
 }
+
+/*
+ * perform initial scan of file using RegEx's to determine column types.
+ *
+ * Assumes header row has already been read
+ *
+ * Optimistically only looks at the first METASCAN_ROWS rows to determine
+ * column types
+ */
+int metascan(std::vector<ColType> &colTypes, ImportCtx &ctx, int nCol) {
+  int i;
+  for (int row = 0; row < METASCAN_ROWS; row++) {
+    int startLine = ctx.nLine;
+    for (i = 0; i < nCol; i++) {
+      char *z = csv_read_one_field(&ctx);
+      if (colTypes[i] != CT_TEXT) {
+        colTypes[i]=guess_column_type(colTypes[i], z);
+      }
+      /*
+      ** Did we reach end-of-file before finding any columns?
+      ** If so, stop instead of NULL filling the remaining columns.
+      */
+      if( z==0 && i==0 ) break;
+      if( i<nCol-1 && ctx.cTerm!=ctx.cColSep ){
+        utf8_printf(stderr, "%s:%d: metascan: expected %d columns but found %d\n",
+                        ctx.zFile, startLine, nCol, i+1);
+      }
+    }
+    // keep reading until we hit a line separator (or EOF)
+    if( ctx.cTerm==ctx.cColSep ){
+      do {
+        csv_read_one_field(&ctx);
+      } while( ctx.cTerm==ctx.cColSep );
+      utf8_printf(stderr, "%s:%d: metascan: expected %d columns but found %d - "
+                      "extras ignored\n",
+                      ctx.zFile, startLine, nCol, i);
+    }
+    if (ctx.cTerm==EOF)
+      break;
+  }
+  return 0;
+}
+
 
 int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   struct ShellState ss;
@@ -247,8 +302,6 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   int nSep;                   /* Number of bytes in p->colSeparator[] */
   char *zSql;                 /* An SQL statement */
   ImportCtx sCtx;             /* Reader context */
-  char *(SQLITE_CDECL *xRead)(ImportCtx*); /* Func to read one value */
-  int (SQLITE_CDECL *xCloser)(FILE*);      /* Func to close file */
 
   p->mode = MODE_Csv;
   sqlite3_snprintf(sizeof(p->colSeparator), p->colSeparator, SEP_Comma);
@@ -286,24 +339,7 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   }
   sCtx.zFile = zFile;
   sCtx.nLine = 1;
-  if( sCtx.zFile[0]=='|' ){
-  #ifdef SQLITE_OMIT_POPEN
-    raw_printf(stderr, "Error: pipes are not supported in this OS\n");
-    return 1;
-  #else
-    sCtx.in = popen(sCtx.zFile+1, "r");
-    sCtx.zFile = "<pipe>";
-    xCloser = pclose;
-  #endif
-  }else{
-    sCtx.in = fopen(sCtx.zFile, "rb");
-    xCloser = fclose;
-  }
-  if( p->mode==MODE_Ascii ){
-    xRead = ascii_read_one_field;
-  }else{
-    xRead = csv_read_one_field;
-  }
+  sCtx.in = fopen(sCtx.zFile, "rb");
   if( sCtx.in==0 ){
     utf8_printf(stderr, "Error: cannot open \"%s\"\n", zFile);
     return 1;
@@ -313,7 +349,7 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   zSql = sqlite3_mprintf("SELECT * FROM %s", zTable);
   if( zSql==0 ){
     raw_printf(stderr, "Error: out of memory\n");
-    xCloser(sCtx.in);
+    fclose(sCtx.in);
     return 1;
   }
   nByte = strlen30(zSql);
@@ -322,7 +358,7 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   if( rc && sqlite3_strglob("no such table: *", sqlite3_errmsg(db))==0 ){
     char *zCreate = sqlite3_mprintf("CREATE TABLE %s", zTable);
     char cSep = '(';
-    while( xRead(&sCtx) ){
+    while( csv_read_one_field(&sCtx) ){
       zCreate = sqlite3_mprintf("%z%c\n  \"%w\" TEXT", zCreate, cSep, sCtx.z);
       cSep = ',';
       if( sCtx.cTerm!=sCtx.cColSep ) break;
@@ -330,18 +366,19 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
     if( cSep=='(' ){
       sqlite3_free(zCreate);
       sqlite3_free(sCtx.z);
-      xCloser(sCtx.in);
+      fclose(sCtx.in);
       utf8_printf(stderr,"%s: empty file\n", sCtx.zFile);
       return 1;
     }
     zCreate = sqlite3_mprintf("%z\n)", zCreate);
+    raw_printf(stderr, "%s", zCreate);
     rc = sqlite3_exec(db, zCreate, 0, 0, 0);
     sqlite3_free(zCreate);
     if( rc ){
       utf8_printf(stderr, "CREATE TABLE %s(...) failed: %s\n", zTable,
               sqlite3_errmsg(db));
       sqlite3_free(sCtx.z);
-      xCloser(sCtx.in);
+      fclose(sCtx.in);
       return 1;
     }
     rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
@@ -350,17 +387,41 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   if( rc ){
     if (pStmt) sqlite3_finalize(pStmt);
     utf8_printf(stderr,"Error: %s\n", sqlite3_errmsg(db));
-    xCloser(sCtx.in);
+    fclose(sCtx.in);
     return 1;
   }
   nCol = sqlite3_column_count(pStmt);
   sqlite3_finalize(pStmt);
   pStmt = 0;
   if( nCol==0 ) return 0; /* no columns, no error */
-  zSql = sqlite3_malloc64( nByte*2 + 20 + nCol*2 );
+
+
+  int content_offset = ftell(sCtx.in);
+  std::vector<ColType> colTypes(nCol, CT_NONE);
+  if (metascan(colTypes,sCtx,nCol)!=0) {
+    raw_printf(stderr, "error performing metascan\n");
+    fclose(sCtx.in);
+    return 1;
+  }
+  printf("metascan complete -- column types: ");
+  for (std::vector<ColType>::const_iterator it = colTypes.begin();
+    it != colTypes.end();
+    ++it) {
+    printf("%s ", colTypeName(*it));
+  }
+  printf("\n");
+
+  // rewind to content_offset:
+  if (fseek(sCtx.in, content_offset, SEEK_SET)!=0) {
+    raw_printf(stderr,"error rewinding file\n");
+    fclose(sCtx.in);
+    return 1;
+  }
+
+  zSql = reinterpret_cast<char*>(sqlite3_malloc64( nByte*2 + 20 + nCol*2 ));
   if( zSql==0 ){
     raw_printf(stderr, "Error: out of memory\n");
-    xCloser(sCtx.in);
+    fclose(sCtx.in);
     return 1;
   }
   sqlite3_snprintf(nByte+20, zSql, "INSERT INTO \"%w\" VALUES(?", zTable);
@@ -376,7 +437,7 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   if( rc ){
     utf8_printf(stderr, "Error: %s\n", sqlite3_errmsg(db));
     if (pStmt) sqlite3_finalize(pStmt);
-    xCloser(sCtx.in);
+    fclose(sCtx.in);
     return 1;
   }
   needCommit = sqlite3_get_autocommit(db);
@@ -384,18 +445,12 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   do{
     int startLine = sCtx.nLine;
     for(i=0; i<nCol; i++){
-      char *z = xRead(&sCtx);
+      char *z = csv_read_one_field(&sCtx);
       /*
       ** Did we reach end-of-file before finding any columns?
       ** If so, stop instead of NULL filling the remaining columns.
       */
       if( z==0 && i==0 ) break;
-      /*
-      ** Did we reach end-of-file OR end-of-line before finding any
-      ** columns in ASCII mode?  If so, stop instead of NULL filling
-      ** the remaining columns.
-      */
-      if( p->mode==MODE_Ascii && (z==0 || z[0]==0) && i==0 ) break;
       sqlite3_bind_text(pStmt, i+1, z, -1, SQLITE_TRANSIENT);
       if( i<nCol-1 && sCtx.cTerm!=sCtx.cColSep ){
         utf8_printf(stderr, "%s:%d: expected %d columns but found %d - "
@@ -407,7 +462,7 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
     }
     if( sCtx.cTerm==sCtx.cColSep ){
       do{
-        xRead(&sCtx);
+        csv_read_one_field(&sCtx);
         i++;
       }while( sCtx.cTerm==sCtx.cColSep );
       utf8_printf(stderr, "%s:%d: expected %d columns but found %d - "
@@ -424,7 +479,7 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
     }
   }while( sCtx.cTerm!=EOF );
 
-  xCloser(sCtx.in);
+  fclose(sCtx.in);
   sqlite3_free(sCtx.z);
   sqlite3_finalize(pStmt);
   if( needCommit ) sqlite3_exec(db, "COMMIT", 0, 0, 0);
