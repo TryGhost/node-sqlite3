@@ -29,7 +29,12 @@
               "deps/sqlite3.gyp:sqlite3"
             ]
         }
-        ]
+        ],
+        ['OS=="mac"', {
+            'xcode_settings': {
+                'CLANG_CXX_LIBRARY': 'libc++'
+            }
+        }]
       ],
       "sources": [
         "src/backup.cc",
