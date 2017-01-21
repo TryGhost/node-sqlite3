@@ -687,9 +687,28 @@ NAN_METHOD(Database::Import) {
 
     REQUIRE_ARGUMENT_STRING(0, filename);
     REQUIRE_ARGUMENT_STRING(1, tablename);
-    OPTIONAL_ARGUMENT_FUNCTION(2, callback);
+    REQUIRE_ARGUMENT_OBJECT(2, options);
+    OPTIONAL_ARGUMENT_FUNCTION(3, callback);
 
-    Baton* baton = new ImportBaton(db, callback, *filename, *tablename);
+    /* Unpack options here, because we have access to isolate via
+     * info and its non-obvious to me how to unpack a pure JS
+     * object with Nan
+     */
+    Isolate *isolate = info.GetIsolate();
+    Handle<Array> colIdsJS = Handle<Array>::Cast(
+                               options->Get(String::NewFromUtf8(isolate,"columnIds")));
+
+    std::vector<std::string> colIds;
+    int colCount = colIdsJS->Length();
+    for (int i = 0; i < colCount; i++) {
+      Nan::Utf8String nsColId(colIdsJS->Get(i));
+      std::string colId(*nsColId);
+      colIds.push_back(colId);
+    }
+    printf("read %d columnIds from options", colCount);
+    ImportOptions importOptions(colIds);
+
+    Baton* baton = new ImportBaton(db, callback, *filename, *tablename, importOptions);
     db->Schedule(Work_BeginImport, baton, true);
 
     info.GetReturnValue().Set(info.This());
@@ -708,15 +727,37 @@ void Database::Work_BeginImport(Baton* baton) {
 void Database::Work_Import(uv_work_t* req) {
     ImportBaton* baton = static_cast<ImportBaton*>(req->data);
 
-    printf("Work_Import: \"%s\" --> %s\n",
-      baton->filename.c_str(),
-      baton->tablename.c_str());
-
-    int rc = sqlite_import(baton->db->_handle, baton->filename.c_str(),
-          baton->tablename.c_str());
-
-    // TODO: really need proper check of rc here!
+    ImportResult *ires = sqlite_import(baton->db->_handle,
+          baton->filename.c_str(),
+          baton->tablename.c_str(),
+          baton->options);
+    // TODO: check result!
+    baton->result = ires;
     baton->status = SQLITE_OK;
+}
+
+Local<Array> strVecToJS(std::vector<std::string> const &svec) {
+  Nan::EscapableHandleScope scope;
+
+  Local<Array> result(Nan::New<Array>(svec.size()));
+  std::vector<std::string>::const_iterator it = svec.begin();
+  std::vector<std::string>::const_iterator end = svec.end();
+  for (int i = 0; it < end; ++it, ++i) {
+    Nan::Set(result, i, Nan::New(it->c_str()).ToLocalChecked());
+  }
+
+  return scope.Escape(result);
+}
+
+Local<Object> importResultToJS(ImportResult *ir) {
+  Nan::EscapableHandleScope scope;
+  Local<Object> result = Nan::New<Object>();
+
+  Nan::Set(result, Nan::New("tableName").ToLocalChecked(), Nan::New(ir->tableName.c_str()).ToLocalChecked());
+  Nan::Set(result, Nan::New("columnIds").ToLocalChecked(), strVecToJS(ir->columnIds));
+  Nan::Set(result, Nan::New("columnTypes").ToLocalChecked(), strVecToJS(ir->columnTypes));
+
+  return scope.Escape(result);
 }
 
 void Database::Work_AfterImport(uv_work_t* req) {
@@ -739,8 +780,9 @@ void Database::Work_AfterImport(uv_work_t* req) {
         }
     }
     else if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { Nan::Null() };
-        TRY_CATCH_CALL(db->handle(), cb, 1, argv);
+        Local<Object> impResJS = importResultToJS(baton->result);
+        Local<Value> argv[] = { Nan::Null(), impResJS };
+        TRY_CATCH_CALL(db->handle(), cb, 2, argv);
     }
 
     db->Process();

@@ -10,6 +10,7 @@
 #include <nan.h>
 
 #include "async.h"
+#include "import.h"
 
 using namespace v8;
 
@@ -71,9 +72,16 @@ public:
     struct ImportBaton : Baton {
         std::string filename;
         std::string tablename;
+        ImportOptions options;
+        ImportResult *result;
+
         ImportBaton(Database* db_, Local<Function> cb_,
-          const char* filename_, const char *tablename_) :
-            Baton(db_, cb_), filename(filename_), tablename(tablename_) {}
+          const char* filename_, const char *tablename_, ImportOptions &options_) :
+            Baton(db_, cb_), filename(filename_), tablename(tablename_), options(options_), result(0) {
+        }
+
+        ~ImportBaton() {
+        }
     };
 
     typedef void (*Work_Callback)(Baton* baton);

@@ -9,6 +9,8 @@
 #include <stdarg.h>
 #include <regex>
 #include <vector>
+#include <sstream>
+#include <string>
 
 enum ColType { CT_NONE, CT_INT, CT_REAL, CT_TEXT };
 
@@ -289,13 +291,16 @@ int metascan(std::vector<ColType> &colTypes, ImportCtx &ctx, int nCol) {
   return 0;
 }
 
-
-int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
+ImportResult *sqlite_import(
+  sqlite3 *db,
+  const char *zFile,      // CSV file to import
+  const char *zTable,     // sqlite destination table name
+  ImportOptions &options  // import options
+) {
   struct ShellState ss;
   struct ShellState *p = &ss;  /* TODO: replace */
   int rc = 0;
   sqlite3_stmt *pStmt = NULL; /* A statement */
-  int nCol;                   /* Number of columns in the table */
   int nByte;                  /* Number of bytes in an SQL string */
   int i, j;                   /* Loop counters */
   int needCommit;             /* True to COMMIT or ROLLBACK at end */
@@ -312,17 +317,17 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   if( nSep==0 ){
     raw_printf(stderr,
                "Error: non-null column separator required for import\n");
-    return 1;
+    return NULL;
   }
   if( nSep>1 ){
     raw_printf(stderr, "Error: multi-character column separators not allowed"
                     " for import\n");
-    return 1;
+    return NULL;
   }
   nSep = strlen30(p->rowSeparator);
   if( nSep==0 ){
     raw_printf(stderr, "Error: non-null row separator required for import\n");
-    return 1;
+    return NULL;
   }
   if( nSep==2 && p->mode==MODE_Csv && strcmp(p->rowSeparator, SEP_CrLf)==0 ){
     /* When importing CSV (only), if the row separator is set to the
@@ -335,14 +340,14 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   if( nSep>1 ){
     raw_printf(stderr, "Error: multi-character row separators not allowed"
                     " for import\n");
-    return 1;
+    return NULL;
   }
   sCtx.zFile = zFile;
   sCtx.nLine = 1;
   sCtx.in = fopen(sCtx.zFile, "rb");
   if( sCtx.in==0 ){
     utf8_printf(stderr, "Error: cannot open \"%s\"\n", zFile);
-    return 1;
+    return NULL;
   }
   sCtx.cColSep = p->colSeparator[0];
   sCtx.cRowSep = p->rowSeparator[0];
@@ -350,79 +355,88 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   if( zSql==0 ){
     raw_printf(stderr, "Error: out of memory\n");
     fclose(sCtx.in);
-    return 1;
+    return NULL;
   }
+
   nByte = strlen30(zSql);
+  std::vector<std::string> colNames;
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  import_append_char(&sCtx, 0);    /* To ensure sCtx.z is allocated */
-  if( rc && sqlite3_strglob("no such table: *", sqlite3_errmsg(db))==0 ){
-    char *zCreate = sqlite3_mprintf("CREATE TABLE %s", zTable);
-    char cSep = '(';
-    while( csv_read_one_field(&sCtx) ){
-      zCreate = sqlite3_mprintf("%z%c\n  \"%w\" TEXT", zCreate, cSep, sCtx.z);
-      cSep = ',';
-      if( sCtx.cTerm!=sCtx.cColSep ) break;
-    }
-    if( cSep=='(' ){
-      sqlite3_free(zCreate);
-      sqlite3_free(sCtx.z);
-      fclose(sCtx.in);
-      utf8_printf(stderr,"%s: empty file\n", sCtx.zFile);
-      return 1;
-    }
-    zCreate = sqlite3_mprintf("%z\n)", zCreate);
-    raw_printf(stderr, "%s", zCreate);
-    rc = sqlite3_exec(db, zCreate, 0, 0, 0);
-    sqlite3_free(zCreate);
-    if( rc ){
-      utf8_printf(stderr, "CREATE TABLE %s(...) failed: %s\n", zTable,
-              sqlite3_errmsg(db));
-      sqlite3_free(sCtx.z);
-      fclose(sCtx.in);
-      return 1;
-    }
-    rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
+  if (!(rc && sqlite3_strglob("no such table: *", sqlite3_errmsg(db))==0)) {
+    utf8_printf(stderr,"Error: %d: %s\n", rc, sqlite3_errmsg(db));
+    sqlite3_free(zSql);
+    fclose(sCtx.in);
+    return NULL;
   }
   sqlite3_free(zSql);
-  if( rc ){
-    if (pStmt) sqlite3_finalize(pStmt);
-    utf8_printf(stderr,"Error: %s\n", sqlite3_errmsg(db));
-    fclose(sCtx.in);
-    return 1;
-  }
-  nCol = sqlite3_column_count(pStmt);
-  sqlite3_finalize(pStmt);
-  pStmt = 0;
-  if( nCol==0 ) return 0; /* no columns, no error */
 
+  import_append_char(&sCtx, 0);    /* To ensure sCtx.z is allocated */
+  while (csv_read_one_field(&sCtx)) {
+    colNames.push_back(std::string(sCtx.z));
+    if( sCtx.cTerm!=sCtx.cColSep ) break;
+  }
+  int nCol = colNames.size();
+  if (nCol==0) {
+    sqlite3_free(sCtx.z);
+    fclose(sCtx.in);
+    utf8_printf(stderr,"%s: empty file\n", sCtx.zFile);
+    return NULL;
+  }
+  if (options.columnIds.size() > 0) {
+    // column ids provided via options -- let's use those
+    // TODO: validate that columnNames.size() == columnIds.size()
+    colNames = options.columnIds;
+  }
 
   int content_offset = ftell(sCtx.in);
   std::vector<ColType> colTypes(nCol, CT_NONE);
   if (metascan(colTypes,sCtx,nCol)!=0) {
     raw_printf(stderr, "error performing metascan\n");
     fclose(sCtx.in);
-    return 1;
+    return NULL;
   }
+  std::vector<std::string> colTypeNames;
   printf("metascan complete -- column types: ");
   for (std::vector<ColType>::const_iterator it = colTypes.begin();
     it != colTypes.end();
     ++it) {
-    printf("%s ", colTypeName(*it));
+    std::string typeName(colTypeName(*it));
+    printf("%s ", typeName.c_str());
+    colTypeNames.push_back(typeName);
   }
   printf("\n");
+
+  std::stringstream ssCreate;
+  ssCreate << "CREATE TABLE " << zTable;
+  char cSep = '(';
+  std::vector<std::string>::const_iterator nmit = colNames.begin();
+  std::vector<ColType>::const_iterator tyit = colTypes.begin();
+  for ( ; nmit != colNames.end() && tyit != colTypes.end(); ++nmit, ++tyit) {
+    ssCreate << cSep << "\n \"" << *nmit << "\" " << colTypeName(*tyit);
+    cSep = ',';
+  }
+  ssCreate << "\n)";
+  raw_printf(stderr, "%s\n", ssCreate.str().c_str());
+  rc = sqlite3_exec(db, ssCreate.str().c_str(), 0, 0, 0);
+  if( rc ){
+    utf8_printf(stderr, "CREATE TABLE %s(...) failed: %s\n", zTable,
+            sqlite3_errmsg(db));
+    sqlite3_free(sCtx.z);
+    fclose(sCtx.in);
+    return NULL;
+  }
 
   // rewind to content_offset:
   if (fseek(sCtx.in, content_offset, SEEK_SET)!=0) {
     raw_printf(stderr,"error rewinding file\n");
     fclose(sCtx.in);
-    return 1;
+    return NULL;
   }
 
   zSql = reinterpret_cast<char*>(sqlite3_malloc64( nByte*2 + 20 + nCol*2 ));
   if( zSql==0 ){
     raw_printf(stderr, "Error: out of memory\n");
     fclose(sCtx.in);
-    return 1;
+    return NULL;
   }
   sqlite3_snprintf(nByte+20, zSql, "INSERT INTO \"%w\" VALUES(?", zTable);
   j = strlen30(zSql);
@@ -438,7 +452,7 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
     utf8_printf(stderr, "Error: %s\n", sqlite3_errmsg(db));
     if (pStmt) sqlite3_finalize(pStmt);
     fclose(sCtx.in);
-    return 1;
+    return NULL;
   }
   needCommit = sqlite3_get_autocommit(db);
   if( needCommit ) sqlite3_exec(db, "BEGIN", 0, 0, 0);
@@ -484,5 +498,7 @@ int sqlite_import(sqlite3 *db, const char *zFile, const char *zTable) {
   sqlite3_finalize(pStmt);
   if( needCommit ) sqlite3_exec(db, "COMMIT", 0, 0, 0);
 
-  return 0;
+  ImportResult *ires = new ImportResult(zTable, colNames, colTypeNames);
+
+  return ires;
 }

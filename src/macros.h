@@ -24,6 +24,11 @@ const char* sqlite_authorizer_string(int type);
     }                                                                          \
     Local<Function> var = Local<Function>::Cast(info[i]);
 
+#define REQUIRE_ARGUMENT_OBJECT(i, var)                                        \
+    if (info.Length() <= (i) || !info[i]->IsObject()) {                        \
+        return Nan::ThrowTypeError("Argument " #i " must be an object");       \
+    }                                                                          \
+    Local<Object> var = info[i]->ToObject();
 
 #define REQUIRE_ARGUMENT_STRING(i, var)                                        \
     if (info.Length() <= (i) || !info[i]->IsString()) {                        \
