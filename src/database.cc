@@ -705,7 +705,6 @@ NAN_METHOD(Database::Import) {
       std::string colId(*nsColId);
       colIds.push_back(colId);
     }
-    printf("read %d columnIds from options", colCount);
     ImportOptions importOptions(colIds);
 
     Baton* baton = new ImportBaton(db, callback, *filename, *tablename, importOptions);
@@ -756,7 +755,7 @@ Local<Object> importResultToJS(ImportResult *ir) {
   Nan::Set(result, Nan::New("tableName").ToLocalChecked(), Nan::New(ir->tableName.c_str()).ToLocalChecked());
   Nan::Set(result, Nan::New("columnIds").ToLocalChecked(), strVecToJS(ir->columnIds));
   Nan::Set(result, Nan::New("columnTypes").ToLocalChecked(), strVecToJS(ir->columnTypes));
-
+  Nan::Set(result, Nan::New("rowCount").ToLocalChecked(), Nan::New(ir->rowCount));
   return scope.Escape(result);
 }
 

@@ -17,10 +17,11 @@ struct ImportResult {
   std::string tableName;
   std::vector<std::string> columnIds;
   std::vector<std::string> columnTypes;
+  unsigned int rowCount;
 
   ImportResult(std::string const &tableName_, std::vector<std::string> const &columnIds_,
-    std::vector<std::string> const &columnTypes_) :
-    tableName(tableName_), columnIds(columnIds_), columnTypes(columnTypes_) { }
+    std::vector<std::string> const &columnTypes_, unsigned int rowCount_) :
+    tableName(tableName_), columnIds(columnIds_), columnTypes(columnTypes_), rowCount(rowCount_) { }
 };
 
 ImportResult *sqlite_import(

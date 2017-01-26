@@ -395,15 +395,12 @@ ImportResult *sqlite_import(
     return NULL;
   }
   std::vector<std::string> colTypeNames;
-  printf("metascan complete -- column types: ");
   for (std::vector<ColType>::const_iterator it = colTypes.begin();
     it != colTypes.end();
     ++it) {
     std::string typeName(colTypeName(*it));
-    printf("%s ", typeName.c_str());
     colTypeNames.push_back(typeName);
   }
-  printf("\n");
 
   std::stringstream ssCreate;
   ssCreate << "CREATE TABLE " << zTable;
@@ -415,7 +412,7 @@ ImportResult *sqlite_import(
     cSep = ',';
   }
   ssCreate << "\n)";
-  raw_printf(stderr, "%s\n", ssCreate.str().c_str());
+  // raw_printf(stderr, "%s\n", ssCreate.str().c_str());
   rc = sqlite3_exec(db, ssCreate.str().c_str(), 0, 0, 0);
   if( rc ){
     utf8_printf(stderr, "CREATE TABLE %s(...) failed: %s\n", zTable,
@@ -456,6 +453,7 @@ ImportResult *sqlite_import(
   }
   needCommit = sqlite3_get_autocommit(db);
   if( needCommit ) sqlite3_exec(db, "BEGIN", 0, 0, 0);
+  unsigned int rowCount = 0;
   do{
     int startLine = sCtx.nLine;
     for(i=0; i<nCol; i++){
@@ -490,6 +488,7 @@ ImportResult *sqlite_import(
         utf8_printf(stderr, "%s:%d: INSERT failed: %s\n", sCtx.zFile,
                     startLine, sqlite3_errmsg(db));
       }
+      rowCount++;
     }
   }while( sCtx.cTerm!=EOF );
 
@@ -498,7 +497,7 @@ ImportResult *sqlite_import(
   sqlite3_finalize(pStmt);
   if( needCommit ) sqlite3_exec(db, "COMMIT", 0, 0, 0);
 
-  ImportResult *ires = new ImportResult(zTable, colNames, colTypeNames);
+  ImportResult *ires = new ImportResult(zTable, colNames, colTypeNames, rowCount);
 
   return ires;
 }
