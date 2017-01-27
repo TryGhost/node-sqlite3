@@ -729,10 +729,15 @@ void Database::Work_Import(uv_work_t* req) {
     ImportResult *ires = sqlite_import(baton->db->_handle,
           baton->filename.c_str(),
           baton->tablename.c_str(),
-          baton->options);
-    // TODO: check result!
+          baton->options,
+          baton->message
+        );
     baton->result = ires;
-    baton->status = SQLITE_OK;
+    if (!ires) {
+      baton->status = SQLITE_ERROR;
+    } else {
+      baton->status = SQLITE_OK;
+    }
 }
 
 Local<Array> strVecToJS(std::vector<std::string> const &svec) {

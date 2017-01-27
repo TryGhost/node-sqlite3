@@ -28,7 +28,8 @@ ImportResult *sqlite_import(
   sqlite3 *db,
   const char *zFile,      // CSV file to import
   const char *zTable,     // sqlite destination table name
-  ImportOptions &options  // import options
+  ImportOptions &options,  // import options
+  std::string &errMsg      // Set in case of error
 );
 
 #endif

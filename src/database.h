@@ -77,7 +77,8 @@ public:
 
         ImportBaton(Database* db_, Local<Function> cb_,
           const char* filename_, const char *tablename_, ImportOptions &options_) :
-            Baton(db_, cb_), filename(filename_), tablename(tablename_), options(options_), result(0) {
+            Baton(db_, cb_), filename(filename_), tablename(tablename_),
+            options(options_), result(0) {
         }
 
         ~ImportBaton() {
