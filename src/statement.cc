@@ -25,6 +25,7 @@ NAN_MODULE_INIT(Statement::Init) {
     Nan::SetPrototypeMethod(t, "all", All);
     Nan::SetPrototypeMethod(t, "each", Each);
     Nan::SetPrototypeMethod(t, "reset", Reset);
+    Nan::SetPrototypeMethod(t, "expandedSql", ExpandedSql);
     Nan::SetPrototypeMethod(t, "finalize", Finalize);
 
     constructor_template.Reset(t);
@@ -824,6 +825,30 @@ NAN_METHOD(Statement::Finalize) {
     stmt->Schedule(Finalize, baton);
 
     info.GetReturnValue().Set(stmt->db->handle());
+}
+
+NAN_METHOD(Statement::ExpandedSql) {
+    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+    char* buf = stmt->ExpandedSql();
+    Nan::MaybeLocal<v8::String> sql = Nan::New<v8::String>(buf, strlen(buf));
+
+    // Need to free the memory using `sqlite3_free`.
+    // See http://sqlite.org/c3ref/expanded_sql.html for more info.
+    if (buf) {
+        sqlite3_free(buf);
+    }
+
+    if (sql.IsEmpty()) {
+        info.GetReturnValue().Set(Nan::EmptyString());
+    }
+    else {
+        info.GetReturnValue().Set(sql.ToLocalChecked());
+    }
+}
+
+// Remember to free the returned buffer with `sqlite3_free`.
+char* Statement::ExpandedSql() {
+    return sqlite3_expanded_sql(_handle);
 }
 
 void Statement::Finalize(Baton* baton) {

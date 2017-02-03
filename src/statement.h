@@ -206,6 +206,7 @@ public:
     WORK_DEFINITION(Each);
     WORK_DEFINITION(Reset);
 
+    static NAN_METHOD(ExpandedSql);
     static NAN_METHOD(Finalize);
 
 protected:
@@ -229,6 +230,9 @@ protected:
     void Process();
     void CleanQueue();
     template <class T> static void Error(T* baton);
+
+    char* ExpandedSql();
+
 
 protected:
     Database* db;
