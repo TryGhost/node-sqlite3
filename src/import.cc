@@ -18,9 +18,13 @@ enum ColType { CT_NONE, CT_INT, CT_REAL, CT_TEXT };
 // Probably conservative by an order of magnitude; tune with real corpus of CSVs.
 const int METASCAN_ROWS = 1024;
 
+/* At some point it might be useful to pass back the fact that
+ * metascan resulted in a column having type CT_NONE.  We'll
+ * use 'text' for now though
+ */
 const char *colTypeName(ColType ct) {
   switch (ct) {
-    case CT_NONE: return "NONE";
+    case CT_NONE: return "text";
     case CT_INT:  return "integer";
     case CT_REAL: return "real";
     case CT_TEXT: return "text";
