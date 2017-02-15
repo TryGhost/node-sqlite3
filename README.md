@@ -49,6 +49,7 @@ db.close();
  - Extensive [debugging support](https://github.com/mapbox/node-sqlite3/wiki/Debugging)
  - [Query serialization](https://github.com/mapbox/node-sqlite3/wiki/Control-Flow) API
  - [Extension support](https://github.com/mapbox/node-sqlite3/wiki/Extensions)
+ - Promise support
  - Big test suite
  - Written in modern C++ and tested for memory leaks
  - Bundles Sqlite3 3.15.0 as a fallback if the installing system doesn't include SQLite
@@ -180,6 +181,7 @@ In sqlite3's directory (where its `package.json` resides) run the following:
 * [Audrius Kažukauskas](https://github.com/audriusk)
 * [Johannes Schauer](https://github.com/pyneo)
 * [Mithgol](https://github.com/Mithgol)
+* [Aminadav Glickshtein](https://github.com/aminadav)
 
 # Acknowledgments
 
