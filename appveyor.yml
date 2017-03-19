@@ -57,6 +57,10 @@ environment:
       platform: x64
       msvs_toolset: 14
       TOOLSET_ARGS: --dist-url=https://s3.amazonaws.com/mapbox/node-cpp11 --toolset=v140
+    - nodejs_version: 6
+      platform: x64
+      msvs_toolset: 12
+      TOOLSET_ARGS: --runtime=electron --target=1.6.0 --dist-url=https://atom.io/download/electron
 
 os: Visual Studio 2015
 
