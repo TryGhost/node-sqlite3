@@ -7,8 +7,8 @@ ECHO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %~f0 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SET PATH=%CD%;%PATH%
 SET msvs_version=2013
 IF "%msvs_toolset%"=="14" SET msvs_version=2015
-IF NOT "%NODE_RUNTIME%"=="" SET TOOLSET_ARGS="%TOOLSET_ARGS% --runtime=%NODE_RUNTIME%"
-IF NOT "%NODE_RUNTIME_VERSION%"=="" SET TOOLSET_ARGS="%TOOLSET_ARGS% --target=%NODE_RUNTIME_VERSION%"
+IF NOT "%NODE_RUNTIME%"=="" SET "TOOLSET_ARGS=%TOOLSET_ARGS% --runtime=%NODE_RUNTIME%"
+IF NOT "%NODE_RUNTIME_VERSION%"=="" SET "TOOLSET_ARGS=%TOOLSET_ARGS% --target=%NODE_RUNTIME_VERSION%"
 
 ECHO APPVEYOR^: %APPVEYOR%
 ECHO nodejs_version^: %nodejs_version%
