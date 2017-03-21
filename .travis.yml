@@ -94,6 +94,14 @@ matrix:
      - os: osx
        compiler: clang
        env: NODE_VERSION="0.10" # node abi 11
+     # electron Linux
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.6.2"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
 
 env:
   global:
