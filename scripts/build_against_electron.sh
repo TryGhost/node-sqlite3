@@ -17,7 +17,7 @@ function publish() {
 }
 
 function electron_pretest() {
-    npm install -g electron
+    npm install -g electron@${ELECTRON_VERSION}
     npm install -g electron-mocha
     sh -e /etc/init.d/xvfb start
     sleep 3

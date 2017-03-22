@@ -62,13 +62,13 @@ environment:
       platform: x64
       msvs_toolset: 12
       NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 1.6.3
+      NODE_RUNTIME_VERSION: 1.6.2
       TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
     - nodejs_version: 6
       platform: x86
       msvs_toolset: 12
       NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 1.6.3
+      NODE_RUNTIME_VERSION: 1.6.2
       TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
     - nodejs_version: 6
       platform: x64
