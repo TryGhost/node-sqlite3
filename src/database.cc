@@ -705,7 +705,18 @@ NAN_METHOD(Database::Import) {
       std::string colId(*nsColId);
       colIds.push_back(colId);
     }
-    ImportOptions importOptions(colIds);
+
+    char delimChar = ',';
+
+    if (options->Has(String::NewFromUtf8(isolate,"delimiter"))) {
+      Nan::Utf8String delimNanStr(options->Get(String::NewFromUtf8(isolate,"delimiter")));
+      if (delimNanStr.length() != 1) {
+        return Nan::ThrowError("options.delimeter must be a string of length 1");
+      }
+      delimChar = (*delimNanStr)[0];
+    }
+
+    ImportOptions importOptions(colIds, delimChar);
 
     Baton* baton = new ImportBaton(db, callback, *filename, *tablename, importOptions);
     db->Schedule(Work_BeginImport, baton, true);

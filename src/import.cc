@@ -1,6 +1,5 @@
 
 #include "import.h"
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -315,7 +314,7 @@ ImportResult *sqlite_import(
   std::stringstream ssErr;    // string stream for error messages
 
   p->mode = MODE_Csv;
-  sqlite3_snprintf(sizeof(p->colSeparator), p->colSeparator, SEP_Comma);
+  sqlite3_snprintf(sizeof(p->colSeparator), p->colSeparator, "%c", options.columnDelimiter);
   sqlite3_snprintf(sizeof(p->rowSeparator), p->rowSeparator, SEP_CrLf);
   seenInterrupt = 0;
   memset(&sCtx, 0, sizeof(sCtx));

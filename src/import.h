@@ -8,9 +8,10 @@
 
 struct ImportOptions {
   std::vector<std::string> columnIds;
+  char columnDelimiter;
 
-  ImportOptions(std::vector<std::string> const &columnIds_) :
-  columnIds(columnIds_) { }
+  ImportOptions(std::vector<std::string> const &columnIds_,const char columnDelimiter_) :
+  columnIds(columnIds_), columnDelimiter(columnDelimiter_) { }
 };
 
 struct ImportResult {
