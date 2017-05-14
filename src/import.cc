@@ -134,6 +134,7 @@ struct ImportCtx {
   int cTerm;          /* Character that terminated the most recent field */
   int cColSep;        /* The column separator character.  (Usually ",") */
   int cRowSep;        /* The row separator character.  (Usually "\n") */
+  bool isNull;         /* non-zero iff null field */
 };
 
 /* Append a single byte to z[] */
@@ -170,6 +171,7 @@ static char *csv_read_one_field(ImportCtx *p){
   c = fgetc(p->in);
   if( c==EOF || seenInterrupt ){
     p->cTerm = EOF;
+    p->isNull = true;
     return 0;
   }
   if( c=='"' ){
@@ -177,6 +179,7 @@ static char *csv_read_one_field(ImportCtx *p){
     int startLine = p->nLine;
     int cQuote = c;
     pc = ppc = 0;
+    p->isNull = false;
     while( 1 ){
       c = fgetc(p->in);
       if( c==rSep ) p->nLine++;
@@ -219,6 +222,11 @@ static char *csv_read_one_field(ImportCtx *p){
       if( p->n>0 && p->z[p->n-1]=='\r' ) p->n--;
     }
     p->cTerm = c;
+    if (p->n == 0) {
+      p->isNull = true;
+    } else {
+      p->isNull = false;
+    }
   }
   if( p->z ) p->z[p->n] = 0;
   return p->z;
@@ -468,7 +476,11 @@ ImportResult *sqlite_import(
       ** If so, stop instead of NULL filling the remaining columns.
       */
       if( z==0 && i==0 ) break;
-      sqlite3_bind_text(pStmt, i+1, z, -1, SQLITE_TRANSIENT);
+      if (sCtx.isNull) {
+        sqlite3_bind_null(pStmt, i+1);
+      } else {
+        sqlite3_bind_text(pStmt, i+1, z, -1, SQLITE_TRANSIENT);
+      }
       if( i<nCol-1 && sCtx.cTerm!=sCtx.cColSep ){
         utf8_printf(stderr, "%s:%d: expected %d columns but found %d - "
                         "filling the rest with NULL\n",
