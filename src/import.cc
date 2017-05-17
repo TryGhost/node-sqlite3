@@ -21,27 +21,6 @@ extern char *sqlite3_win32_utf8_to_mbcs_v2(const char *, int);
 extern LPWSTR sqlite3_win32_utf8_to_unicode(const char *zText);
 #endif
 
-/* On Windows, we normally run with output mode of TEXT so that \n characters
-** are automatically translated into \r\n.  However, this behavior needs
-** to be disabled in some cases (ex: when generating CSV output and when
-** rendering quoted strings that contain \n characters).  The following
-** routines take care of that.
-*/
-#if defined(_WIN32) || defined(WIN32)
-static void setBinaryMode(FILE *file, int isOutput){
-  if( isOutput ) fflush(file);
-  _setmode(_fileno(file), _O_BINARY);
-}
-static void setTextMode(FILE *file, int isOutput){
-  if( isOutput ) fflush(file);
-  _setmode(_fileno(file), _O_TEXT);
-}
-#else
-# define setBinaryMode(X,Y)
-# define setTextMode(X,Y)
-#endif
-
-
 enum ColType { CT_NONE, CT_INT, CT_REAL, CT_TEXT };
 
 // Number of rows to examine when determining column types
