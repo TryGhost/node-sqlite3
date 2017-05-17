@@ -11,16 +11,6 @@
 #include <sstream>
 #include <string>
 
-#if defined(_WIN32) || defined(WIN32)
-#include <windows.h>
-
-/* string conversion routines only needed on Win32 */
-extern char *sqlite3_win32_unicode_to_utf8(LPCWSTR);
-extern char *sqlite3_win32_mbcs_to_utf8_v2(const char *, int);
-extern char *sqlite3_win32_utf8_to_mbcs_v2(const char *, int);
-extern LPWSTR sqlite3_win32_utf8_to_unicode(const char *zText);
-#endif
-
 enum ColType { CT_NONE, CT_INT, CT_REAL, CT_TEXT };
 
 // Number of rows to examine when determining column types
@@ -41,36 +31,9 @@ const char *colTypeName(ColType ct) {
   }
 }
 
-/*
-** On Windows systems we have to know if standard output is a console
-** in order to translate UTF-8 into MBCS.  The following variable is
-** true if translation is required.
-*/
-static int stdout_is_console = 1;
 
-/*
-** Render output like fprintf().  Except, if the output is going to the
-** console and if this is running on a Windows machine, translate the
-** output from UTF-8 into MBCS.
-*/
-#if defined(_WIN32) || defined(WIN32)
-void utf8_printf(FILE *out, const char *zFormat, ...){
-  va_list ap;
-  va_start(ap, zFormat);
-  if( stdout_is_console && (out==stdout || out==stderr) ){
-    char *z1 = sqlite3_vmprintf(zFormat, ap);
-    char *z2 = sqlite3_win32_utf8_to_mbcs_v2(z1, 0);
-    sqlite3_free(z1);
-    fputs(z2, out);
-    sqlite3_free(z2);
-  }else{
-    vfprintf(out, zFormat, ap);
-  }
-  va_end(ap);
-}
-#elif !defined(utf8_printf)
-# define utf8_printf fprintf
-#endif
+#define utf8_printf fprintf
+
 
 /*
 ** Render output like fprintf().  This should not be used on anything that
