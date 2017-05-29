@@ -410,6 +410,8 @@ ImportResult *sqlite_import(
   if( rc ){
     utf8_printf(stderr, "CREATE TABLE %s(...) failed: %s\n", zTable,
             sqlite3_errmsg(db));
+    ssErr << "CREATE TABLE " << zTable << "(...) failed: " << sqlite3_errmsg(db);
+    errMsg = ssErr.str();
     sqlite3_free(sCtx.z);
     fclose(sCtx.in);
     return NULL;
@@ -417,7 +419,7 @@ ImportResult *sqlite_import(
 
   // rewind to content_offset:
   if (fseek(sCtx.in, content_offset, SEEK_SET)!=0) {
-    raw_printf(stderr,"error rewinding file\n");
+    errMsg = "error rewinding file";
     fclose(sCtx.in);
     return NULL;
   }
