@@ -7,7 +7,9 @@
   "targets": [
     {
       "target_name": "<(module_name)",
-      "include_dirs": ["<!(node -e \"require('nan')\")"],
+      "cflags!": [ "-fno-exceptions" ],
+      "cflags_cc!": [ "-fno-exceptions" ],
+      "include_dirs": ["<!@(node -p \"require('node-addon-api').include\")"],
       "conditions": [
         ["sqlite != 'internal'", {
             "include_dirs": [ "<(sqlite)/include" ],

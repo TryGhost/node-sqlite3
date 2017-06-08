@@ -12,10 +12,11 @@
 #include <vector>
 
 #include <sqlite3.h>
-#include <nan.h>
+#include <napi.h>
+#include <uv.h>
 
-using namespace v8;
-using namespace node;
+using namespace Napi;
+using namespace Napi;
 
 namespace node_sqlite3 {
 
@@ -71,20 +72,20 @@ typedef Row Parameters;
 
 
 
-class Statement : public Nan::ObjectWrap {
+class Statement : public Napi::ObjectWrap<Statement> {
 public:
-    static Nan::Persistent<FunctionTemplate> constructor_template;
+    static Napi::FunctionReference constructor;
 
-    static NAN_MODULE_INIT(Init);
-    static NAN_METHOD(New);
+    static void Init(Napi::Env env, Napi::Object exports, Napi::Object module);
+    static Napi::Value New(const Napi::CallbackInfo& info);
 
     struct Baton {
         uv_work_t request;
         Statement* stmt;
-        Nan::Persistent<Function> callback;
+        Napi::Persistent<Function> callback;
         Parameters parameters;
 
-        Baton(Statement* stmt_, Local<Function> cb_) : stmt(stmt_) {
+        Baton(Statement* stmt_, Napi::Function cb_) : stmt(stmt_) {
             stmt->Ref();
             request.data = this;
             callback.Reset(cb_);
@@ -100,20 +101,20 @@ public:
     };
 
     struct RowBaton : Baton {
-        RowBaton(Statement* stmt_, Local<Function> cb_) :
+        RowBaton(Statement* stmt_, Napi::Function cb_) :
             Baton(stmt_, cb_) {}
         Row row;
     };
 
     struct RunBaton : Baton {
-        RunBaton(Statement* stmt_, Local<Function> cb_) :
+        RunBaton(Statement* stmt_, Napi::Function cb_) :
             Baton(stmt_, cb_), inserted_id(0), changes(0) {}
         sqlite3_int64 inserted_id;
         int changes;
     };
 
     struct RowsBaton : Baton {
-        RowsBaton(Statement* stmt_, Local<Function> cb_) :
+        RowsBaton(Statement* stmt_, Napi::Function cb_) :
             Baton(stmt_, cb_) {}
         Rows rows;
     };
@@ -121,10 +122,10 @@ public:
     struct Async;
 
     struct EachBaton : Baton {
-        Nan::Persistent<Function> completed;
+        Napi::Persistent<Function> completed;
         Async* async; // Isn't deleted when the baton is deleted.
 
-        EachBaton(Statement* stmt_, Local<Function> cb_) :
+        EachBaton(Statement* stmt_, Napi::Function cb_) :
             Baton(stmt_, cb_) {}
         virtual ~EachBaton() {
             completed.Reset();
@@ -134,7 +135,7 @@ public:
     struct PrepareBaton : Database::Baton {
         Statement* stmt;
         std::string sql;
-        PrepareBaton(Database* db_, Local<Function> cb_, Statement* stmt_) :
+        PrepareBaton(Database* db_, Napi::Function cb_, Statement* stmt_) :
             Baton(db_, cb_), stmt(stmt_) {
             stmt->Ref();
         }
@@ -166,8 +167,8 @@ public:
 
         // Store the callbacks here because we don't have
         // access to the baton in the async callback.
-        Nan::Persistent<Function> item_cb;
-        Nan::Persistent<Function> completed_cb;
+        Napi::Persistent<Function> item_cb;
+        Napi::Persistent<Function> completed_cb;
 
         Async(Statement* st, uv_async_cb async_cb) :
                 stmt(st), completed(false), retrieved(0) {
@@ -185,7 +186,7 @@ public:
         }
     };
 
-    Statement(Database* db_) : Nan::ObjectWrap(),
+    Statement(Database* db_) : Napi::ObjectWrap<Statement>(),
             db(db_),
             _handle(NULL),
             status(SQLITE_OK),
@@ -206,7 +207,7 @@ public:
     WORK_DEFINITION(Each);
     WORK_DEFINITION(Reset);
 
-    static NAN_METHOD(Finalize);
+    static Napi::Value Finalize(const Napi::CallbackInfo& info);
 
 protected:
     static void Work_BeginPrepare(Database::Baton* baton);
@@ -219,12 +220,12 @@ protected:
     static void Finalize(Baton* baton);
     void Finalize();
 
-    template <class T> inline Values::Field* BindParameter(const Local<Value> source, T pos);
-    template <class T> T* Bind(Nan::NAN_METHOD_ARGS_TYPE info, int start = 0, int end = -1);
+    template <class T> inline Values::Field* BindParameter(const Napi::Value source, T pos);
+    template <class T> T* Bind(const Napi::CallbackInfo& info, int start = 0, int end = -1);
     bool Bind(const Parameters &parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
-    static Local<Object> RowToJS(Row* row);
+    static Napi::Object RowToJS(Row* row);
     void Schedule(Work_Callback callback, Baton* baton);
     void Process();
     void CleanQueue();

@@ -1,5 +1,6 @@
 #include <string.h>
-#include <node.h>
+#include <napi.h>
+#include <uv.h>
 #include <node_buffer.h>
 #include <node_version.h>
 
@@ -9,27 +10,27 @@
 
 using namespace node_sqlite3;
 
-Nan::Persistent<FunctionTemplate> Statement::constructor_template;
+Napi::FunctionReference Statement::constructor;
 
-NAN_MODULE_INIT(Statement::Init) {
-    Nan::HandleScope scope;
+void Statement::Init(Napi::Env env, Napi::Object exports, Napi::Object module) {
+    Napi::HandleScope scope(env);
 
-    Local<FunctionTemplate> t = Nan::New<FunctionTemplate>(New);
+    Local<Napi::FunctionReference> t = Napi::Napi::FunctionReference::New(env, New);
 
-    t->InstanceTemplate()->SetInternalFieldCount(1);
-    t->SetClassName(Nan::New("Statement").ToLocalChecked());
 
-    Nan::SetPrototypeMethod(t, "bind", Bind);
-    Nan::SetPrototypeMethod(t, "get", Get);
-    Nan::SetPrototypeMethod(t, "run", Run);
-    Nan::SetPrototypeMethod(t, "all", All);
-    Nan::SetPrototypeMethod(t, "each", Each);
-    Nan::SetPrototypeMethod(t, "reset", Reset);
-    Nan::SetPrototypeMethod(t, "finalize", Finalize);
+    t->SetClassName(Napi::String::New(env, "Statement"));
 
-    constructor_template.Reset(t);
-    Nan::Set(target, Nan::New("Statement").ToLocalChecked(),
-        Nan::GetFunction(t).ToLocalChecked());
+      InstanceMethod("bind", &Bind),
+      InstanceMethod("get", &Get),
+      InstanceMethod("run", &Run),
+      InstanceMethod("all", &All),
+      InstanceMethod("each", &Each),
+      InstanceMethod("reset", &Reset),
+      InstanceMethod("finalize", &Finalize),
+
+    constructor.Reset(t);
+    (exports).Set( Napi::String::New(env, "Statement"),
+        Napi::GetFunction(t));
 }
 
 void Statement::Process() {
@@ -60,56 +61,56 @@ void Statement::Schedule(Work_Callback callback, Baton* baton) {
 }
 
 template <class T> void Statement::Error(T* baton) {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     Statement* stmt = baton->stmt;
     // Fail hard on logic errors.
     assert(stmt->status != 0);
-    EXCEPTION(Nan::New(stmt->message.c_str()).ToLocalChecked(), stmt->status, exception);
+    EXCEPTION(Napi::New(env, stmt->message.c_str()), stmt->status, exception);
 
-    Local<Function> cb = Nan::New(baton->callback);
+    Napi::Function cb = Napi::New(env, baton->callback);
 
     if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { exception };
+        Napi::Value argv[] = { exception };
         TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
     }
     else {
-        Local<Value> argv[] = { Nan::New("error").ToLocalChecked(), exception };
+        Napi::Value argv[] = { Napi::String::New(env, "error"), exception };
         EMIT_EVENT(stmt->handle(), 2, argv);
     }
 }
 
 // { Database db, String sql, Array params, Function callback }
-NAN_METHOD(Statement::New) {
+Napi::Value Statement::New(const Napi::CallbackInfo& info) {
     if (!info.IsConstructCall()) {
-        return Nan::ThrowTypeError("Use the new operator to create new Statement objects");
+        return Napi::TypeError::New(env, "Use the new operator to create new Statement objects").ThrowAsJavaScriptException();
     }
 
     int length = info.Length();
 
     if (length <= 0 || !Database::HasInstance(info[0])) {
-        return Nan::ThrowTypeError("Database object expected");
+        return Napi::TypeError::New(env, "Database object expected").ThrowAsJavaScriptException();
     }
-    else if (length <= 1 || !info[1]->IsString()) {
-        return Nan::ThrowTypeError("SQL query expected");
+    else if (length <= 1 || !info[1].IsString()) {
+        return Napi::TypeError::New(env, "SQL query expected").ThrowAsJavaScriptException();
     }
-    else if (length > 2 && !info[2]->IsUndefined() && !info[2]->IsFunction()) {
-        return Nan::ThrowTypeError("Callback expected");
+    else if (length > 2 && !info[2].IsUndefined() && !info[2].IsFunction()) {
+        return Napi::TypeError::New(env, "Callback expected").ThrowAsJavaScriptException();
     }
 
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info[0].As<Object>());
-    Local<String> sql = Local<String>::Cast(info[1]);
+    Database* db = info[0].As<Napi::Object>().Unwrap<Database>();
+    Napi::String sql = Napi::String::Cast(info[1]);
 
-    info.This()->ForceSet(Nan::New("sql").ToLocalChecked(), sql, ReadOnly);
+    info.This().ForceSet(Napi::String::New(env, "sql"), sql, ReadOnly);
 
     Statement* stmt = new Statement(db);
     stmt->Wrap(info.This());
 
-    PrepareBaton* baton = new PrepareBaton(db, Local<Function>::Cast(info[2]), stmt);
-    baton->sql = std::string(*Nan::Utf8String(sql));
+    PrepareBaton* baton = new PrepareBaton(db, Napi::Function::Cast(info[2]), stmt);
+    baton->sql = std::string(sql->As<Napi::String>().Utf8Value().c_str());
     db->Schedule(Work_BeginPrepare, baton);
 
-    info.GetReturnValue().Set(info.This());
+    return info.This();
 }
 
 void Statement::Work_BeginPrepare(Database::Baton* baton) {
@@ -145,7 +146,7 @@ void Statement::Work_Prepare(uv_work_t* req) {
 }
 
 void Statement::Work_AfterPrepare(uv_work_t* req) {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     STATEMENT_INIT(PrepareBaton);
 
@@ -155,9 +156,9 @@ void Statement::Work_AfterPrepare(uv_work_t* req) {
     }
     else {
         stmt->prepared = true;
-        Local<Function> cb = Nan::New(baton->callback);
+        Napi::Function cb = Napi::New(env, baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[] = { Nan::Null() };
+            Napi::Value argv[] = { env.Null() };
             TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
         }
     }
@@ -166,77 +167,77 @@ void Statement::Work_AfterPrepare(uv_work_t* req) {
 }
 
 template <class T> Values::Field*
-                   Statement::BindParameter(const Local<Value> source, T pos) {
-    if (source->IsString() || source->IsRegExp()) {
-        Nan::Utf8String val(source);
-        return new Values::Text(pos, val.length(), *val);
+                   Statement::BindParameter(const Napi::Value source, T pos) {
+    if (source.IsString() || source->IsRegExp()) {
+        std::string val = source.As<Napi::String>();
+        return new Values::Text(pos, val.Length(), *val);
     }
-    else if (source->IsInt32()) {
-        return new Values::Integer(pos, Nan::To<int32_t>(source).FromJust());
+    else if (source-.IsNumber()) {
+        return new Values::Integer(pos, source.As<Napi::Number>().Int32Value());
     }
-    else if (source->IsNumber()) {
-        return new Values::Float(pos, Nan::To<double>(source).FromJust());
+    else if (source.IsNumber()) {
+        return new Values::Float(pos, source.As<Napi::Number>().DoubleValue());
     }
     else if (source->IsBoolean()) {
-        return new Values::Integer(pos, Nan::To<bool>(source).FromJust() ? 1 : 0);
+        return new Values::Integer(pos, source.As<Napi::Boolean>().Value() ? 1 : 0);
     }
     else if (source->IsNull()) {
         return new Values::Null(pos);
     }
     else if (Buffer::HasInstance(source)) {
-        Local<Object> buffer = Nan::To<Object>(source).ToLocalChecked();
+        Napi::Object buffer = source.To<Napi::Object>();
         return new Values::Blob(pos, Buffer::Length(buffer), Buffer::Data(buffer));
     }
     else if (source->IsDate()) {
-        return new Values::Float(pos, Nan::To<double>(source).FromJust());
+        return new Values::Float(pos, source.As<Napi::Number>().DoubleValue());
     }
     else {
         return NULL;
     }
 }
 
-template <class T> T* Statement::Bind(Nan::NAN_METHOD_ARGS_TYPE info, int start, int last) {
-    Nan::HandleScope scope;
+template <class T> T* Statement::Bind(const Napi::CallbackInfo& info, int start, int last) {
+    Napi::HandleScope scope(env);
 
     if (last < 0) last = info.Length();
-    Local<Function> callback;
+    Napi::Function callback;
     if (last > start && info[last - 1]->IsFunction()) {
-        callback = Local<Function>::Cast(info[last - 1]);
+        callback = Napi::Function::Cast(info[last - 1]);
         last--;
     }
 
     T* baton = new T(this, callback);
 
     if (start < last) {
-        if (info[start]->IsArray()) {
-            Local<Array> array = Local<Array>::Cast(info[start]);
+        if (info[start].IsArray()) {
+            Napi::Array array = Napi::Array::Cast(info[start]);
             int length = array->Length();
             // Note: bind parameters start with 1.
             for (int i = 0, pos = 1; i < length; i++, pos++) {
-                baton->parameters.push_back(BindParameter(Nan::Get(array, i).ToLocalChecked(), pos));
+                baton->parameters.push_back(BindParameter((array).Get(i), pos));
             }
         }
-        else if (!info[start]->IsObject() || info[start]->IsRegExp() || info[start]->IsDate() || Buffer::HasInstance(info[start])) {
+        else if (!info[start].IsObject() || info[start].IsRegExp() || info[start].IsDate() || Buffer::HasInstance(info[start])) {
             // Parameters directly in array.
             // Note: bind parameters start with 1.
             for (int i = start, pos = 1; i < last; i++, pos++) {
                 baton->parameters.push_back(BindParameter(info[i], pos));
             }
         }
-        else if (info[start]->IsObject()) {
-            Local<Object> object = Local<Object>::Cast(info[start]);
-            Local<Array> array = Nan::GetPropertyNames(object).ToLocalChecked();
+        else if (info[start].IsObject()) {
+            Napi::Object object = Napi::Object::Cast(info[start]);
+            Napi::Array array = Napi::GetPropertyNames(object);
             int length = array->Length();
             for (int i = 0; i < length; i++) {
-                Local<Value> name = Nan::Get(array, i).ToLocalChecked();
+                Napi::Value name = (array).Get(i);
 
-                if (name->IsInt32()) {
+                if (name-.IsNumber()) {
                     baton->parameters.push_back(
-                        BindParameter(Nan::Get(object, name).ToLocalChecked(), Nan::To<int32_t>(name).FromJust()));
+                        BindParameter((object).Get(name), name.As<Napi::Number>().Int32Value()));
                 }
                 else {
-                    baton->parameters.push_back(BindParameter(Nan::Get(object, name).ToLocalChecked(),
-                        *Nan::Utf8String(name)));
+                    baton->parameters.push_back(BindParameter((object).Get(name),
+                        name->As<Napi::String>().Utf8Value().c_str()));
                 }
             }
         }
@@ -305,16 +306,16 @@ bool Statement::Bind(const Parameters & parameters) {
     return true;
 }
 
-NAN_METHOD(Statement::Bind) {
-    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+Napi::Value Statement::Bind(const Napi::CallbackInfo& info) {
+    Statement* stmt = this;
 
     Baton* baton = stmt->Bind<Baton>(info);
     if (baton == NULL) {
-        return Nan::ThrowTypeError("Data type is not supported");
+        return Napi::TypeError::New(env, "Data type is not supported").ThrowAsJavaScriptException();
     }
     else {
         stmt->Schedule(Work_BeginBind, baton);
-        info.GetReturnValue().Set(info.This());
+        return info.This();
     }
 }
 
@@ -332,7 +333,7 @@ void Statement::Work_Bind(uv_work_t* req) {
 }
 
 void Statement::Work_AfterBind(uv_work_t* req) {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     STATEMENT_INIT(Baton);
 
@@ -341,9 +342,9 @@ void Statement::Work_AfterBind(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        Local<Function> cb = Nan::New(baton->callback);
+        Napi::Function cb = Napi::New(env, baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[] = { Nan::Null() };
+            Napi::Value argv[] = { env.Null() };
             TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
         }
     }
@@ -353,16 +354,16 @@ void Statement::Work_AfterBind(uv_work_t* req) {
 
 
 
-NAN_METHOD(Statement::Get) {
-    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+Napi::Value Statement::Get(const Napi::CallbackInfo& info) {
+    Statement* stmt = this;
 
     Baton* baton = stmt->Bind<RowBaton>(info);
     if (baton == NULL) {
-        return Nan::ThrowError("Data type is not supported");
+        return Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
     }
     else {
         stmt->Schedule(Work_BeginGet, baton);
-        info.GetReturnValue().Set(info.This());
+        return info.This();
     }
 }
 
@@ -395,7 +396,7 @@ void Statement::Work_Get(uv_work_t* req) {
 }
 
 void Statement::Work_AfterGet(uv_work_t* req) {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     STATEMENT_INIT(RowBaton);
 
@@ -404,15 +405,15 @@ void Statement::Work_AfterGet(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        Local<Function> cb = Nan::New(baton->callback);
+        Napi::Function cb = Napi::New(env, baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             if (stmt->status == SQLITE_ROW) {
                 // Create the result array from the data we acquired.
-                Local<Value> argv[] = { Nan::Null(), RowToJS(&baton->row) };
+                Napi::Value argv[] = { env.Null(), RowToJS(&baton->row) };
                 TRY_CATCH_CALL(stmt->handle(), cb, 2, argv);
             }
             else {
-                Local<Value> argv[] = { Nan::Null() };
+                Napi::Value argv[] = { env.Null() };
                 TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
             }
         }
@@ -421,16 +422,16 @@ void Statement::Work_AfterGet(uv_work_t* req) {
     STATEMENT_END();
 }
 
-NAN_METHOD(Statement::Run) {
-    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+Napi::Value Statement::Run(const Napi::CallbackInfo& info) {
+    Statement* stmt = this;
 
     Baton* baton = stmt->Bind<RunBaton>(info);
     if (baton == NULL) {
-        return Nan::ThrowError("Data type is not supported");
+        return Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
     }
     else {
         stmt->Schedule(Work_BeginRun, baton);
-        info.GetReturnValue().Set(info.This());
+        return info.This();
     }
 }
 
@@ -465,7 +466,7 @@ void Statement::Work_Run(uv_work_t* req) {
 }
 
 void Statement::Work_AfterRun(uv_work_t* req) {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     STATEMENT_INIT(RunBaton);
 
@@ -474,12 +475,12 @@ void Statement::Work_AfterRun(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        Local<Function> cb = Nan::New(baton->callback);
+        Napi::Function cb = Napi::New(env, baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            Nan::Set(stmt->handle(), Nan::New("lastID").ToLocalChecked(), Nan::New<Number>(baton->inserted_id));
-            Nan::Set(stmt->handle(), Nan::New("changes").ToLocalChecked(), Nan::New(baton->changes));
+            (stmt->handle()).Set( Napi::String::New(env, "lastID"), Napi::Number::New(env, baton->inserted_id));
+            (stmt->handle()).Set( Napi::String::New(env, "changes"), Napi::New(env, baton->changes));
 
-            Local<Value> argv[] = { Nan::Null() };
+            Napi::Value argv[] = { env.Null() };
             TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
         }
     }
@@ -487,16 +488,16 @@ void Statement::Work_AfterRun(uv_work_t* req) {
     STATEMENT_END();
 }
 
-NAN_METHOD(Statement::All) {
-    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+Napi::Value Statement::All(const Napi::CallbackInfo& info) {
+    Statement* stmt = this;
 
     Baton* baton = stmt->Bind<RowsBaton>(info);
     if (baton == NULL) {
-        return Nan::ThrowError("Data type is not supported");
+        return Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
     }
     else {
         stmt->Schedule(Work_BeginAll, baton);
-        info.GetReturnValue().Set(info.This());
+        return info.This();
     }
 }
 
@@ -531,7 +532,7 @@ void Statement::Work_All(uv_work_t* req) {
 }
 
 void Statement::Work_AfterAll(uv_work_t* req) {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     STATEMENT_INIT(RowsBaton);
 
@@ -540,26 +541,26 @@ void Statement::Work_AfterAll(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        Local<Function> cb = Nan::New(baton->callback);
+        Napi::Function cb = Napi::New(env, baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             if (baton->rows.size()) {
                 // Create the result array from the data we acquired.
-                Local<Array> result(Nan::New<Array>(baton->rows.size()));
+                Napi::Array result(Napi::Array::New(env, baton->rows.size()));
                 Rows::const_iterator it = baton->rows.begin();
                 Rows::const_iterator end = baton->rows.end();
                 for (int i = 0; it < end; ++it, i++) {
-                    Nan::Set(result, i, RowToJS(*it));
+                    (result).Set( i, RowToJS(*it));
                     delete *it;
                 }
 
-                Local<Value> argv[] = { Nan::Null(), result };
+                Napi::Value argv[] = { env.Null(), result };
                 TRY_CATCH_CALL(stmt->handle(), cb, 2, argv);
             }
             else {
                 // There were no result rows.
-                Local<Value> argv[] = {
-                    Nan::Null(),
-                    Nan::New<Array>(0)
+                Napi::Value argv[] = {
+                    env.Null(),
+                    Napi::Array::New(env, 0)
                 };
                 TRY_CATCH_CALL(stmt->handle(), cb, 2, argv);
             }
@@ -569,24 +570,24 @@ void Statement::Work_AfterAll(uv_work_t* req) {
     STATEMENT_END();
 }
 
-NAN_METHOD(Statement::Each) {
-    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+Napi::Value Statement::Each(const Napi::CallbackInfo& info) {
+    Statement* stmt = this;
 
     int last = info.Length();
 
-    Local<Function> completed;
+    Napi::Function completed;
     if (last >= 2 && info[last - 1]->IsFunction() && info[last - 2]->IsFunction()) {
-        completed = Local<Function>::Cast(info[--last]);
+        completed = Napi::Function::Cast(info[--last]);
     }
 
     EachBaton* baton = stmt->Bind<EachBaton>(info, 0, last);
     if (baton == NULL) {
-        return Nan::ThrowError("Data type is not supported");
+        return Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
     }
     else {
         baton->completed.Reset(completed);
         stmt->Schedule(Work_BeginEach, baton);
-        info.GetReturnValue().Set(info.This());
+        return info.This();
     }
 }
 
@@ -652,7 +653,7 @@ void Statement::CloseCallback(uv_handle_t* handle) {
 }
 
 void Statement::AsyncEach(uv_async_t* handle, int status) {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     Async* async = static_cast<Async*>(handle->data);
 
@@ -667,10 +668,10 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
             break;
         }
 
-        Local<Function> cb = Nan::New(async->item_cb);
+        Napi::Function cb = Napi::New(env, async->item_cb);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[2];
-            argv[0] = Nan::Null();
+            Napi::Value argv[2];
+            argv[0] = env.Null();
 
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
@@ -683,13 +684,13 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
         }
     }
 
-    Local<Function> cb = Nan::New(async->completed_cb);
+    Napi::Function cb = Napi::New(env, async->completed_cb);
     if (async->completed) {
         if (!cb.IsEmpty() &&
                 cb->IsFunction()) {
-            Local<Value> argv[] = {
-                Nan::Null(),
-                Nan::New(async->retrieved)
+            Napi::Value argv[] = {
+                env.Null(),
+                Napi::New(env, async->retrieved)
             };
             TRY_CATCH_CALL(async->stmt->handle(), cb, 2, argv);
         }
@@ -698,7 +699,7 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
 }
 
 void Statement::Work_AfterEach(uv_work_t* req) {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     STATEMENT_INIT(EachBaton);
 
@@ -709,15 +710,15 @@ void Statement::Work_AfterEach(uv_work_t* req) {
     STATEMENT_END();
 }
 
-NAN_METHOD(Statement::Reset) {
-    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+Napi::Value Statement::Reset(const Napi::CallbackInfo& info) {
+    Statement* stmt = this;
 
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     Baton* baton = new Baton(stmt, callback);
     stmt->Schedule(Work_BeginReset, baton);
 
-    info.GetReturnValue().Set(info.This());
+    return info.This();
 }
 
 void Statement::Work_BeginReset(Baton* baton) {
@@ -732,51 +733,51 @@ void Statement::Work_Reset(uv_work_t* req) {
 }
 
 void Statement::Work_AfterReset(uv_work_t* req) {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     STATEMENT_INIT(Baton);
 
     // Fire callbacks.
-    Local<Function> cb = Nan::New(baton->callback);
+    Napi::Function cb = Napi::New(env, baton->callback);
     if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { Nan::Null() };
+        Napi::Value argv[] = { env.Null() };
         TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
     }
 
     STATEMENT_END();
 }
 
-Local<Object> Statement::RowToJS(Row* row) {
-    Nan::EscapableHandleScope scope;
+Napi::Object Statement::RowToJS(Row* row) {
+    Napi::EscapableHandleScope scope(env);
 
-    Local<Object> result = Nan::New<Object>();
+    Napi::Object result = Napi::Object::New(env);
 
     Row::const_iterator it = row->begin();
     Row::const_iterator end = row->end();
     for (int i = 0; it < end; ++it, i++) {
         Values::Field* field = *it;
 
-        Local<Value> value;
+        Napi::Value value;
 
         switch (field->type) {
             case SQLITE_INTEGER: {
-                value = Nan::New<Number>(((Values::Integer*)field)->value);
+                value = Napi::Number::New(env, ((Values::Integer*)field)->value);
             } break;
             case SQLITE_FLOAT: {
-                value = Nan::New<Number>(((Values::Float*)field)->value);
+                value = Napi::Number::New(env, ((Values::Float*)field)->value);
             } break;
             case SQLITE_TEXT: {
-                value = Nan::New<String>(((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size()).ToLocalChecked();
+                value = Napi::String::New(env, ((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size());
             } break;
             case SQLITE_BLOB: {
-                value = Nan::CopyBuffer(((Values::Blob*)field)->value, ((Values::Blob*)field)->length).ToLocalChecked();
+                value = Napi::Buffer::Copy(env, ((Values::Blob*)field)->value, ((Values::Blob*)field)->length);
             } break;
             case SQLITE_NULL: {
-                value = Nan::Null();
+                value = env.Null();
             } break;
         }
 
-        Nan::Set(result, Nan::New(field->name.c_str()).ToLocalChecked(), value);
+        (result).Set( Napi::New(env, field->name.c_str()), value);
 
         DELETE_FIELD(field);
     }
@@ -816,23 +817,23 @@ void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
     }
 }
 
-NAN_METHOD(Statement::Finalize) {
-    Statement* stmt = Nan::ObjectWrap::Unwrap<Statement>(info.This());
+Napi::Value Statement::Finalize(const Napi::CallbackInfo& info) {
+    Statement* stmt = this;
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     Baton* baton = new Baton(stmt, callback);
     stmt->Schedule(Finalize, baton);
 
-    info.GetReturnValue().Set(stmt->db->handle());
+    return stmt->db->handle();
 }
 
 void Statement::Finalize(Baton* baton) {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     baton->stmt->Finalize();
 
     // Fire callback in case there was one.
-    Local<Function> cb = Nan::New(baton->callback);
+    Napi::Function cb = Napi::New(env, baton->callback);
     if (!cb.IsEmpty() && cb->IsFunction()) {
         TRY_CATCH_CALL(baton->stmt->handle(), cb, 0, NULL);
     }
@@ -852,13 +853,13 @@ void Statement::Finalize() {
 }
 
 void Statement::CleanQueue() {
-    Nan::HandleScope scope;
+    Napi::HandleScope scope(env);
 
     if (prepared && !queue.empty()) {
         // This statement has already been prepared and is now finalized.
         // Fire error for all remaining items in the queue.
-        EXCEPTION(Nan::New<String>("Statement is already finalized").ToLocalChecked(), SQLITE_MISUSE, exception);
-        Local<Value> argv[] = { exception };
+        EXCEPTION(Napi::String::New(env, "Statement is already finalized"), SQLITE_MISUSE, exception);
+        Napi::Value argv[] = { exception };
         bool called = false;
 
         // Clear out the queue so that this object can get GC'ed.
@@ -866,7 +867,7 @@ void Statement::CleanQueue() {
             Call* call = queue.front();
             queue.pop();
 
-            Local<Function> cb = Nan::New(call->baton->callback);
+            Napi::Function cb = Napi::New(env, call->baton->callback);
 
             if (prepared && !cb.IsEmpty() &&
                 cb->IsFunction()) {
@@ -883,7 +884,7 @@ void Statement::CleanQueue() {
         // When we couldn't call a callback function, emit an error on the
         // Statement object.
         if (!called) {
-            Local<Value> info[] = { Nan::New("error").ToLocalChecked(), exception };
+            Napi::Value info[] = { Napi::String::New(env, "error"), exception };
             EMIT_EVENT(handle(), 2, info);
         }
     }
