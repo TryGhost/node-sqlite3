@@ -442,6 +442,8 @@ ImportResult *sqlite_import(
   sqlite3_free(zSql);
   if( rc ){
     utf8_printf(stderr, "Error: %s\n", sqlite3_errmsg(db));
+    ssErr << "prepare insert statement failed: " << sqlite3_errmsg(db);
+    errMsg = ssErr.str();
     if (pStmt) sqlite3_finalize(pStmt);
     fclose(sCtx.in);
     return NULL;
