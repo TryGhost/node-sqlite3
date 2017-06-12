@@ -1,0 +1,42 @@
+# This variable requests the highest version of 
+# Visual Studio to be installed. Previous versions
+# will also be available and work. So, choosing 2015 here makes
+# available both `msvs_toolset: 12` (from Visual Studio 2013)
+# and `msvs_toolset: 14` (from Visual Studio 2015)
+# Note/TODO: it is not yet confirmed that earlier versions work with the the `Visual Studio 2017` os image. 
+os: Visual Studio 2015
+
+environment:
+  matrix:
+    - nodejs_version: 0.10
+      msvs_toolset: 14
+      platform: x64
+    - nodejs_version: 0.10
+      msvs_toolset: 14
+      platform: x86
+    - nodejs_version: 4
+      msvs_toolset: 14
+      platform: x64
+    - nodejs_version: 4
+      msvs_toolset: 14
+      platform: x86
+    - nodejs_version: 6
+      msvs_toolset: 14
+      platform: x64
+    - nodejs_version: 6
+      msvs_toolset: 14
+      platform: x86
+    - nodejs_version: 8
+      msvs_toolset: 14
+      platform: x64
+    - nodejs_version: 8
+      msvs_toolset: 14
+      platform: x86
+
+install:
+  - ps: Start-FileDownload 'https://github.com/mapbox/ci-scripts/raw/v1.0.0/node/ci-cpp.bat' -FileName ci.bat
+  - CALL ci.bat
+
+build: OFF
+test: OFF
+deploy: OFF
