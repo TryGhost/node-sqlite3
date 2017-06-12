@@ -14,8 +14,6 @@ environment:
   matrix:
     - nodejs_version: 0.10
       msvs_toolset: 12
-    - nodejs_version: 0.12
-      msvs_toolset: 12
     - nodejs_version: 4
       msvs_toolset: 12
     - nodejs_version: 5
@@ -29,11 +27,7 @@ environment:
     # visual studio 2015 builds
     - nodejs_version: 4
       msvs_toolset: 14
-    - nodejs_version: 5
-      msvs_toolset: 14
     - nodejs_version: 6
-      msvs_toolset: 14
-    - nodejs_version: 7
       msvs_toolset: 14
     - nodejs_version: 8
       msvs_toolset: 14
