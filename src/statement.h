@@ -76,13 +76,12 @@ class Statement : public Napi::ObjectWrap<Statement> {
 public:
     static Napi::FunctionReference constructor;
 
-    static void Init(Napi::Env env, Napi::Object exports, Napi::Object module);
-    static Napi::Value New(const Napi::CallbackInfo& info);
+    static void Init(Napi::Env env, Napi::Object exports);
 
     struct Baton {
         uv_work_t request;
         Statement* stmt;
-        Napi::Persistent<Function> callback;
+        Napi::FunctionReference callback;
         Parameters parameters;
 
         Baton(Statement* stmt_, Napi::Function cb_) : stmt(stmt_) {
@@ -122,7 +121,7 @@ public:
     struct Async;
 
     struct EachBaton : Baton {
-        Napi::Persistent<Function> completed;
+        Napi::FunctionReference completed;
         Async* async; // Isn't deleted when the baton is deleted.
 
         EachBaton(Statement* stmt_, Napi::Function cb_) :
@@ -167,8 +166,8 @@ public:
 
         // Store the callbacks here because we don't have
         // access to the baton in the async callback.
-        Napi::Persistent<Function> item_cb;
-        Napi::Persistent<Function> completed_cb;
+        Napi::FunctionReference item_cb;
+        Napi::FunctionReference completed_cb;
 
         Async(Statement* st, uv_async_cb async_cb) :
                 stmt(st), completed(false), retrieved(0) {
@@ -186,13 +185,14 @@ public:
         }
     };
 
-    Statement(Database* db_) : Napi::ObjectWrap<Statement>(),
-            db(db_),
-            _handle(NULL),
-            status(SQLITE_OK),
-            prepared(false),
-            locked(true),
-            finalized(false) {
+    Statement(const Napi::CallbackInfo& info);
+    void init(Database* db_) {
+        db = db_;
+        _handle  = NULL;
+        status = SQLITE_OK;
+        prepared = false;
+        locked = true;
+        finalized = false;
         db->Ref();
     }
 
@@ -207,7 +207,7 @@ public:
     WORK_DEFINITION(Each);
     WORK_DEFINITION(Reset);
 
-    static Napi::Value Finalize(const Napi::CallbackInfo& info);
+    Napi::Value Finalize(const Napi::CallbackInfo& info);
 
 protected:
     static void Work_BeginPrepare(Database::Baton* baton);
@@ -225,7 +225,7 @@ protected:
     bool Bind(const Parameters &parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
-    static Napi::Object RowToJS(Row* row);
+    static Napi::Value RowToJS(Napi::Env env, Row* row);
     void Schedule(Work_Callback callback, Baton* baton);
     void Process();
     void CleanQueue();
