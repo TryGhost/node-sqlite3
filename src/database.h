@@ -25,7 +25,7 @@ public:
     static void Init(Napi::Env env, Napi::Object exports);
 
     static inline bool HasInstance(Napi::Value val) {
-  Napi::Env env = val.Env();
+        Napi::Env env = val.Env();
         Napi::HandleScope scope(env);
         if (!val.IsObject()) return false;
         Napi::Object obj = val.As<Napi::Object>();
@@ -43,7 +43,7 @@ public:
                 db(db_), status(SQLITE_OK) {
             db->Ref();
             request.data = this;
-            callback.Reset(cb_);
+            callback.Reset(cb_, 1);
         }
         virtual ~Baton() {
             db->Unref();
@@ -101,6 +101,18 @@ public:
 
     friend class Statement;
 
+    Database() :
+        _handle(NULL),
+        open(false),
+        closing(false),
+        locked(false),
+        pending(0),
+        serialize(false),
+        debug_trace(NULL),
+        debug_profile(NULL),
+        update_event(NULL) {
+
+    }
     void init() {
         _handle = NULL;
         open = false;
@@ -120,7 +132,7 @@ public:
         open = false;
     }
 
-    Database(const Napi::CallbackInfo& info);
+    void New(const Napi::CallbackInfo& info);
 protected:
     static void Work_BeginOpen(Baton* baton);
     static void Work_Open(uv_work_t* req);

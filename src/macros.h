@@ -103,7 +103,9 @@ inline Napi::String StringConcat(Napi::Value str1, Napi::Value str2) {
 
 #define TRY_CATCH_CALL(context, callback, argc, argv)                          \
     std::vector<napi_value> args;\
-    args.assign(argv, argv + argc);\
+    if (argc != 0 && argv != NULL) {\
+      args.assign(argv, argv + argc);\
+    }\
     (callback).MakeCallback(Napi::Value(context), args); 
 
 #define WORK_DEFINITION(name)                                                  \

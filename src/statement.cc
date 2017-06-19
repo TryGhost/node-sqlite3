@@ -27,10 +27,7 @@ void Statement::Init(Napi::Env env, Napi::Object exports) {
       InstanceMethod("finalize", &Statement::Finalize),
     });
 
-    constructor.Reset(t);
-    // TODO: Validate
-    // (exports).Set( Napi::String::New(env, "Statement"),
-    //    Napi::GetFunction(t));
+    constructor.Reset(t, 1);
     (exports).Set( Napi::String::New(env, "Statement"), t);
 }
 
@@ -84,7 +81,7 @@ template <class T> void Statement::Error(T* baton) {
 }
 
 // { Database db, String sql, Array params, Function callback }
-Statement::Statement(const Napi::CallbackInfo& info) {
+void Statement::New(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     int length = info.Length();
 
@@ -192,6 +189,10 @@ template <class T> Values::Field*
     //else if (source.IsDate()) {
     //    return new Values::Float(pos, source.As<Napi::Number>().DoubleValue());
     //}
+    else if (source.IsObject()) {
+        std::string val = source.ToString().Utf8Value();
+        return new Values::Text(pos, val.length(), val.c_str());
+    }
     else {
         return NULL;
     }
@@ -596,7 +597,7 @@ Napi::Value Statement::Each(const Napi::CallbackInfo& info) {
         Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
     }
     else {
-        baton->completed.Reset(completed);
+        baton->completed.Reset(completed, 1);
         stmt->Schedule(Work_BeginEach, baton);
         return info.This();
     }
@@ -607,8 +608,8 @@ void Statement::Work_BeginEach(Baton* baton) {
     // the event loop. This prevents dangling events.
     EachBaton* each_baton = static_cast<EachBaton*>(baton);
     each_baton->async = new Async(each_baton->stmt, reinterpret_cast<uv_async_cb>(AsyncEach));
-    each_baton->async->item_cb.Reset(each_baton->callback.Value());
-    each_baton->async->completed_cb.Reset(each_baton->completed.Value());
+    each_baton->async->item_cb.Reset(each_baton->callback.Value(), 1);
+    each_baton->async->completed_cb.Reset(each_baton->completed.Value(), 1);
 
     STATEMENT_BEGIN(Each);
 }

@@ -23,10 +23,8 @@ void Database::Init(Napi::Env env, Napi::Object exports) {
       InstanceAccessor("open", &Database::OpenGetter, nullptr),
     });
 
-    constructor.Reset(t);
-    // TODO: Validate
-    // constructor = Napi::Persistent(t);
-    // constructor.SuppressDestruct();
+    constructor = Napi::Persistent(t);
+    constructor.SuppressDestruct();
 
     (exports).Set( Napi::String::New(env, "Database"), t);
 }
@@ -107,8 +105,7 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
     }
 }
 
-Database::Database(const Napi::CallbackInfo& info) {
-    init();
+void Database::New(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
     REQUIRE_ARGUMENT_STRING(0, filename);
@@ -126,10 +123,6 @@ Database::Database(const Napi::CallbackInfo& info) {
         callback = info[pos++].As<Napi::Function>();
     }
 
-    // TODO: Validate
-    // info.This().As<Napi::Object>().Set(Napi::String::New(env, "filename"), info[0].As<Napi::String>());
-    // info.This().As<Napi::Object>().Set(Napi::String::New(env, "mode"), Napi::Number::New(env, mode));
-    
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filename", info[0].As<Napi::String>(), napi_default));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("mode", Napi::Number::New(env, mode), napi_default));
 

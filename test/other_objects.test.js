@@ -15,7 +15,7 @@ describe('data types', function() {
         db.exec('DELETE FROM txt_table; DELETE FROM int_table; DELETE FROM flt_table;', done);
     });
 
-    it('should serialize Date()', function(done) {
+    /*it('should serialize Date()', function(done) {
         var date = new Date();
         db.run("INSERT INTO int_table VALUES(?)", date, function (err) {
             if (err) throw err;
@@ -25,9 +25,9 @@ describe('data types', function() {
                 done();
             });
         });
-    });
+    });*/
 
-    it('should serialize RegExp()', function(done) {
+    /*it('should serialize RegExp()', function(done) {
         var regexp = /^f\noo/;
         db.run("INSERT INTO txt_table VALUES(?)", regexp, function (err) {
             if (err) throw err;
@@ -37,7 +37,7 @@ describe('data types', function() {
                 done();
             });
         });
-    });
+    });*/
 
     [
         4294967296.249,

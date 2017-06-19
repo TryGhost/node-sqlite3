@@ -87,7 +87,7 @@ public:
         Baton(Statement* stmt_, Napi::Function cb_) : stmt(stmt_) {
             stmt->Ref();
             request.data = this;
-            callback.Reset(cb_);
+            callback.Reset(cb_, 1);
         }
         virtual ~Baton() {
             for (unsigned int i = 0; i < parameters.size(); i++) {
@@ -185,15 +185,20 @@ public:
         }
     };
 
-    Statement(const Napi::CallbackInfo& info);
+    void New(const Napi::CallbackInfo& info);
+
     void init(Database* db_) {
         db = db_;
+        db->Ref();
+    }
+
+    Statement() {
+        db = NULL;
         _handle  = NULL;
         status = SQLITE_OK;
         prepared = false;
         locked = true;
         finalized = false;
-        db->Ref();
     }
 
     ~Statement() {
