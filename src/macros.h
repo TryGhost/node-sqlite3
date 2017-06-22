@@ -14,27 +14,27 @@ inline Napi::String StringConcat(Napi::Value str1, Napi::Value str2) {
 
 #define REQUIRE_ARGUMENTS(n)                                                   \
     if (info.Length() < (n)) {                                                 \
-        throw Napi::TypeError::New(env, "Expected " #n "arguments");                \
+        Napi::TypeError::New(env, "Expected " #n "arguments").ThrowAsJavaScriptException();                \
     }
 
 
 #define REQUIRE_ARGUMENT_EXTERNAL(i, var)                                      \
     if (info.Length() <= (i) || !info[i].IsExternal()) {                      \
-        throw Napi::TypeError::New(env, "Argument " #i " invalid");                 \
+        Napi::TypeError::New(env, "Argument " #i " invalid").ThrowAsJavaScriptException();                 \
     }                                                                          \
-    Napi::External var = Napi::External::Cast(info[i]);
+    Napi::External var = info[i].As<Napi::External>();
 
 
 #define REQUIRE_ARGUMENT_FUNCTION(i, var)                                      \
     if (info.Length() <= (i) || !info[i].IsFunction()) {                      \
-        throw Napi::TypeError::New(env, "Argument " #i " must be a function");      \
+        Napi::TypeError::New(env, "Argument " #i " must be a function").ThrowAsJavaScriptException();      \
     }                                                                          \
     Napi::Function var = info[i].As<Napi::Function>();
 
 
 #define REQUIRE_ARGUMENT_STRING(i, var)                                        \
     if (info.Length() <= (i) || !info[i].IsString()) {                        \
-        throw Napi::TypeError::New(env, "Argument " #i " must be a string");        \
+        Napi::TypeError::New(env, "Argument " #i " must be a string").ThrowAsJavaScriptException();        \
     }                                                                          \
     std::string var = info[i].As<Napi::String>();
 
@@ -43,7 +43,7 @@ inline Napi::String StringConcat(Napi::Value str1, Napi::Value str2) {
     Napi::Function var;                                                       \
     if (info.Length() > i && !info[i].IsUndefined()) {                        \
         if (!info[i].IsFunction()) {                                          \
-            throw Napi::TypeError::New(env, "Argument " #i " must be a function");  \
+            Napi::TypeError::New(env, "Argument " #i " must be a function").ThrowAsJavaScriptException();  \
         }                                                                      \
         var = info[i].As<Napi::Function>();                                  \
     }
@@ -58,7 +58,7 @@ inline Napi::String StringConcat(Napi::Value str1, Napi::Value str2) {
         var = info[i].As<Napi::Number>().Int32Value();                            \
     }                                                                          \
     else {                                                                     \
-        throw Napi::TypeError::New(env, "Argument " #i " must be an integer");      \
+        Napi::TypeError::New(env, "Argument " #i " must be an integer").ThrowAsJavaScriptException();      \
     }
 
 
@@ -106,7 +106,7 @@ inline Napi::String StringConcat(Napi::Value str1, Napi::Value str2) {
     if (argc != 0 && argv != NULL) {\
       args.assign(argv, argv + argc);\
     }\
-    (callback).MakeCallback(Napi::Value(context), args); 
+    (callback).MakeCallback(Napi::Value(context), args);
 
 #define WORK_DEFINITION(name)                                                  \
     Napi::Value name(const Napi::CallbackInfo& info);                   \

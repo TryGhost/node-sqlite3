@@ -335,7 +335,8 @@ Napi::Value Database::Configure(const Napi::CallbackInfo& info) {
     }
     else if (info[0].StrictEquals( Napi::String::New(env, "busyTimeout") )) {
         if (!info[1].IsNumber()) {
-            throw Napi::TypeError::New(env, "Value must be an integer");
+            Napi::TypeError::New(env, "Value must be an integer").ThrowAsJavaScriptException();
+            return env.Null();
         }
         Napi::Function handle;
         Baton* baton = new Baton(db, handle);
@@ -343,10 +344,11 @@ Napi::Value Database::Configure(const Napi::CallbackInfo& info) {
         db->Schedule(SetBusyTimeout, baton);
     }
     else {
-        throw Napi::TypeError::New(env, (StringConcat(
+        Napi::TypeError::New(env, (StringConcat(
             info[0].As<Napi::String>(),
             Napi::String::New(env, " is not a valid configuration option")
-        )).Utf8Value().c_str());
+        )).Utf8Value().c_str()).ThrowAsJavaScriptException();
+        return env.Null();
     }
 
     db->Process();
@@ -359,11 +361,13 @@ Napi::Value Database::Interrupt(const Napi::CallbackInfo& info) {
     Database* db = this;
 
     if (!db->open) {
-        throw Napi::Error::New(env, "Database is not open");
+        Napi::Error::New(env, "Database is not open").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
     if (db->closing) {
-        throw Napi::Error::New(env, "Database is closing");
+        Napi::Error::New(env, "Database is closing").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
     sqlite3_interrupt(db->_handle);
