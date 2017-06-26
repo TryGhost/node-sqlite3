@@ -105,7 +105,8 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
     }
 }
 
-void Database::New(const Napi::CallbackInfo& info) {
+Database::Database(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Database>(info){
+    init();
     Napi::Env env = info.Env();
 
     REQUIRE_ARGUMENT_STRING(0, filename);

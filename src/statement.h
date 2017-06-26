@@ -185,15 +185,11 @@ public:
         }
     };
 
-    void New(const Napi::CallbackInfo& info);
+    Statement(const Napi::CallbackInfo& info);
 
     void init(Database* db_) {
         db = db_;
         db->Ref();
-    }
-
-    Statement() {
-        db = NULL;
         _handle  = NULL;
         status = SQLITE_OK;
         prepared = false;

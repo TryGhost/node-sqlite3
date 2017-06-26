@@ -101,18 +101,6 @@ public:
 
     friend class Statement;
 
-    Database() :
-        _handle(NULL),
-        open(false),
-        closing(false),
-        locked(false),
-        pending(0),
-        serialize(false),
-        debug_trace(NULL),
-        debug_profile(NULL),
-        update_event(NULL) {
-
-    }
     void init() {
         _handle = NULL;
         open = false;
@@ -132,7 +120,7 @@ public:
         open = false;
     }
 
-    void New(const Napi::CallbackInfo& info);
+    Database(const Napi::CallbackInfo& info);
 protected:
     static void Work_BeginOpen(Baton* baton);
     static void Work_Open(uv_work_t* req);

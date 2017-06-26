@@ -81,18 +81,18 @@ template <class T> void Statement::Error(T* baton) {
 }
 
 // { Database db, String sql, Array params, Function callback }
-void Statement::New(const Napi::CallbackInfo& info) {
+Statement::Statement(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Statement>(info) {
     Napi::Env env = info.Env();
     int length = info.Length();
 
     if (length <= 0 || !Database::HasInstance(info[0])) {
-        return Napi::TypeError::New(env, "Database object expected").ThrowAsJavaScriptException();
+        Napi::TypeError::New(env, "Database object expected").ThrowAsJavaScriptException();
     }
     else if (length <= 1 || !info[1].IsString()) {
-        return Napi::TypeError::New(env, "SQL query expected").ThrowAsJavaScriptException();
+        Napi::TypeError::New(env, "SQL query expected").ThrowAsJavaScriptException();
     }
     else if (length > 2 && !info[2].IsUndefined() && !info[2].IsFunction()) {
-        return Napi::TypeError::New(env, "Callback expected").ThrowAsJavaScriptException();
+        Napi::TypeError::New(env, "Callback expected").ThrowAsJavaScriptException();
     }
 
     Database* db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
