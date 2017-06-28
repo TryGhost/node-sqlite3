@@ -716,7 +716,14 @@ NAN_METHOD(Database::Import) {
       delimChar = (*delimNanStr)[0];
     }
 
-    ImportOptions importOptions(colIds, delimChar);
+    bool noHeaderRow = false;
+    if (options->Has(String::NewFromUtf8(isolate,"noHeaderRow"))) {
+      Handle<Value> noHeaderValue  =
+        options->Get(String::NewFromUtf8(isolate,"noHeaderRow"));
+      noHeaderRow = noHeaderValue->BooleanValue();
+    }
+
+    ImportOptions importOptions(colIds, delimChar, noHeaderRow);
 
     Baton* baton = new ImportBaton(db, callback, *filename, *tablename, importOptions);
     db->Schedule(Work_BeginImport, baton, true);

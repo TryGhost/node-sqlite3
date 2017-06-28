@@ -300,6 +300,7 @@ ImportResult *sqlite_import(
   char *zSql;                 /* An SQL statement */
   ImportCtx sCtx;             /* Reader context */
   std::stringstream ssErr;    // string stream for error messages
+  int content_offset = 0;     // updated later if header row
 
   p->mode = MODE_Csv;
   sqlite3_snprintf(sizeof(p->colSeparator), p->colSeparator, "%c", options.columnDelimiter);
@@ -362,25 +363,28 @@ ImportResult *sqlite_import(
   sqlite3_free(zSql);
 
   import_append_char(&sCtx, 0);    /* To ensure sCtx.z is allocated */
-  while (csv_read_one_field(&sCtx)) {
-    colNames.push_back(std::string(sCtx.z));
-    if( sCtx.cTerm!=sCtx.cColSep ) break;
-  }
-  int nCol = colNames.size();
-  if (nCol==0) {
-    sqlite3_free(sCtx.z);
-    fclose(sCtx.in);
-    ssErr << '"' << sCtx.zFile << ": empty file";
-    errMsg = ssErr.str();
-    return NULL;
+  int nCol = 0;
+  if (!options.noHeaderRow) {
+    while (csv_read_one_field(&sCtx)) {
+      colNames.push_back(std::string(sCtx.z));
+      if( sCtx.cTerm!=sCtx.cColSep ) break;
+    }
+    nCol = colNames.size();
+    if (nCol==0) {
+      sqlite3_free(sCtx.z);
+      fclose(sCtx.in);
+      ssErr << '"' << sCtx.zFile << ": empty file";
+      errMsg = ssErr.str();
+      return NULL;
+    }
+    content_offset = ftell(sCtx.in);
   }
   if (options.columnIds.size() > 0) {
     // column ids provided via options -- let's use those
-    // TODO: validate that columnNames.size() == columnIds.size()
     colNames = options.columnIds;
+    nCol = colNames.size();
   }
 
-  int content_offset = ftell(sCtx.in);
   std::vector<ColType> colTypes(nCol, CT_NONE);
   if (metascan(colTypes,sCtx,nCol)!=0) {
     errMsg = "error performing metascan";

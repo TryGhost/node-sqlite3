@@ -9,9 +9,14 @@
 struct ImportOptions {
   std::vector<std::string> columnIds;
   char columnDelimiter;
+  bool noHeaderRow;
 
-  ImportOptions(std::vector<std::string> const &columnIds_,const char columnDelimiter_) :
-  columnIds(columnIds_), columnDelimiter(columnDelimiter_) { }
+  ImportOptions(std::vector<std::string> const &columnIds_,
+    const char columnDelimiter_,
+    bool noHeaderRow_
+  ) :
+  columnIds(columnIds_), columnDelimiter(columnDelimiter_),
+  noHeaderRow(noHeaderRow_) { }
 };
 
 struct ImportResult {
