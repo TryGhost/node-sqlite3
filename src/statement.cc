@@ -27,6 +27,7 @@ void Statement::Init(Napi::Env env, Napi::Object exports) {
 
     constructor.Reset(t, 1);
     constructor.SuppressDestruct();
+
     (exports).Set( Napi::String::New(env, "Statement"), t);
 }
 
