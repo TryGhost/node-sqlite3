@@ -15,8 +15,6 @@ Napi::FunctionReference Statement::constructor;
 void Statement::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
-    //Napi::FunctionReference t = Napi::FunctionReference::New(env, New);
-
     Napi::Function t = DefineClass(env, "Statement", {
       InstanceMethod("bind", &Statement::Bind),
       InstanceMethod("get", &Statement::Get),
@@ -28,6 +26,7 @@ void Statement::Init(Napi::Env env, Napi::Object exports) {
     });
 
     constructor.Reset(t, 1);
+    constructor.SuppressDestruct();
     (exports).Set( Napi::String::New(env, "Statement"), t);
 }
 
@@ -100,8 +99,6 @@ Statement::Statement(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Statemen
 
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("sql", sql, napi_default));
 
-    // Statement* stmt = new Statement(db);
-    // stmt->Wrap(info.This());
     init(db);
     Statement* stmt = this;
 
