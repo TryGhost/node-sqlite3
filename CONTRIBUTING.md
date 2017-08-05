@@ -51,7 +51,7 @@ Note: NEVER republish binaries for an existing released version.
 An official release requires:
 
  - Updating the CHANGELOG.md
- - Create and push github tag like `git tag v3.1.1` -m "v3.1.1" && git push --tags`
+ - Create and push github tag like `git tag v3.1.1 -m "v3.1.1" && git push --tags`
  - Ensure you have a clean checkout (no extra files in your check that are not known by git). You need to be careful, for instance, to avoid a large accidental file being packaged by npm. You can get a view of what npm will publish by running `make testpack`
  - Fully rebuild and ensure install from binary works: `make clean && npm install --fallback-to-build=false`
  - Then publish the module to npm repositories by running `npm publish`

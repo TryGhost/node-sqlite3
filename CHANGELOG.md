@@ -1,5 +1,10 @@
 # Changelog
 
+
+## 3.1.9
+
+- Added support for node v8 and upgraded `nan`, `node-pre-gyp` deps.
+
 ## 3.1.8
 
 - Added support for node v7 (pre-compiled binaries available)
