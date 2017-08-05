@@ -48,13 +48,6 @@ IF %NODE_MAJOR% GTR 0 ECHO node version greater than zero, not updating npm && G
 
 powershell Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-CALL npm install --global --production npm-windows-upgrade
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-REM https://ci.appveyor.com/project/Mapbox/node-sqlite3/build/1.0.500/job/n2y9fo4eg316db56#L289
-REM error C2373: '__pfnDliNotifyHook2': redefinition; different type modifiers
-REM at least 2.15.9 is needed: https://github.com/nodejs/node-gyp/issues/972#issuecomment-231055109
-CALL npm-windows-upgrade --npm-version 2.15.9 --no-dns-check --no-prompt
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 :SKIP_APPVEYOR_INSTALL
 IF /I "%msvs_toolset%"=="12" GOTO NODE_INSTALLED
