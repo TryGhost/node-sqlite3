@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.10
+
+- Removed `npm ls` from `prepublish` hook per mapbox/node-pre-gyp#291
+- Upgraded node-pre-gyp to v0.6.37
+- Removed accidentally committed large file
 
 ## 3.1.9
 
