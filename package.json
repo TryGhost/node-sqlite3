@@ -40,8 +40,8 @@
     "nan": "~2.6.2",
     "node-pre-gyp": "~0.6.36"
   },
-  "bundledDependencies": [		
-      "node-pre-gyp"		
+  "bundledDependencies": [
+    "node-pre-gyp"
   ],
   "devDependencies": {
     "node-gyp": "^3.6.1",
@@ -50,7 +50,7 @@
     "mocha": "3.x"
   },
   "scripts": {
-    "prepublish": "npm ls",
+    "prepublishOnly": "npm ls",
     "install": "node-pre-gyp install --fallback-to-build",
     "pretest": "node test/support/createdb.js",
     "test": "mocha -R spec --timeout 480000"
