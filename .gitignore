@@ -20,3 +20,8 @@ test/tmp
 test/nw/app.nw
 .DS_Store
 .idea
+.dtps
+local.env
+.mason
+.eslintrc.js
+setup.sh
