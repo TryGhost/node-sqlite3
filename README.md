@@ -155,6 +155,16 @@ Set the location where `make` installed it:
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/local --verbose
     
     node -e 'require("sqlite3")'
+    
+### Custom builds and Electron
+
+Running sqlite3 through [electron-rebuild](https://github.com/electron/electron-rebuild) does not preserve the sqlcipher extension, so some additional flags are needed to make this build Electron compatible. Your `npm install sqlite3 --build-from-source` command needs these additional flags (be sure to replace the target version with the current Electron version you are working with):
+
+    --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
+
+In the case of MacOS with Homebrew, the command should look like the following:
+
+    npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix` --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
 
 # Testing
 
