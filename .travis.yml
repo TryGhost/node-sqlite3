@@ -2,6 +2,8 @@ sudo: false
 
 language: generic
 
+dist: precise
+
 git:
   depth: 10
 
@@ -131,6 +133,8 @@ before_script:
 
 script:
 - if [[ "${NODE_VERSION}" ]]; then ./scripts/build_against_node.sh; fi;
+- nm lib/binding/*/node_sqlite3.node | grep "GLIBCXX_" || true
+- nm lib/binding/*/node_sqlite3.node | grep "GLIB_" || true
 - if [[ "${NODE_VERSION}" -eq "4" ]]; then ./node_modules/.bin/eslint lib; fi;
 # disabled for now: need to port to sudo:false
 #- if [[ "${NODE_WEBKIT}" ]]; then ./scripts/build_against_node_webkit.sh; fi;
