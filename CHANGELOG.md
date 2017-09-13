@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.11
+
+- Fixed building from source on alpine linux
+
 ## 3.1.10
 
 - Removed `npm ls` from `prepublish` hook per mapbox/node-pre-gyp#291
