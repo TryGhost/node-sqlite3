@@ -4,6 +4,7 @@
 const char* sqlite_code_string(int code);
 const char* sqlite_authorizer_string(int type);
 
+#define UNUSED_VARIABLE(var) (void)var
 
 #define REQUIRE_ARGUMENTS(n)                                                   \
     if (info.Length() < (n)) {                                                 \

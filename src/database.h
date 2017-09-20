@@ -68,6 +68,12 @@ public:
             Baton(db_, cb_), filename(filename_) {}
     };
 
+    struct BackupBaton : Baton {
+        std::string filename;
+        BackupBaton(Database* db_, Local<Function> cb_, const char* filename_) :
+            Baton(db_, cb_), filename(filename_) {}
+    };
+
     typedef void (*Work_Callback)(Baton* baton);
 
     struct Call {
@@ -153,6 +159,11 @@ protected:
     static NAN_METHOD(Configure);
 
     static NAN_METHOD(Interrupt);
+
+    static NAN_METHOD(Backup);
+    static void Work_BeginBackup(Baton* baton);
+    static void Work_Backup(uv_work_t* req);
+    static void Work_AfterBackup(uv_work_t* req);
 
     static void SetBusyTimeout(Baton* baton);
 

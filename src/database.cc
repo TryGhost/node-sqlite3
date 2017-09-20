@@ -24,6 +24,7 @@ NAN_MODULE_INIT(Database::Init) {
     Nan::SetPrototypeMethod(t, "parallelize", Parallelize);
     Nan::SetPrototypeMethod(t, "configure", Configure);
     Nan::SetPrototypeMethod(t, "interrupt", Interrupt);
+    Nan::SetPrototypeMethod(t, "backup", Backup);
 
     NODE_SET_GETTER(t, "open", OpenGetter);
 
@@ -143,6 +144,7 @@ NAN_METHOD(Database::New) {
 void Database::Work_BeginOpen(Baton* baton) {
     int status = uv_queue_work(uv_default_loop(),
         &baton->request, Work_Open, (uv_after_work_cb)Work_AfterOpen);
+    UNUSED_VARIABLE(status);
     assert(status == 0);
 }
 
@@ -229,6 +231,7 @@ void Database::Work_BeginClose(Baton* baton) {
 
     int status = uv_queue_work(uv_default_loop(),
         &baton->request, Work_Close, (uv_after_work_cb)Work_AfterClose);
+    UNUSED_VARIABLE(status);
     assert(status == 0);
 }
 
@@ -369,6 +372,83 @@ NAN_METHOD(Database::Interrupt) {
 
     sqlite3_interrupt(db->_handle);
     info.GetReturnValue().Set(info.This());
+}
+
+NAN_METHOD(Database::Backup) {
+    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+
+    REQUIRE_ARGUMENT_STRING(0, filename);
+    OPTIONAL_ARGUMENT_FUNCTION(1, callback);
+
+    Baton* baton = new BackupBaton(db, callback, *filename);
+    db->Schedule(Work_BeginBackup, baton, false);
+
+    info.GetReturnValue().Set(info.This());
+}
+
+void Database::Work_BeginBackup(Baton* baton) {
+    assert(baton->db->open);
+    assert(baton->db->_handle);
+    int status = uv_queue_work(uv_default_loop(),
+        &baton->request, Work_Backup, (uv_after_work_cb)Work_AfterExec);
+    UNUSED_VARIABLE(status);
+    assert(status == 0);
+}
+
+void Database::Work_Backup(uv_work_t* req) {
+    BackupBaton* baton = static_cast<BackupBaton*>(req->data);
+    sqlite3* file;
+    sqlite3_backup* backup;
+
+    baton->status = sqlite3_open(baton->filename.c_str(), &file);
+
+    if (baton->status == SQLITE_OK) {
+        backup = sqlite3_backup_init(file, "main", baton->db->_handle, "main");
+
+        if (backup) {
+            if (sqlite3_backup_step(backup, -1) == SQLITE_OK) {
+                sqlite3_backup_finish(backup);
+            }
+        }
+
+        baton->status = sqlite3_errcode(file);
+    }
+            
+    sqlite3_close(file);
+
+    if (baton->status != SQLITE_OK) {
+        baton->message = std::string(sqlite3_errmsg(file));
+    }
+}
+
+void Database::Work_AfterBackup(uv_work_t* req) {
+    Nan::HandleScope scope;
+
+    BackupBaton* baton = static_cast<BackupBaton*>(req->data);
+    Database* db = baton->db;
+
+    Local<Function> cb = Nan::New(baton->callback);
+
+    if (baton->status != SQLITE_OK) {
+        EXCEPTION(Nan::New(baton->message.c_str()).ToLocalChecked(), baton->status, exception);
+
+        if (!cb.IsEmpty() && cb->IsFunction()) {
+            Local<Value> argv[] = { exception };
+            TRY_CATCH_CALL(db->handle(), cb, 1, argv);
+        }
+        else {
+            Local<Value> info[] = { Nan::New("error").ToLocalChecked(), exception };
+            EMIT_EVENT(db->handle(), 2, info);
+        }
+    }
+    else if (!cb.IsEmpty() && cb->IsFunction()) {
+        Local<Value> argv[] = { Nan::Null() };
+        TRY_CATCH_CALL(db->handle(), cb, 1, argv);
+    }
+
+    db->Process();
+
+    delete baton;
 }
 
 void Database::SetBusyTimeout(Baton* baton) {
@@ -524,6 +604,7 @@ void Database::Work_BeginExec(Baton* baton) {
     assert(baton->db->pending == 0);
     int status = uv_queue_work(uv_default_loop(),
         &baton->request, Work_Exec, (uv_after_work_cb)Work_AfterExec);
+    UNUSED_VARIABLE(status);
     assert(status == 0);
 }
 
@@ -624,6 +705,7 @@ void Database::Work_BeginLoadExtension(Baton* baton) {
     assert(baton->db->pending == 0);
     int status = uv_queue_work(uv_default_loop(),
         &baton->request, Work_LoadExtension, reinterpret_cast<uv_after_work_cb>(Work_AfterLoadExtension));
+    UNUSED_VARIABLE(status);
     assert(status == 0);
 }
 
