@@ -100,7 +100,7 @@ NAN_METHOD(Statement::New) {
     Database* db = Nan::ObjectWrap::Unwrap<Database>(info[0].As<Object>());
     Local<String> sql = Local<String>::Cast(info[1]);
 
-    info.This()->ForceSet(Nan::New("sql").ToLocalChecked(), sql, ReadOnly);
+    Nan::ForceSet(info.This(),Nan::New("sql").ToLocalChecked(), sql, ReadOnly);
 
     Statement* stmt = new Statement(db);
     stmt->Wrap(info.This());
