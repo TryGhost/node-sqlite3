@@ -126,10 +126,7 @@ before_script:
    fi
 
 script:
-- export CXXFLAGS="${CXXFLAGS:-} -include $(pwd)/src/gcc-preinclude.h"
 - if [[ "${NODE_VERSION}" ]]; then ./scripts/build_against_node.sh; fi;
-- nm lib/binding/*/node_sqlite3.node | grep "GLIBCXX_" | c++filt  || true
-- nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true
 - if [[ "${NODE_VERSION}" -eq "4" ]]; then ./node_modules/.bin/eslint lib; fi;
 # disabled for now: need to port to sudo:false
 #- if [[ "${NODE_WEBKIT}" ]]; then ./scripts/build_against_node_webkit.sh; fi;
