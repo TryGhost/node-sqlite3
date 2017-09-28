@@ -8,7 +8,7 @@ using namespace node_sqlite3;
 
 Napi::FunctionReference Database::constructor;
 
-void Database::Init(Napi::Env env, Napi::Object exports) {
+Napi::Object Database::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
     Napi::Function t = DefineClass(env, "Database", {
@@ -26,7 +26,8 @@ void Database::Init(Napi::Env env, Napi::Object exports) {
     constructor = Napi::Persistent(t);
     constructor.SuppressDestruct();
 
-    (exports).Set( Napi::String::New(env, "Database"), t);
+    exports.Set("Database", t);
+    return exports;
 }
 
 void Database::Process() {

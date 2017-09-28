@@ -22,7 +22,7 @@ class Database;
 class Database : public Napi::ObjectWrap<Database> {
 public:
     static Napi::FunctionReference constructor;
-    static void Init(Napi::Env env, Napi::Object exports);
+    static Napi::Object Init(Napi::Env env, Napi::Object exports);
 
     static inline bool HasInstance(Napi::Value val) {
         Napi::Env env = val.Env();

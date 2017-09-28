@@ -12,7 +12,7 @@ using namespace node_sqlite3;
 
 namespace {
 
-void RegisterModule(Napi::Env env, Napi::Object exports, Napi::Object module) {
+Napi::Object RegisterModule(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
     Database::Init(env, exports);
@@ -56,6 +56,8 @@ void RegisterModule(Napi::Env env, Napi::Object exports, Napi::Object module) {
         DEFINE_CONSTANT_INTEGER(exports, SQLITE_RANGE, RANGE)
         DEFINE_CONSTANT_INTEGER(exports, SQLITE_NOTADB, NOTADB)
     });
+
+    return exports;
 }
 
 }

@@ -1,8 +1,4 @@
 #include <string.h>
-#include <napi.h>
-#include <uv.h>
-#include <node_buffer.h>
-#include <node_version.h>
 
 #include "macros.h"
 #include "database.h"
@@ -12,7 +8,7 @@ using namespace node_sqlite3;
 
 Napi::FunctionReference Statement::constructor;
 
-void Statement::Init(Napi::Env env, Napi::Object exports) {
+Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
     Napi::Function t = DefineClass(env, "Statement", {
@@ -25,10 +21,11 @@ void Statement::Init(Napi::Env env, Napi::Object exports) {
       InstanceMethod("finalize", &Statement::Finalize),
     });
 
-    constructor.Reset(t, 1);
+    constructor = Napi::Persistent(t);
     constructor.SuppressDestruct();
 
-    (exports).Set( Napi::String::New(env, "Statement"), t);
+    exports.Set("Statement", t);
+    return exports;
 }
 
 void Statement::Process() {

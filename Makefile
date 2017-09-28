@@ -35,10 +35,10 @@ rebuild:
 
 ifndef only
 test:
-	@PATH="./node_modules/mocha/bin:${PATH}" && NODE_PATH="./lib:$(NODE_PATH)" && export NODE_OPTIONS=--napi-modules && mocha -R spec
+	@PATH="./node_modules/mocha/bin:${PATH}" && NODE_PATH="./lib:$(NODE_PATH)" && mocha -R spec
 else
 test:
-	@PATH="./node_modules/mocha/bin:${PATH}" && NODE_PATH="./lib:$(NODE_PATH)" && export NODE_OPTIONS=--napi-modules && mocha -R spec test/${only}.test.js
+	@PATH="./node_modules/mocha/bin:${PATH}" && NODE_PATH="./lib:$(NODE_PATH)" && mocha -R spec test/${only}.test.js
 endif
 
 check: test
