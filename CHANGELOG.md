@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.13
+
+- Attempt to fix regression of #866
+
 ## 3.1.12
 
 - Fixed to ensure the binaries do not rely on `GLIBC_2.14` and only `GLIBC_2.2.5`. This regressed in v3.1.11.
