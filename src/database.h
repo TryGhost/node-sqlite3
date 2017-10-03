@@ -43,7 +43,9 @@ public:
                 db(db_), status(SQLITE_OK) {
             db->Ref();
             request.data = this;
-            callback.Reset(cb_, 1);
+            if (!cb_.IsUndefined() && cb_.IsFunction()) {
+                callback.Reset(cb_, 1);
+            }
         }
         virtual ~Baton() {
             db->Unref();

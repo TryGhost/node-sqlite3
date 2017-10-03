@@ -84,12 +84,15 @@ Statement::Statement(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Statemen
 
     if (length <= 0 || !Database::HasInstance(info[0])) {
         Napi::TypeError::New(env, "Database object expected").ThrowAsJavaScriptException();
+        return;
     }
     else if (length <= 1 || !info[1].IsString()) {
         Napi::TypeError::New(env, "SQL query expected").ThrowAsJavaScriptException();
+        return;
     }
     else if (length > 2 && !info[2].IsUndefined() && !info[2].IsFunction()) {
         Napi::TypeError::New(env, "Callback expected").ThrowAsJavaScriptException();
+        return;
     }
 
     Database* db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
@@ -149,8 +152,8 @@ void Statement::Work_AfterPrepare(uv_work_t* req) {
     }
     else {
         stmt->prepared = true;
-        Napi::Function cb = baton->callback.Value();
-        if (!cb.IsUndefined() && cb.IsFunction()) {
+        if (!baton->callback.IsEmpty() && baton->callback.Value().IsFunction()) {
+            Napi::Function cb = baton->callback.Value();
             Napi::Value argv[] = { env.Null() };
             TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
         }
