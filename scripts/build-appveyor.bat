@@ -4,9 +4,13 @@ SET EL=0
 
 ECHO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %~f0 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+IF "%msvs_toolset%"=="" ECHO "msvs_toolset unset, defaulting to 12" && SET msvs_toolset=12
+IF %NODE_MAJOR% GTR 4 ECHO "detected >= node v5, forcing msvs_toolset=14" && SET msvs_toolset=14
+
 SET PATH=%CD%;%PATH%
 SET msvs_version=2013
 IF "%msvs_toolset%"=="14" SET msvs_version=2015
+
 
 ECHO APPVEYOR^: %APPVEYOR%
 ECHO nodejs_version^: %nodejs_version%
@@ -51,6 +55,7 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 :SKIP_APPVEYOR_INSTALL
 IF /I "%msvs_toolset%"=="12" GOTO NODE_INSTALLED
+IF %NODE_MAJOR% GTR 4 GOTO NODE_INSTALLED
 
 
 ::custom node for VS2015
