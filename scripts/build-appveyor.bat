@@ -4,8 +4,8 @@ SET EL=0
 
 ECHO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %~f0 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-IF "%msvs_toolset%"=="" ECHO "msvs_toolset unset, defaulting to 12" && SET msvs_toolset=12
-IF %NODE_MAJOR% GTR 4 ECHO "detected >= node v5, forcing msvs_toolset=14" && SET msvs_toolset=14
+IF /I "%msvs_toolset%"=="" ECHO msvs_toolset unset, defaulting to 12 && SET msvs_toolset=12
+IF %NODE_MAJOR% GTR 4 ECHO detected node v5, forcing msvs_toolset 14 && SET msvs_toolset=14
 
 SET PATH=%CD%;%PATH%
 SET msvs_version=2013
