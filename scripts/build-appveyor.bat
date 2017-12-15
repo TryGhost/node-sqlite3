@@ -119,6 +119,8 @@ IF "%nodejs_version:~0,1%"=="0" npm install https://github.com/springmeyer/node-
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 IF "%nodejs_version:~0,1%"=="4" npm install node-gyp@3.x
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+IF "%nodejs_version:~0,1%"=="5" npm install node-gyp@3.x
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 CALL npm install --build-from-source --msvs_version=%msvs_version% %TOOLSET_ARGS% --loglevel=http
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
