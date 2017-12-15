@@ -5,6 +5,7 @@ SET EL=0
 ECHO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %~f0 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 IF /I "%msvs_toolset%"=="" ECHO msvs_toolset unset, defaulting to 12 && SET msvs_toolset=12
+SET NODE_MAJOR=%nodejs_version:~0,1%
 IF %NODE_MAJOR% GTR 4 ECHO detected node v5, forcing msvs_toolset 14 && SET msvs_toolset=14
 
 SET PATH=%CD%;%PATH%
@@ -46,7 +47,6 @@ IF /I "%platform%"=="x64" powershell Install-Product node $env:nodejs_version x6
 IF /I "%platform%"=="x86" powershell Install-Product node $env:nodejs_version x86
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
-SET NODE_MAJOR=%nodejs_version:~0,1%
 ECHO node major version^: %NODE_MAJOR%
 IF %NODE_MAJOR% GTR 0 ECHO node version greater than zero, not updating npm && GOTO SKIP_APPVEYOR_INSTALL
 
