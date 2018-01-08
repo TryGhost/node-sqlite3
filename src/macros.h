@@ -101,10 +101,13 @@ inline Napi::String StringConcat(Napi::Value str1, Napi::Value str2) {
         argc, argv                                                             \
     );
 
+// The Mac OS compiler complains when argv is NULL unless we
+// first assign it to a locally defined variable.
 #define TRY_CATCH_CALL(context, callback, argc, argv)                          \
+    Napi::Value* passed_argv = argv;\
     std::vector<napi_value> args;\
-    if (argc != 0 && argv != NULL) {\
-      args.assign(argv, argv + argc);\
+    if ((argc != 0) && (passed_argv != NULL)) {\
+      args.assign(passed_argv, passed_argv + argc);\
     }\
     (callback).MakeCallback(Napi::Value(context), args);
 

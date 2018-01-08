@@ -34,6 +34,7 @@
         }
         ]
       ],
+      'defines': [ 'NAPI_DISABLE_CPP_EXCEPTIONS' ],
       "cflags": [ "-include ../src/gcc-preinclude.h" ],
       "sources": [
         "src/database.cc",

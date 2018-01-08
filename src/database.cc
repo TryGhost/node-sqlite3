@@ -111,7 +111,7 @@ Database::Database(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Database>(
     Napi::Env env = info.Env();
 
     REQUIRE_ARGUMENT_STRING(0, filename);
-    int pos = 1;
+    unsigned int pos = 1;
 
     int mode;
     if (info.Length() >= pos && info[pos].IsNumber()) {
