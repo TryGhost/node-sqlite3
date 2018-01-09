@@ -408,8 +408,8 @@ void Statement::Work_AfterGet(uv_work_t* req) {
         if (!cb.IsEmpty() && cb->IsFunction()) {
             if (stmt->status == SQLITE_ROW) {
                 // Create the result array from the data we acquired.
-                Local<Value> argv[] = { Nan::Null(), RowToJS(&baton->row) };
-                TRY_CATCH_CALL(stmt->handle(), cb, 2, argv);
+                Local<Value> argv[] = { Nan::Null(), RowToJS(&baton->row), GetFields(stmt->_handle) };
+                TRY_CATCH_CALL(stmt->handle(), cb, 3, argv);
             }
             else {
                 Local<Value> argv[] = { Nan::Null() };
@@ -552,8 +552,8 @@ void Statement::Work_AfterAll(uv_work_t* req) {
                     delete *it;
                 }
 
-                Local<Value> argv[] = { Nan::Null(), result };
-                TRY_CATCH_CALL(stmt->handle(), cb, 2, argv);
+                Local<Value> argv[] = { Nan::Null(), result, GetFields(stmt->_handle) };
+                TRY_CATCH_CALL(stmt->handle(), cb, 3, argv);
             }
             else {
                 // There were no result rows.
@@ -669,15 +669,17 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
 
         Local<Function> cb = Nan::New(async->item_cb);
         if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[2];
+            Local<Value> argv[3];
+            Local<Array> fields = GetFields(async->stmt->_handle);
             argv[0] = Nan::Null();
 
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
             for (int i = 0; it < end; ++it, i++) {
                 argv[1] = RowToJS(*it);
+                argv[2] = fields;
                 async->retrieved++;
-                TRY_CATCH_CALL(async->stmt->handle(), cb, 2, argv);
+                TRY_CATCH_CALL(async->stmt->handle(), cb, 3, argv);
                 delete *it;
             }
         }
@@ -746,10 +748,10 @@ void Statement::Work_AfterReset(uv_work_t* req) {
     STATEMENT_END();
 }
 
-Local<Object> Statement::RowToJS(Row* row) {
+Local<Array> Statement::RowToJS(Row* row) {
     Nan::EscapableHandleScope scope;
 
-    Local<Object> result = Nan::New<Object>();
+    Local<Array> result = Nan::New<Array>();
 
     Row::const_iterator it = row->begin();
     Row::const_iterator end = row->end();
@@ -776,7 +778,7 @@ Local<Object> Statement::RowToJS(Row* row) {
             } break;
         }
 
-        Nan::Set(result, Nan::New(field->name.c_str()).ToLocalChecked(), value);
+        Nan::Set(result, i, value);
 
         DELETE_FIELD(field);
     }
@@ -814,6 +816,23 @@ void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
                 assert(false);
         }
     }
+}
+
+Local<Array> Statement::GetFields(sqlite3_stmt* stmt) {
+    Nan::EscapableHandleScope scope;
+
+    int count = sqlite3_column_count(stmt);
+    Local<Array> fields(Nan::New<Array>(sqlite3_column_count(stmt)));
+
+    for (int i = 0; i < count; i++) {
+        Local<Object> field = Nan::New<Object>();
+        Nan::Set(field, Nan::New<String>("name").ToLocalChecked(), Nan::New<String>(sqlite3_column_name(stmt, i)).ToLocalChecked());
+        const char* qualifier = sqlite3_column_table_name(stmt, i);
+        Nan::Set(field, Nan::New<String>("table").ToLocalChecked(), Nan::New<String>(qualifier != NULL ? qualifier : "").ToLocalChecked());
+        Nan::Set(fields, i, field);
+    }
+
+    return scope.Escape(fields);
 }
 
 NAN_METHOD(Statement::Finalize) {
