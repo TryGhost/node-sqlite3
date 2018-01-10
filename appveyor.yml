@@ -6,46 +6,36 @@ environment:
   matrix:
     - nodejs_version: 0.10
       platform: x86
-      msvs_toolset: 12
     - nodejs_version: 0.10
       platform: x64
-      msvs_toolset: 12
     - nodejs_version: 0.12
       platform: x86
-      msvs_toolset: 12
     - nodejs_version: 0.12
       platform: x64
-      msvs_toolset: 12
     - nodejs_version: 4
       platform: x64
-      msvs_toolset: 12
     - nodejs_version: 4
       platform: x86
-      msvs_toolset: 12
     - nodejs_version: 5
       platform: x64
-      msvs_toolset: 12
     - nodejs_version: 5
       platform: x86
-      msvs_toolset: 12
     - nodejs_version: 6
       platform: x64
-      msvs_toolset: 12
     - nodejs_version: 6
       platform: x86
-      msvs_toolset: 12
     - nodejs_version: 7
       platform: x64
-      msvs_toolset: 12
     - nodejs_version: 7
       platform: x86
-      msvs_toolset: 12
     - nodejs_version: 8
       platform: x64
-      msvs_toolset: 12
     - nodejs_version: 8
       platform: x86
-      msvs_toolset: 12
+    - nodejs_version: 9
+      platform: x64
+    - nodejs_version: 9
+      platform: x86
     # custom visual studio 2015 builds
     - nodejs_version: 0.10.40
       platform: x86

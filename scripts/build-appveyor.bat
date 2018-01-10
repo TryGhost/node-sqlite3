@@ -4,9 +4,14 @@ SET EL=0
 
 ECHO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %~f0 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+IF /I "%msvs_toolset%"=="" ECHO msvs_toolset unset, defaulting to 12 && SET msvs_toolset=12
+SET NODE_MAJOR=%nodejs_version:~0,1%
+IF %NODE_MAJOR% GTR 4 ECHO detected node v5, forcing msvs_toolset 14 && SET msvs_toolset=14
+
 SET PATH=%CD%;%PATH%
 SET msvs_version=2013
 IF "%msvs_toolset%"=="14" SET msvs_version=2015
+
 
 ECHO APPVEYOR^: %APPVEYOR%
 ECHO nodejs_version^: %nodejs_version%
@@ -42,7 +47,6 @@ IF /I "%platform%"=="x64" powershell Install-Product node $env:nodejs_version x6
 IF /I "%platform%"=="x86" powershell Install-Product node $env:nodejs_version x86
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
-SET NODE_MAJOR=%nodejs_version:~0,1%
 ECHO node major version^: %NODE_MAJOR%
 IF %NODE_MAJOR% GTR 0 ECHO node version greater than zero, not updating npm && GOTO SKIP_APPVEYOR_INSTALL
 
@@ -51,6 +55,7 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 :SKIP_APPVEYOR_INSTALL
 IF /I "%msvs_toolset%"=="12" GOTO NODE_INSTALLED
+IF %NODE_MAJOR% GTR 4 GOTO NODE_INSTALLED
 
 
 ::custom node for VS2015
@@ -110,9 +115,11 @@ IF /I "%NPM_BIN_DIR%"=="%CD%" ECHO ERROR npm bin -g equals local directory && SE
 ECHO ===== where npm puts stuff END ============
 
 
-IF "%nodejs_version:~0,1%"=="0" npm install https://github.com/springmeyer/node-gyp/tarball/v3.x
+IF "%nodejs_version:~0,1%"=="0" CALL npm install https://github.com/springmeyer/node-gyp/tarball/v3.x
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-IF "%nodejs_version:~0,1%"=="4" npm install node-gyp@3.x
+IF "%nodejs_version:~0,1%"=="4" CALL npm install node-gyp@3.x
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+IF "%nodejs_version:~0,1%"=="5" CALL npm install node-gyp@3.x
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 CALL npm install --build-from-source --msvs_version=%msvs_version% %TOOLSET_ARGS% --loglevel=http
