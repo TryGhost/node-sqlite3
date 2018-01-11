@@ -100,6 +100,21 @@ matrix:
      - os: osx
        compiler: clang
        env: NODE_VERSION="0.10" # node abi 11
+     # electron Linux
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.6.2"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.3.14"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
 
 env:
   global:
@@ -136,7 +151,13 @@ before_script:
    fi
 
 script:
-- if [[ "${NODE_VERSION}" ]]; then ./scripts/build_against_node.sh; fi;
+- if [[ "${NODE_VERSION}" ]]; then
+    if [[ "${ELECTRON_VERSION}" ]]; then
+      ./scripts/build_against_electron.sh;
+    else
+      ./scripts/build_against_node.sh;
+    fi;
+  fi
 - if [[ "${NODE_VERSION}" -eq "4" ]]; then ./node_modules/.bin/eslint lib; fi;
 # disabled for now: need to port to sudo:false
 #- if [[ "${NODE_WEBKIT}" ]]; then ./scripts/build_against_node_webkit.sh; fi;
