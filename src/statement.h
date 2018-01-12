@@ -70,7 +70,6 @@ typedef std::vector<Row*> Rows;
 typedef Row Parameters;
 
 
-
 class Statement : public Nan::ObjectWrap {
 public:
     static Nan::Persistent<FunctionTemplate> constructor_template;
@@ -224,7 +223,8 @@ protected:
     bool Bind(const Parameters &parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
-    static Local<Object> RowToJS(Row* row);
+    static Local<Array> GetFields(sqlite3_stmt* stmt);
+    static Local<Array> RowToJS(Row* row);
     void Schedule(Work_Callback callback, Baton* baton);
     void Process();
     void CleanQueue();

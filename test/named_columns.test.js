@@ -20,7 +20,7 @@ describe('named columns', function() {
 
     it('should retrieve the values', function(done) {
         db.get("SELECT txt, num FROM foo ORDER BY num", function(err, row) {
-            if (err) throw err;
+            if (err) done(err);
             assert.equal(row.txt, "Lorem Ipsum");
             assert.equal(row.num, 1);
             done();
@@ -29,7 +29,7 @@ describe('named columns', function() {
 
     it('should be able to retrieve rowid of last inserted value', function(done) {
         db.get("SELECT last_insert_rowid() as last_id FROM foo", function(err, row) {
-            if (err) throw err;
+            if (err) done(err);
             assert.equal(row.last_id, 1);
             done();
         });
