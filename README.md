@@ -9,7 +9,7 @@ Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](
 
 ## Supported platforms
 
-The `sqlite3` module works with Node.js v0.10.x, v0.12.x, v4.x, v5.x, v6.x and v7.x.
+The `sqlite3` module works with Node.js v4.x, v5.x, v6.x and v7.x.
 
 Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/mapbox/node-pre-gyp).
 

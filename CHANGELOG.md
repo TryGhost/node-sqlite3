@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+ - Drop support for Node v0.10 and v.12
+ - Upgrade to node-pre-gyp@0.9.0
+
 ## 3.1.13
 
 - Attempt to fix regression of #866
