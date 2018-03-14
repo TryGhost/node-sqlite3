@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## 4.0.0
 
  - Drop support for Node v0.10 and v.12
  - Upgrade to node-pre-gyp@0.9.0
