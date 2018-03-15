@@ -4,6 +4,7 @@
 
  - Drop support for Node v0.10 and v.12
  - Upgrade to node-pre-gyp@0.9.0
+ - Upgrade to nan@2.9.2
 
 ## 3.1.13
 
