@@ -33,13 +33,8 @@ rebuild:
 	@make clean
 	@make
 
-ifndef only
 test:
-	@PATH="./node_modules/mocha/bin:${PATH}" && NODE_PATH="./lib:$(NODE_PATH)" mocha -R spec
-else
-test:
-	@PATH="./node_modules/mocha/bin:${PATH}" && NODE_PATH="./lib:$(NODE_PATH)" mocha -R spec test/${only}.test.js
-endif
+	npm test
 
 check: test
 
