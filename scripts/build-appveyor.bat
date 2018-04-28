@@ -178,7 +178,6 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 :NPM_TEST_FINISHED
 
-ECHO node-pre-gyp packaging 
 CALL node_modules\.bin\node-pre-gyp package %TOOLSET_ARGS%
 ::make commit message env var shorter
 SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%
