@@ -19,7 +19,10 @@ if [[ ${COVERAGE} == true ]]; then
     npm test
     ./py-local/bin/cpp-coveralls --exclude node_modules --exclude tests --build-root build --gcov-options '\-lp' --exclude docs --exclude build/Release/obj/gen --exclude deps  > /dev/null
 else
-    npm install --build-from-source  --clang=1
+    echo "building binaries for publishing"
+    CFLAGS="${CFLAGS:-} -include $(pwd)/src/gcc-preinclude.h" CXXFLAGS="${CXXFLAGS:-} -include $(pwd)/src/gcc-preinclude.h" V=1 npm install --build-from-source  --clang=1
+    nm lib/binding/*/node_sqlite3.node | grep "GLIBCXX_" | c++filt  || true
+    nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true
     npm test
 fi
 
@@ -27,6 +30,7 @@ fi
 publish
 
 # now test building against shared sqlite
+echo "building from source to test against external libsqlite3"
 export NODE_SQLITE3_JSON1=no
 if [[ $(uname -s) == 'Darwin' ]]; then
     brew install sqlite

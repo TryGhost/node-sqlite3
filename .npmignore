@@ -10,3 +10,8 @@ Makefile
 scripts
 .travis.yml
 examples
+.dtps
+local.env
+.mason
+.eslintrc.js
+setup.sh
