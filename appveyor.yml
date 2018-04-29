@@ -82,3 +82,6 @@ install:
 build: OFF
 test: OFF
 deploy: OFF
+
+artifacts:
+  - path: '**\electron-*.tar.gz'
