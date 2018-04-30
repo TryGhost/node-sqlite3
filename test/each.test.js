@@ -1,4 +1,4 @@
-var sqlite3 = require('..').verbose();
+var sqlite3 = require('..');
 var assert = require('assert');
 
 describe('each', function() {
@@ -16,10 +16,10 @@ describe('each', function() {
             retrieved++;
         });
 
-        db.wait(function() {
+        db.wait(setTimeout(function() {
             assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
             done();
-        });
+        }, 400));
     });
 
     it('Statement#each with complete callback', function(done) {
