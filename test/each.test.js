@@ -1,4 +1,4 @@
-var sqlite3 = require('..');
+var sqlite3 = require('..').verbose();
 var assert = require('assert');
 
 describe('each', function() {
