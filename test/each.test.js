@@ -10,16 +10,19 @@ describe('each', function() {
     it('retrieve 100,000 rows with Statement#each', function(done) {
         var total = 100000;
         var retrieved = 0;
+        
+        db.wait(function() {
+            db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
+                if (err) throw err;
+                retrieved++;
+            });
 
-        db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
-            if (err) throw err;
-            retrieved++;
+            db.wait(function() {
+                assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
+                done();
+            });
         });
 
-        db.wait(setTimeout(function() {
-            assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
-            done();
-        }, 400));
     });
 
     it('Statement#each with complete callback', function(done) {
