@@ -5,5 +5,5 @@ var createdb = require('./createdb.js');
 createdb(function () {
     setTimeout(function () {
         app.quit();
-    }, 1000);
+    }, 20000);
 });
