@@ -11,20 +11,16 @@ describe('each', function() {
         var total = 100000;
         var retrieved = 0;
         
-        // assert fails sometimes if previous test is still running & blocking.
-        // so wait until it is finished.
-        db.wait(function() {
-            db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
-                if (err) throw err;
-                retrieved++;
-            });
 
-            db.wait(function() {
+        db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
+            if (err) throw err;
+            retrieved++;
+            
+            if(retrieved === total) {
                 assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
                 done();
-            });
+            }
         });
-
     });
 
     it('Statement#each with complete callback', function(done) {
