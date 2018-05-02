@@ -81,7 +81,10 @@ matrix:
        env: NODE_VERSION="5" COVERAGE=true PUBLISHABLE=false # node abi 47
      - os: osx
        compiler: clang
-       env: NODE_VERSION="9" # node abi 58
+       env: NODE_VERSION="10" # node abi 64
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="9" # node abi 59
      - os: osx
        compiler: clang
        env: NODE_VERSION="8" # node abi 57
