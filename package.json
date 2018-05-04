@@ -37,7 +37,7 @@
     "url": "git://github.com/mapbox/node-sqlite3.git"
   },
   "dependencies": {
-    "node-addon-api": "^1.1.0",
+    "node-addon-api": "^1.2.0",
     "nan": "~2.9.2",
     "node-pre-gyp": "~0.9.0"
   },
