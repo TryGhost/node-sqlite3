@@ -45,7 +45,6 @@
     "node-pre-gyp"
   ],
   "devDependencies": {
-    "node-gyp": "^3.6.1",
     "aws-sdk": "2.x",
     "eslint": "3.5.0",
     "mocha": "3.x"
