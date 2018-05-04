@@ -9,7 +9,7 @@ Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](
 
 ## Supported platforms
 
-The `sqlite3` module works with Node.js v0.10.x, v0.12.x, v4.x, v5.x, v6.x and v7.x.
+The `sqlite3` module works with Node.js v4.x, v5.x, v6.x and v7.x.
 
 Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/mapbox/node-pre-gyp).
 
@@ -155,6 +155,16 @@ Set the location where `make` installed it:
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/local --verbose
     
     node -e 'require("sqlite3")'
+    
+### Custom builds and Electron
+
+Running sqlite3 through [electron-rebuild](https://github.com/electron/electron-rebuild) does not preserve the sqlcipher extension, so some additional flags are needed to make this build Electron compatible. Your `npm install sqlite3 --build-from-source` command needs these additional flags (be sure to replace the target version with the current Electron version you are working with):
+
+    --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
+
+In the case of MacOS with Homebrew, the command should look like the following:
+
+    npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix` --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
 
 # Testing
 

@@ -1,5 +1,33 @@
 # Changelog
 
+## 4.0.0
+
+ - Drop support for Node v0.10 and v.12
+ - Upgrade to node-pre-gyp@0.9.0
+ - Upgrade to nan@2.9.2
+
+## 3.1.13
+
+- Attempt to fix regression of #866
+
+## 3.1.12
+
+- Fixed to ensure the binaries do not rely on `GLIBC_2.14` and only `GLIBC_2.2.5`. This regressed in v3.1.11.
+
+## 3.1.11
+
+- Fixed building from source on alpine linux
+
+## 3.1.10
+
+- Removed `npm ls` from `prepublish` hook per mapbox/node-pre-gyp#291
+- Upgraded node-pre-gyp to v0.6.37
+- Removed accidentally committed large file
+
+## 3.1.9
+
+- Added support for node v8 and upgraded `nan`, `node-pre-gyp` deps.
+
 ## 3.1.8
 
 - Added support for node v7 (pre-compiled binaries available)

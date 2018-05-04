@@ -127,6 +127,8 @@ Database::Database(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Database>(
 
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filename", info[0].As<Napi::String>(), napi_default));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("mode", Napi::Number::New(env, mode), napi_default));
+    Database* db = new Database();
+    db->Wrap(info.This());
 
     // Start opening the database.
     OpenBaton* baton = new OpenBaton(this, callback, filename.c_str(), mode);

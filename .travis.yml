@@ -2,6 +2,8 @@ sudo: false
 
 language: generic
 
+dist: precise
+
 git:
   depth: 10
 
@@ -13,15 +15,16 @@ addons:
     packages:
      - clang-3.5
 
-# don't re-build for tags so that [publish binary] is not re-run
-# https://github.com/travis-ci/travis-ci/issues/1532
-branches:
-  except:
-    - /^v[0-9]/
-
 matrix:
   include:
      # Linux
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="9"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
      - os: linux
        compiler: clang
        env: NODE_VERSION="8"
@@ -29,9 +32,64 @@ matrix:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
             packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="7"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="6"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="5"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="4"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     # test building against external sqlite
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="8" EXTERNAL_SQLITE=true PUBLISHABLE=false
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5','libsqlite3-dev']
+     # OS X
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="5" COVERAGE=true PUBLISHABLE=false # node abi 47
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="9" # node abi 58
      - os: osx
        compiler: clang
        env: NODE_VERSION="8" # node abi 57
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="7" # node abi 51
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="6" # node abi 48
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="5" # node abi 47
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="4" # node abi 46
 
 env:
   global:

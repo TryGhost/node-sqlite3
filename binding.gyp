@@ -41,7 +41,6 @@
         'GCC_VERSION': 'com.apple.compilers.llvm.clang.1_0'
       },
       'defines': [ 'NAPI_DISABLE_CPP_EXCEPTIONS' ],
-      "cflags": [ "-include ../src/gcc-preinclude.h" ],
       "sources": [
         "src/database.cc",
         "src/node_sqlite3.cc",

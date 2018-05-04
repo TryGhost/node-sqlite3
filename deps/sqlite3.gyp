@@ -71,7 +71,6 @@
       'dependencies': [
         'action_before_build'
       ],
-      'cflags': [ '-include ../src/gcc-preinclude.h' ],
       'sources': [
         '<(SHARED_INTERMEDIATE_DIR)/sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
       ],
@@ -87,8 +86,7 @@
         ],
       },
       'cflags_cc': [
-          '-Wno-unused-value',
-          '-include ../src/gcc-preinclude.h'
+          '-Wno-unused-value'
       ],
       'defines': [
         '_REENTRANT=1',
