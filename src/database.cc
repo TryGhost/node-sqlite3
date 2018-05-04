@@ -324,6 +324,7 @@ NAN_METHOD(Database::Configure) {
     Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
 
     REQUIRE_ARGUMENTS(2);
+    OPTIONAL_ARGUMENT_FUNCTION(2, callback);
 
     if (Nan::Equals(info[0], Nan::New("trace").ToLocalChecked()).FromJust()) {
         Local<Function> handle;
@@ -340,9 +341,26 @@ NAN_METHOD(Database::Configure) {
             return Nan::ThrowTypeError("Value must be an integer");
         }
         Local<Function> handle;
-        Baton* baton = new Baton(db, handle);
-        baton->status = Nan::To<int>(info[1]).FromJust();
+
+        int timeout = Nan::To<int>(info[1]).FromJust();
+        ConfigureBaton* baton = new ConfigureBaton(db, callback, timeout);
         db->Schedule(SetBusyTimeout, baton);
+    }
+    else if (Nan::Equals(info[0], Nan::New("chunkSize").ToLocalChecked()).FromJust()) {
+        // do basic validation and throw an error if the value is not a valid
+        // value, but if there's an error during execution that will come back
+        // only via the callback if the calling code supplies one.
+        const char* v_error = "Value must be an integer > 0 and must be a power of 2";
+        if (!info[1]->IsInt32()) {
+            return Nan::ThrowTypeError(v_error);
+        }
+
+        int sz = Nan::To<int>(info[1]).FromJust();
+        if (sz <= 0 ||  (sz & (sz - 1)) != 0) {
+            return Nan::ThrowError(v_error);
+        }
+        ConfigureBaton* baton = new ConfigureBaton(db, callback, sz);
+        db->Schedule(SetChunkSize, baton);
     }
     else {
         return Nan::ThrowError(Exception::Error(String::Concat(
@@ -375,8 +393,24 @@ void Database::SetBusyTimeout(Baton* baton) {
     assert(baton->db->open);
     assert(baton->db->_handle);
 
-    // Abuse the status field for passing the timeout.
-    sqlite3_busy_timeout(baton->db->_handle, baton->status);
+    ConfigureBaton* csbaton = static_cast<ConfigureBaton*>(baton);
+
+    int ret = sqlite3_busy_timeout(baton->db->_handle, csbaton->value);
+
+    MAYBE_CALLBACK(baton, ret);
+
+    delete baton;
+}
+
+void Database::SetChunkSize(Baton* baton) {
+    assert(baton->db->open);
+    assert(baton->db->_handle);
+
+    ConfigureBaton* csbaton = static_cast<ConfigureBaton*>(baton);
+
+    int ret = sqlite3_file_control(baton->db->_handle, NULL, SQLITE_FCNTL_CHUNK_SIZE, (void*)&csbaton->value);
+
+    MAYBE_CALLBACK(baton, ret);
 
     delete baton;
 }

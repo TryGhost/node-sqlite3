@@ -68,6 +68,12 @@ public:
             Baton(db_, cb_), filename(filename_) {}
     };
 
+    struct ConfigureBaton : Baton {
+        int value;
+        ConfigureBaton(Database* db_, Local<Function> cb_, int value_) :
+            Baton(db_, cb_), value(value_) {}
+    };
+
     typedef void (*Work_Callback)(Baton* baton);
 
     struct Call {
@@ -155,6 +161,7 @@ protected:
     static NAN_METHOD(Interrupt);
 
     static void SetBusyTimeout(Baton* baton);
+    static void SetChunkSize(Baton* baton);
 
     static void RegisterTraceCallback(Baton* baton);
     static void TraceCallback(void* db, const char* sql);
