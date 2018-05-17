@@ -44,6 +44,7 @@
     "node-pre-gyp"
   ],
   "devDependencies": {
+    "@mapbox/cloudfriend": "^1.9.0",
     "aws-sdk": "2.x",
     "eslint": "3.5.0",
     "mocha": "3.x"
