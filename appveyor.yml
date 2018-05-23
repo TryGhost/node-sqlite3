@@ -32,6 +32,16 @@ environment:
     - nodejs_version: 8
       platform: x64
       NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 2.0.1
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 8
+      platform: x86
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 2.0.1
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 8
+      platform: x64
+      NODE_RUNTIME: electron
       NODE_RUNTIME_VERSION: 1.8.4
       TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
     - nodejs_version: 8
