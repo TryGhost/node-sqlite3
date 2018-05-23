@@ -101,7 +101,7 @@ matrix:
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
+            packages: [ 'clang-3.5', 'libc6']
      - os: linux
        compiler: clang
        env: NODE_VERSION="6" ELECTRON_VERSION="1.8.4"
