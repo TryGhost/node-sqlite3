@@ -36,7 +36,7 @@ cd ./lib/binding/
 for dir in `ls | grep "electron-v2.0"`; do
     echo "Zipping & Uploading $dir"
     file=$(echo "${dir}.zip")
-    zip -R $file $dir
+    zip -r $file $dir
     url="$(curl  -H "Max-Days: 1" -s --upload-file $file https://transfer.sh/$file)\n"
     echo "Uploaded file= ${url}"
 done
