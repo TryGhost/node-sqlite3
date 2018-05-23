@@ -30,11 +30,6 @@ function electron_test() {
 
 # test installing from source
 npm install --build-from-source  --clang=1 $GYP_ARGS
-electron_pretest
-electron_test
-
-publish
-make clean
 
 # TODO: remove me -start
 cd ./lib/binding/
@@ -47,7 +42,12 @@ for dir in `ls | grep "electron-v2.0"`; do
 done
 cd ../../
 # TODO: remove me -end
-    
+
+electron_pretest
+electron_test
+
+publish
+make clean
 
 # now test building against shared sqlite
 export NODE_SQLITE3_JSON1=no
