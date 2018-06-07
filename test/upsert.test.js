@@ -8,7 +8,7 @@ describe('query properties', function() {
         db.run("CREATE TABLE foo (id INT PRIMARY KEY, count INT)", done);
     });
 
-    it('should upsert', function(done) {
+    (sqlite3.VERSION_NUMBER < 3024000 ? it.skip : it)('should upsert', function(done) {
         var stmt = db.prepare("INSERT INTO foo VALUES(?, ?)");
         stmt.run(1, 1, function(err) { // insert 1
             if (err) throw err;
