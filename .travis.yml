@@ -7,14 +7,6 @@ dist: trusty
 git:
   depth: 10
 
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    - llvm-toolchain-trusty-3.9
-    packages:
-     - clang-3.9
-
 matrix:
   include:
      # Linux
