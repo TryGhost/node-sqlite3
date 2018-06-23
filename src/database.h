@@ -7,41 +7,45 @@
 #include <queue>
 
 #include <sqlite3.h>
-#include <nan.h>
+#include <napi.h>
+#include <uv.h>
 
 #include "async.h"
 
-using namespace v8;
+using namespace Napi;
 
 namespace node_sqlite3 {
 
 class Database;
 
 
-class Database : public Nan::ObjectWrap {
+class Database : public Napi::ObjectWrap<Database> {
 public:
-    static Nan::Persistent<FunctionTemplate> constructor_template;
-    static NAN_MODULE_INIT(Init);
+    static Napi::FunctionReference constructor;
+    static Napi::Object Init(Napi::Env env, Napi::Object exports);
 
-    static inline bool HasInstance(Local<Value> val) {
-        Nan::HandleScope scope;
-        if (!val->IsObject()) return false;
-        Local<Object> obj = val.As<Object>();
-        return Nan::New(constructor_template)->HasInstance(obj);
+    static inline bool HasInstance(Napi::Value val) {
+        Napi::Env env = val.Env();
+        Napi::HandleScope scope(env);
+        if (!val.IsObject()) return false;
+        Napi::Object obj = val.As<Napi::Object>();
+        return obj.InstanceOf(constructor.Value());
     }
 
     struct Baton {
         uv_work_t request;
         Database* db;
-        Nan::Persistent<Function> callback;
+        Napi::FunctionReference callback;
         int status;
         std::string message;
 
-        Baton(Database* db_, Local<Function> cb_) :
+        Baton(Database* db_, Napi::Function cb_) :
                 db(db_), status(SQLITE_OK) {
             db->Ref();
             request.data = this;
-            callback.Reset(cb_);
+            if (!cb_.IsUndefined() && cb_.IsFunction()) {
+                callback.Reset(cb_, 1);
+            }
         }
         virtual ~Baton() {
             db->Unref();
@@ -52,19 +56,19 @@ public:
     struct OpenBaton : Baton {
         std::string filename;
         int mode;
-        OpenBaton(Database* db_, Local<Function> cb_, const char* filename_, int mode_) :
+        OpenBaton(Database* db_, Napi::Function cb_, const char* filename_, int mode_) :
             Baton(db_, cb_), filename(filename_), mode(mode_) {}
     };
 
     struct ExecBaton : Baton {
         std::string sql;
-        ExecBaton(Database* db_, Local<Function> cb_, const char* sql_) :
+        ExecBaton(Database* db_, Napi::Function cb_, const char* sql_) :
             Baton(db_, cb_), sql(sql_) {}
     };
 
     struct LoadExtensionBaton : Baton {
         std::string filename;
-        LoadExtensionBaton(Database* db_, Local<Function> cb_, const char* filename_) :
+        LoadExtensionBaton(Database* db_, Napi::Function cb_, const char* filename_) :
             Baton(db_, cb_), filename(filename_) {}
     };
 
@@ -99,17 +103,16 @@ public:
 
     friend class Statement;
 
-protected:
-    Database() : Nan::ObjectWrap(),
-        _handle(NULL),
-        open(false),
-        closing(false),
-        locked(false),
-        pending(0),
-        serialize(false),
-        debug_trace(NULL),
-        debug_profile(NULL),
-        update_event(NULL) {
+    void init() {
+        _handle = NULL;
+        open = false;
+        closing = false;
+        locked = false;
+        pending = 0;
+        serialize =false;
+        debug_trace = NULL;
+        debug_profile = NULL;
+        update_event = NULL;
     }
 
     ~Database() {
@@ -119,40 +122,41 @@ protected:
         open = false;
     }
 
-    static NAN_METHOD(New);
+    Database(const Napi::CallbackInfo& info);
+protected:
     static void Work_BeginOpen(Baton* baton);
     static void Work_Open(uv_work_t* req);
     static void Work_AfterOpen(uv_work_t* req);
 
-    static NAN_GETTER(OpenGetter);
+    Napi::Value OpenGetter(const Napi::CallbackInfo& info);
 
     void Schedule(Work_Callback callback, Baton* baton, bool exclusive = false);
     void Process();
 
-    static NAN_METHOD(Exec);
+    Napi::Value Exec(const Napi::CallbackInfo& info);
     static void Work_BeginExec(Baton* baton);
     static void Work_Exec(uv_work_t* req);
     static void Work_AfterExec(uv_work_t* req);
 
-    static NAN_METHOD(Wait);
+    Napi::Value Wait(const Napi::CallbackInfo& info);
     static void Work_Wait(Baton* baton);
 
-    static NAN_METHOD(Close);
+    Napi::Value Close(const Napi::CallbackInfo& info);
     static void Work_BeginClose(Baton* baton);
     static void Work_Close(uv_work_t* req);
     static void Work_AfterClose(uv_work_t* req);
 
-    static NAN_METHOD(LoadExtension);
+    Napi::Value LoadExtension(const Napi::CallbackInfo& info);
     static void Work_BeginLoadExtension(Baton* baton);
     static void Work_LoadExtension(uv_work_t* req);
     static void Work_AfterLoadExtension(uv_work_t* req);
 
-    static NAN_METHOD(Serialize);
-    static NAN_METHOD(Parallelize);
+    Napi::Value Serialize(const Napi::CallbackInfo& info);
+    Napi::Value Parallelize(const Napi::CallbackInfo& info);
 
-    static NAN_METHOD(Configure);
+    Napi::Value Configure(const Napi::CallbackInfo& info);
 
-    static NAN_METHOD(Interrupt);
+    Napi::Value Interrupt(const Napi::CallbackInfo& info);
 
     static void SetBusyTimeout(Baton* baton);
 
