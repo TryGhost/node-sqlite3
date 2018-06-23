@@ -127,7 +127,12 @@ NAN_METHOD(Database::New) {
         callback = Local<Function>::Cast(info[pos++]);
     }
 
-    Database* db = new Database(node::GetCurrentEventLoop(info.GetIsolate()));
+#if NODE_MODULE_VERSION > NODE_9_0_MODULE_VERSION
+    uv_loop_t* loop = node::GetCurrentEventLoop(info.GetIsolate());
+#else
+    uv_loop_t* loop = uv_default_loop();
+#endif
+    Database* db = new Database(loop);
     db->Wrap(info.This());
 
     Nan::ForceSet(info.This(), Nan::New("filename").ToLocalChecked(), info[0].As<String>(), ReadOnly);
