@@ -10,15 +10,16 @@ describe('each', function() {
     it('retrieve 100,000 rows with Statement#each', function(done) {
         var total = 100000;
         var retrieved = 0;
+        
 
         db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
             if (err) throw err;
             retrieved++;
-        });
-
-        db.wait(function() {
-            assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
-            done();
+            
+            if(retrieved === total) {
+                assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
+                done();
+            }
         });
     });
 

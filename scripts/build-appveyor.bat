@@ -9,6 +9,8 @@ IF /I "%msvs_version%"=="" ECHO msvs_version unset, defaulting to 2015 && SET ms
 
 SET PATH=%CD%;%PATH%
 IF "%msvs_toolset%"=="12" SET msvs_version=2013
+IF NOT "%NODE_RUNTIME%"=="" SET "TOOLSET_ARGS=%TOOLSET_ARGS% --runtime=%NODE_RUNTIME%"
+IF NOT "%NODE_RUNTIME_VERSION%"=="" SET "TOOLSET_ARGS=%TOOLSET_ARGS% --target=%NODE_RUNTIME_VERSION%"
 
 ECHO APPVEYOR^: %APPVEYOR%
 ECHO nodejs_version^: %nodejs_version%
@@ -74,7 +76,7 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 CALL npm install --build-from-source --msvs_version=%msvs_version% %TOOLSET_ARGS% --loglevel=http
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
-FOR /F "tokens=*" %%i in ('CALL node_modules\.bin\node-pre-gyp reveal module --silent') DO SET MODULE=%%i
+FOR /F "tokens=*" %%i in ('"CALL node_modules\.bin\node-pre-gyp reveal module %TOOLSET_ARGS% --silent"') DO SET MODULE=%%i
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 FOR /F "tokens=*" %%i in ('node -e "console.log(process.execPath)"') DO SET NODE_EXE=%%i
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
@@ -84,6 +86,8 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 dumpbin /DEPENDENTS "%MODULE%"
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
+
+IF "%NODE_RUNTIME%"=="electron" GOTO CHECK_ELECTRON_TEST_ERRORLEVEL
 
 ::skipping check for errorlevel npm test result when using io.js
 ::@springmeyer: how to proceed?
@@ -98,14 +102,27 @@ ECHO ==========================================
 GOTO NPM_TEST_FINISHED
 
 
+:CHECK_ELECTRON_TEST_ERRORLEVEL
+ECHO installing electron
+CALL npm install -g "electron@%NODE_RUNTIME_VERSION%"
+ECHO installing electron-mocha
+CALL npm install -g electron-mocha
+ECHO preparing tests
+CALL electron "test/support/createdb-electron.js"
+DEL "test\support\createdb-electron.js"
+ECHO calling electron-mocha
+CALL electron-mocha -R spec --timeout 480000
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+GOTO NPM_TEST_FINISHED
+
+
 :CHECK_NPM_TEST_ERRORLEVEL
 ECHO calling npm test
 CALL npm test
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 :NPM_TEST_FINISHED
-
-
+ECHO packaging for node-gyp
 CALL node_modules\.bin\node-pre-gyp package %TOOLSET_ARGS%
 ::make commit message env var shorter
 SET CM=%APPVEYOR_REPO_COMMIT_MESSAGE%

@@ -62,6 +62,13 @@ matrix:
             packages: [ 'clang-3.5']
      - os: linux
        compiler: clang
+       env: NODE_VERSION="5" COVERAGE=true PUBLISHABLE=false
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
        env: NODE_VERSION="4"
        addons:
          apt:
@@ -100,6 +107,43 @@ matrix:
      - os: osx
        compiler: clang
        env: NODE_VERSION="4" # node abi 46
+     # electron Linux
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="2.0.1"
+       dist: trusty # needed for libc6 / 'version `GLIBC_2.17` not found' error on precise
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5', 'libc6']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.8.4"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.7.12"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.6.2"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
+     - os: linux
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.3.14"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5']
 
 env:
   global:
@@ -127,14 +171,21 @@ before_script:
 - export COMMIT_MESSAGE=$(git show -s --format=%B $TRAVIS_COMMIT | tr -d '\n')
 - if [[ ${COVERAGE} == true ]]; then
      if [[ $(uname -s) == 'Linux' ]]; then
-       PYTHONUSERBASE=$(pwd)/py-local pip install --user cpp-coveralls;
+       curl https://bootstrap.pypa.io/get-pip.py | python - --user;
+       pip install --user cpp-coveralls;
      else
        PYTHONUSERBASE=$(pwd)/py-local easy_install --user cpp-coveralls;
      fi;
    fi
 
 script:
-- if [[ "${NODE_VERSION}" ]]; then ./scripts/build_against_node.sh; fi;
+- if [[ "${NODE_VERSION}" ]]; then
+    if [[ "${ELECTRON_VERSION}" ]]; then
+      ./scripts/build_against_electron.sh;
+    else
+      ./scripts/build_against_node.sh;
+    fi;
+  fi
 - if [[ "${NODE_VERSION}" -eq "4" ]]; then ./node_modules/.bin/eslint lib; fi;
 # disabled for now: need to port to sudo:false
 #- if [[ "${NODE_WEBKIT}" ]]; then ./scripts/build_against_node_webkit.sh; fi;
