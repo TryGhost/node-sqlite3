@@ -1,13 +1,11 @@
 environment:
-  node_pre_gyp_accessKeyId:
-    secure: 7DrSVc5eIGtmMcki5H+iRft+Tk3MJTwDBQEUuJHWaQ4=
-  node_pre_gyp_secretAccessKey:
-    secure: 1amwJJw9fu0j6dXnc5KsAQbSYf7Cjw/dapT6OZWABa6nc52grkKeLQ+DGaOfQz8i
   matrix:
     - nodejs_version: 4
       platform: x64
+      msvs_toolset: 12
     - nodejs_version: 4
       platform: x86
+      msvs_toolset: 12
     - nodejs_version: 5
       platform: x64
     - nodejs_version: 5
@@ -27,6 +25,10 @@ environment:
     - nodejs_version: 9
       platform: x64
     - nodejs_version: 9
+      platform: x86
+    - nodejs_version: 10
+      platform: x64
+    - nodejs_version: 10
       platform: x86
     # electron
     - nodejs_version: 8
