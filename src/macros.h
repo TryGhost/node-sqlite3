@@ -122,7 +122,7 @@ const char* sqlite_authorizer_string(int type);
     assert(baton->stmt->prepared);                                             \
     baton->stmt->locked = true;                                                \
     baton->stmt->db->pending++;                                                \
-    int status = uv_queue_work(uv_default_loop(),                              \
+    int status = uv_queue_work(baton->stmt->db->loop,                          \
         &baton->request,                                                       \
         Work_##type, reinterpret_cast<uv_after_work_cb>(Work_After##type));    \
     assert(status == 0);

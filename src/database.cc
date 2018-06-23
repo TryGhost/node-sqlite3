@@ -127,7 +127,7 @@ NAN_METHOD(Database::New) {
         callback = Local<Function>::Cast(info[pos++]);
     }
 
-    Database* db = new Database();
+    Database* db = new Database(node::GetCurrentEventLoop(info.GetIsolate()));
     db->Wrap(info.This());
 
     Nan::ForceSet(info.This(), Nan::New("filename").ToLocalChecked(), info[0].As<String>(), ReadOnly);
@@ -141,7 +141,7 @@ NAN_METHOD(Database::New) {
 }
 
 void Database::Work_BeginOpen(Baton* baton) {
-    int status = uv_queue_work(uv_default_loop(),
+    int status = uv_queue_work(baton->db->loop,
         &baton->request, Work_Open, (uv_after_work_cb)Work_AfterOpen);
     assert(status == 0);
 }
@@ -227,7 +227,7 @@ void Database::Work_BeginClose(Baton* baton) {
     baton->db->RemoveCallbacks();
     baton->db->closing = true;
 
-    int status = uv_queue_work(uv_default_loop(),
+    int status = uv_queue_work(baton->db->loop,
         &baton->request, Work_Close, (uv_after_work_cb)Work_AfterClose);
     assert(status == 0);
 }
@@ -388,7 +388,7 @@ void Database::RegisterTraceCallback(Baton* baton) {
 
     if (db->debug_trace == NULL) {
         // Add it.
-        db->debug_trace = new AsyncTrace(db, TraceCallback);
+        db->debug_trace = new AsyncTrace(db->loop, db, TraceCallback);
         sqlite3_trace(db->_handle, TraceCallback, db);
     }
     else {
@@ -426,7 +426,7 @@ void Database::RegisterProfileCallback(Baton* baton) {
 
     if (db->debug_profile == NULL) {
         // Add it.
-        db->debug_profile = new AsyncProfile(db, ProfileCallback);
+        db->debug_profile = new AsyncProfile(db->loop, db, ProfileCallback);
         sqlite3_profile(db->_handle, ProfileCallback, db);
     }
     else {
@@ -467,7 +467,7 @@ void Database::RegisterUpdateCallback(Baton* baton) {
 
     if (db->update_event == NULL) {
         // Add it.
-        db->update_event = new AsyncUpdate(db, UpdateCallback);
+        db->update_event = new AsyncUpdate(db->loop, db, UpdateCallback);
         sqlite3_update_hook(db->_handle, UpdateCallback, db);
     }
     else {
@@ -522,7 +522,7 @@ void Database::Work_BeginExec(Baton* baton) {
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
-    int status = uv_queue_work(uv_default_loop(),
+    int status = uv_queue_work(baton->db->loop,
         &baton->request, Work_Exec, (uv_after_work_cb)Work_AfterExec);
     assert(status == 0);
 }
@@ -622,7 +622,7 @@ void Database::Work_BeginLoadExtension(Baton* baton) {
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
-    int status = uv_queue_work(uv_default_loop(),
+    int status = uv_queue_work(baton->db->loop,
         &baton->request, Work_LoadExtension, reinterpret_cast<uv_after_work_cb>(Work_AfterLoadExtension));
     assert(status == 0);
 }
