@@ -9,8 +9,8 @@ SET NODE_MAJOR=%nodejs_version:~0,1%
 IF %NODE_MAJOR% GTR 4 ECHO detected node v5, forcing msvs_toolset 14 && SET msvs_toolset=14
 
 SET PATH=%CD%;%PATH%
-SET msvs_version=2013
-IF "%msvs_toolset%"=="14" SET msvs_version=2015
+SET msvs_version=2015
+IF "%msvs_toolset%"=="12" SET msvs_version=2013
 
 
 ECHO APPVEYOR^: %APPVEYOR%
@@ -52,38 +52,6 @@ IF %NODE_MAJOR% GTR 0 ECHO node version greater than zero, not updating npm && G
 
 powershell Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-
-:SKIP_APPVEYOR_INSTALL
-IF /I "%msvs_toolset%"=="12" GOTO NODE_INSTALLED
-IF %NODE_MAJOR% GTR 4 GOTO NODE_INSTALLED
-
-
-::custom node for VS2015
-SET ARCHPATH=
-IF "%platform%"=="X64" (SET ARCHPATH=x64/)
-IF "%platform%"=="x64" (SET ARCHPATH=x64/)
-SET NODE_URL=https://mapbox.s3.amazonaws.com/node-cpp11/v%nodejs_version%/%ARCHPATH%node.exe
-ECHO downloading node^: %NODE_URL%
-powershell Invoke-WebRequest "${env:NODE_URL}" -OutFile node.exe
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-
-ECHO deleting node ...
-SET NODE_EXE_PRG=%ProgramFiles%\nodejs\node.exe
-IF EXIST "%NODE_EXE_PRG%" ECHO found %NODE_EXE_PRG%, deleting... && DEL /F "%NODE_EXE_PRG%"
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-IF EXIST "%ProgramFiles%\nodejs" ECHO copy custom node.exe to %ProgramFiles%\nodejs\ && COPY node.exe "%ProgramFiles%\nodejs\"
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-
-SET NODE_EXE_PRG=%ProgramFiles(x86)%\nodejs\node.exe
-IF EXIST "%NODE_EXE_PRG%" ECHO found %NODE_EXE_PRG%, deleting... && DEL /F "%NODE_EXE_PRG%"
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-IF EXIST "%ProgramFiles(x86)%\nodejs" ECHO copy custom node.exe to %ProgramFiles(x86)%\nodejs\ && COPY node.exe "%ProgramFiles(x86)%\nodejs\"
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-
-ECHO delete node.exe in current directory && DEL node.exe
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-
-:NODE_INSTALLED
 
 ECHO available node.exe^:
 call where node
