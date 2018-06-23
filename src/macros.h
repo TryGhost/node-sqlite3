@@ -34,7 +34,7 @@ const char* sqlite_authorizer_string(int type);
 
 #define OPTIONAL_ARGUMENT_FUNCTION(i, var)                                     \
     Local<Function> var;                                                       \
-    if (info.Length() > i && !info[i]->IsUndefined()) {                        \
+    if (info.Length() > (i) && !info[i]->IsUndefined()) {                      \
         if (!info[i]->IsFunction()) {                                          \
             return Nan::ThrowTypeError("Argument " #i " must be a function");  \
         }                                                                      \
