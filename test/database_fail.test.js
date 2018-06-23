@@ -10,11 +10,11 @@ describe('error handling', function() {
     it('throw when calling Database() without new', function() {
         assert.throws(function() {
             sqlite3.Database(':memory:');
-        }, (/Use the new operator to create new Database objects/));
+        }, (/Class constructors cannot be invoked without 'new'/));
 
         assert.throws(function() {
             sqlite3.Statement();
-        }, (/Use the new operator to create new Statement objects/));
+        }, (/Class constructors cannot be invoked without 'new'/));
     });
 
     it('should error when calling Database#get on a missing table', function(done) {

@@ -6,7 +6,7 @@ all: build
 	npm install --build-from-source
 
 build: ./node_modules
-	./node_modules/.bin/node-pre-gyp build --loglevel=silent
+	./node_modules/.bin/node-pre-gyp build --loglevel=error
 
 debug:
 	./node_modules/.bin/node-pre-gyp rebuild --debug

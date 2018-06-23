@@ -7,7 +7,10 @@
   "targets": [
     {
       "target_name": "<(module_name)",
-      "include_dirs": ["<!(node -e \"require('nan')\")"],
+      "cflags!": [ "-fno-exceptions" ],
+      "cflags_cc!": [ "-fno-exceptions" ],
+      "include_dirs": ["<!@(node -p \"require('node-addon-api').include\")"],
+      "dependencies": ["<!(node -p \"require('node-addon-api').gyp\")"],
       "conditions": [
         ["sqlite != 'internal'", {
             "include_dirs": [ "<(sqlite)/include" ],
@@ -31,6 +34,13 @@
         }
         ]
       ],
+      'xcode_settings': {
+        'MACOSX_DEPLOYMENT_TARGET':'10.8',
+        'CLANG_CXX_LIBRARY': 'libc++',
+        'CLANG_CXX_LANGUAGE_STANDARD':'c++11',
+        'GCC_VERSION': 'com.apple.compilers.llvm.clang.1_0'
+      },
+      'defines': [ 'NAPI_DISABLE_CPP_EXCEPTIONS' ],
       "sources": [
         "src/database.cc",
         "src/node_sqlite3.cc",
