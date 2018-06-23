@@ -111,6 +111,7 @@ matrix:
      - os: linux
        compiler: clang
        env: NODE_VERSION="6" ELECTRON_VERSION="2.0.1"
+       dist: trusty # needed for libc6 / 'version `GLIBC_2.17` not found' error on precise
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
