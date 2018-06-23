@@ -15,3 +15,5 @@ local.env
 .mason
 .eslintrc.js
 setup.sh
+cloudformation/ci.template.js
+appveyor.yml
