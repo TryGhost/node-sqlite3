@@ -2,18 +2,10 @@ sudo: false
 
 language: generic
 
-dist: precise
+dist: trusty
 
 git:
   depth: 10
-
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    - llvm-toolchain-precise-3.5
-    packages:
-     - clang-3.5
 
 matrix:
   include:
@@ -30,54 +22,48 @@ matrix:
        env: NODE_VERSION="9"
        addons:
          apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
+            packages: [ 'clang-3.9']
      - os: linux
        compiler: clang
        env: NODE_VERSION="8"
        addons:
          apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
+            packages: [ 'clang-3.9']
      - os: linux
        compiler: clang
        env: NODE_VERSION="7"
        addons:
          apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
+            packages: [ 'clang-3.9']
      - os: linux
        compiler: clang
        env: NODE_VERSION="6"
        addons:
          apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
+            packages: [ 'clang-3.9']
      - os: linux
        compiler: clang
        env: NODE_VERSION="5"
        addons:
          apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
+            packages: [ 'clang-3.9']
      - os: linux
        compiler: clang
        env: NODE_VERSION="4"
        addons:
          apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
+            packages: [ 'clang-3.9']
      # test building against external sqlite
      - os: linux
        compiler: clang
        env: NODE_VERSION="8" EXTERNAL_SQLITE=true PUBLISHABLE=false
        addons:
          apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5','libsqlite3-dev']
+            packages: [ 'clang-3.9','libsqlite3-dev']
      # OS X
      - os: osx
        compiler: clang
+       osx_image: xcode9.4
        env: NODE_VERSION="5" COVERAGE=true PUBLISHABLE=false # node abi 47
      - os: osx
        compiler: clang
@@ -109,8 +95,8 @@ before_install:
 - export PUBLISHABLE=${PUBLISHABLE:-true}
 - export COVERAGE=${COVERAGE:-false}
 - if [[ $(uname -s) == 'Linux' ]]; then
-    export CXX="clang++-3.5";
-    export CC="clang-3.5";
+    export CXX="clang++-3.9";
+    export CC="clang-3.9";
     export PYTHONPATH=$(pwd)/py-local/lib/python2.7/site-packages;
   else
     export PYTHONPATH=$(pwd)/py-local/lib/python/site-packages;
