@@ -47,7 +47,7 @@
     "@mapbox/cloudfriend": "^1.9.0",
     "aws-sdk": "2.x",
     "eslint": "3.5.0",
-    "mocha": "3.x"
+    "mocha": "^5.2.0"
   },
   "scripts": {
     "prepublishOnly": "npm ls",
