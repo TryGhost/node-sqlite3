@@ -38,11 +38,8 @@
   },
   "dependencies": {
     "nan": "~2.10.0",
-    "node-pre-gyp": "~0.10.0"
+    "node-pre-gyp": "~0.10.1"
   },
-  "bundledDependencies": [
-    "node-pre-gyp"
-  ],
   "devDependencies": {
     "@mapbox/cloudfriend": "^1.9.0",
     "aws-sdk": "2.x",
