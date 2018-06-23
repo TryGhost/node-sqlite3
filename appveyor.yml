@@ -1,13 +1,11 @@
 environment:
-  node_pre_gyp_accessKeyId:
-    secure: 7DrSVc5eIGtmMcki5H+iRft+Tk3MJTwDBQEUuJHWaQ4=
-  node_pre_gyp_secretAccessKey:
-    secure: 1amwJJw9fu0j6dXnc5KsAQbSYf7Cjw/dapT6OZWABa6nc52grkKeLQ+DGaOfQz8i
   matrix:
     - nodejs_version: 4
       platform: x64
+      msvs_toolset: 12
     - nodejs_version: 4
       platform: x86
+      msvs_toolset: 12
     - nodejs_version: 5
       platform: x64
     - nodejs_version: 5
@@ -28,6 +26,65 @@ environment:
       platform: x64
     - nodejs_version: 9
       platform: x86
+    - nodejs_version: 10
+      platform: x64
+    - nodejs_version: 10
+      platform: x86
+    # electron
+    - nodejs_version: 8
+      platform: x64
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 2.0.1
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 8
+      platform: x86
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 2.0.1
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 8
+      platform: x64
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 1.8.4
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 8
+      platform: x86
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 1.8.4
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 7
+      platform: x64
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 1.7.12
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 7
+      platform: x86
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 1.7.12
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 6
+      platform: x64
+      msvs_toolset: 12
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 1.6.2
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 6
+      platform: x86
+      msvs_toolset: 12
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 1.6.2
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 6
+      platform: x64
+      msvs_toolset: 12
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 1.3.14
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 6
+      platform: x86
+      msvs_toolset: 12
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 1.3.14
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
 
 os: Visual Studio 2015
 
