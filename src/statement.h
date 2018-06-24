@@ -174,7 +174,7 @@ public:
             watcher.data = this;
             NODE_SQLITE3_MUTEX_INIT
             stmt->Ref();
-            uv_async_init(uv_default_loop(), &watcher, async_cb);
+            uv_async_init(stmt->db->loop, &watcher, async_cb);
         }
 
         ~Async() {
