@@ -9,10 +9,13 @@
   },
   "binary": {
     "module_name": "node_sqlite3",
-    "module_path": "./lib/binding/{node_abi_napi}-{platform}-{arch}",
+    "module_path": "./lib/binding/napi-v{napi_build_version}",
     "host": "https://mapbox-node-binary.s3.amazonaws.com",
-    "remote_path": "./{name}/v{version}/{toolset}/",
-    "package_name": "{node_abi_napi}-{platform}-{arch}.tar.gz"
+    "remote_path": "./{name}/v{version}/{configuration}/{toolset}/",
+    "package_name": "{platform}-{arch}-napi-v{napi_build_version}.tar.gz",
+    "napi_versions": [
+      1
+    ]
   },
   "contributors": [
     "Konstantin Käfer <mail@kkaefer.com>",
