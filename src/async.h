@@ -22,11 +22,11 @@ public:
     Parent* parent;
 
 public:
-    Async(uv_loop_t* loop_, Parent* parent_, Callback cb_)
+    Async(Parent* parent_, Callback cb_)
         : callback(cb_), parent(parent_) {
         watcher.data = this;
         NODE_SQLITE3_MUTEX_INIT
-        uv_async_init(loop_, &watcher, reinterpret_cast<uv_async_cb>(listener));
+        uv_async_init(uv_default_loop(), &watcher, reinterpret_cast<uv_async_cb>(listener));
     }
 
     static void listener(uv_async_t* handle, int status) {

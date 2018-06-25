@@ -50,8 +50,7 @@
     "prepublishOnly": "npm ls",
     "install": "node-pre-gyp install --fallback-to-build",
     "pretest": "node test/support/createdb.js",
-    "test": "mocha -R spec --timeout 480000",
-    "test:worker": "node --experimental-worker scripts/mocha-as-worker.js -R spec --timeout 480000"
+    "test": "mocha -R spec --timeout 480000"
   },
   "license": "BSD-3-Clause",
   "keywords": [
