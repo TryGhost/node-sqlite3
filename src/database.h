@@ -100,9 +100,8 @@ public:
     friend class Statement;
 
 protected:
-    Database(uv_loop_t* loop_) : Nan::ObjectWrap(),
+    Database() : Nan::ObjectWrap(),
         _handle(NULL),
-        loop(loop_),
         open(false),
         closing(false),
         locked(false),
@@ -173,10 +172,7 @@ protected:
 
 protected:
     sqlite3* _handle;
-public:
-    uv_loop_t* loop;
 
-protected:
     bool open;
     bool closing;
     bool locked;
