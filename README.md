@@ -10,7 +10,7 @@ Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](
 
 ## Supported platforms
 
-The `sqlite3` module works with Node.js v4.x, v5.x, v6.x and v7.x.
+The `sqlite3` module works with Node.js v4.x, v6.x, v8.x, and v10.x.
 
 Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/mapbox/node-pre-gyp).
 
@@ -130,7 +130,7 @@ For instructions for building sqlcipher see
 To run node-sqlite3 against sqlcipher you need to compile from source by passing build options like:
 
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/
-    
+
     node -e 'require("sqlite3")'
 
 If your sqlcipher is installed in a custom location (if you compiled and installed it yourself),
@@ -143,7 +143,7 @@ Set the location where `brew` installed it:
     export LDFLAGS="-L`brew --prefix`/opt/sqlcipher/lib"
     export CPPFLAGS="-I`brew --prefix`/opt/sqlcipher/include"
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix`
-    
+
     node -e 'require("sqlite3")'
 
 ### On most Linuxes (including Raspberry Pi)
@@ -154,9 +154,9 @@ Set the location where `make` installed it:
     export CPPFLAGS="-I/usr/local/include -I/usr/local/include/sqlcipher"
     export CXXFLAGS="$CPPFLAGS"
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/local --verbose
-    
+
     node -e 'require("sqlite3")'
-    
+
 ### Custom builds and Electron
 
 Running sqlite3 through [electron-rebuild](https://github.com/electron/electron-rebuild) does not preserve the sqlcipher extension, so some additional flags are needed to make this build Electron compatible. Your `npm install sqlite3 --build-from-source` command needs these additional flags (be sure to replace the target version with the current Electron version you are working with):
