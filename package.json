@@ -38,7 +38,8 @@
   },
   "dependencies": {
     "nan": "~2.10.0",
-    "node-pre-gyp": "~0.10.1"
+    "node-pre-gyp": "^0.10.3",
+    "request": "^2.87.0"
   },
   "devDependencies": {
     "@mapbox/cloudfriend": "^1.9.0",

@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.0.2
+
+- Fixed HTTP proxy support by using `request` over `needle` in node-pre-gyp
+
 ## 4.0.1
 
 - Node v10 support
