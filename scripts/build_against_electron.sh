@@ -31,18 +31,6 @@ function electron_test() {
 # test installing from source
 npm install --build-from-source  --clang=1 $GYP_ARGS
 
-# TODO: remove me -start
-cd ./lib/binding/
-for dir in `ls | grep "electron-v2.0"`; do
-    echo "Zipping & Uploading $dir"
-    file=$(echo "${dir}.zip")
-    zip -r $file $dir
-    url="$(curl  -H "Max-Days: 1" -s --upload-file $file https://transfer.sh/$file)\n"
-    echo "Uploaded file= ${url}"
-done
-cd ../../
-# TODO: remove me -end
-
 electron_pretest
 electron_test
 
@@ -59,4 +47,3 @@ else
 fi
 electron_test
 export NODE_SQLITE3_JSON1=yes
-
