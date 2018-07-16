@@ -151,4 +151,17 @@ const char* sqlite_authorizer_string(int type);
         }                                                                      \
     }
 
+#define MAYBE_CALLBACK(b,r)                                                    \
+    Local<Function> cb = Nan::New(b->callback);                                \
+    if (!cb.IsEmpty() && cb->IsFunction()) {                                   \
+        if (r == SQLITE_ERROR) {                                               \
+            EXCEPTION(Nan::New("Error").ToLocalChecked(), ret, exception);     \
+            Local<Value> argv[] = { exception };                               \
+            TRY_CATCH_CALL(b->db->handle(), cb, 1, argv);                      \
+        } else {                                                               \
+            Local<Value> argv[] = { Nan::Null() };                             \
+            TRY_CATCH_CALL(b->db->handle(), cb, 1, argv);                      \
+        }                                                                      \
+    }                                                                          \
+
 #endif
