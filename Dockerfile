@@ -74,3 +74,10 @@ RUN echo "#log: ${project}: Building sources" \
   && find build/stage/ -type f \
   && sync
 
+WORKDIR /usr/local/${project}/${project}
+RUN echo "#log: ${project}: Installing sources" \
+  && set -x \
+  && install -d /usr/local/src/${project}/ \
+  && install *.tgz /usr/local/src/${project}/ \
+  && cp -rfva ./build/stage/ /usr/local/src/${project}/ \
+  && sync
