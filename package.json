@@ -50,7 +50,8 @@
   "scripts": {
     "install": "node-pre-gyp install --fallback-to-build",
     "pretest": "node test/support/createdb.js",
-    "test": "mocha -R spec --timeout 480000"
+    "test": "mocha -R spec --timeout 480000",
+    "pack": "node-pre-gyp package"
   },
   "license": "BSD-3-Clause",
   "keywords": [
