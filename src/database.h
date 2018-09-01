@@ -68,6 +68,32 @@ public:
             Baton(db_, cb_), filename(filename_) {}
     };
 
+    struct FunctionInvocation {
+        sqlite3_context *context;
+        sqlite3_value **argv;
+        int argc;
+        bool complete;
+    };
+
+    struct FunctionBaton {
+        Database* db;
+        std::string name;
+        Persistent<Function> callback;
+        uv_async_t async;
+        uv_mutex_t mutex;
+        uv_cond_t condition;
+        std::queue<FunctionInvocation*> queue;
+
+        FunctionBaton(Database* db_, const char* name_, Handle<Function> cb_) :
+                db(db_), name(name_) {
+            async.data = this;
+            NanAssignPersistent(callback, cb_);
+        }
+        virtual ~FunctionBaton() {
+            NanDisposePersistent(callback);
+        }
+    };
+
     typedef void (*Work_Callback)(Baton* baton);
 
     struct Call {
@@ -153,6 +179,11 @@ protected:
     static NAN_METHOD(Configure);
 
     static NAN_METHOD(Interrupt);
+
+    static NAN_METHOD(RegisterFunction);
+    static void FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv);
+    static void FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocation);
+    static void AsyncFunctionProcessQueue(uv_async_t *async);
 
     static void SetBusyTimeout(Baton* baton);
 
