@@ -54,6 +54,27 @@ First implementation by [Whitney Young](https://github.com/wbyoung)
     db.close();
 ```
 
+# Custom aggregate
+
+```javascript
+    var sqlite3 = require('sqlite3').verbose();
+    var db = new sqlite3.Database(':memory:');
+    
+    let tempStr = '';
+    db.registerAggregateFunction('CUSTOM_AGGREGATE', function(value) {
+        if(!value){
+            return tempStr;
+        }
+        tempStr+= value;
+    });
+    
+    db.all('SELECT CUSTOM_AGGREGATE(id) AS val', function(err, rows) {
+        console.log(row.id + ": " + row.info); //Prints [{val: '123456'}] if table has 6 rows with id field
+    });
+    
+    db.close();
+```
+
 # Features
 
  - Straightforward query and parameter binding interface

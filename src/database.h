@@ -73,6 +73,7 @@ public:
         sqlite3_value **argv;
         int argc;
         bool complete;
+        bool finalize;
     };
 
     struct FunctionBaton {
@@ -182,7 +183,9 @@ protected:
     static NAN_METHOD(Interrupt);
 
     static NAN_METHOD(RegisterFunction);
+    static NAN_METHOD(RegisterAggregateFunction);
     static void FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv);
+    static void FunctionEnqueueFinalize(sqlite3_context *context);
     static void FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocation);
     static void AsyncFunctionProcessQueue(uv_async_t *async);
 

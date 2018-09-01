@@ -30,6 +30,7 @@ NAN_MODULE_INIT(Database::Init) {
     Nan::SetPrototypeMethod(t, "configure", Configure);
     Nan::SetPrototypeMethod(t, "interrupt", Interrupt);
     Nan::SetPrototypeMethod(t, "registerFunction", RegisterFunction);
+    Nan::SetPrototypeMethod(t, "registerAggregateFunction", RegisterAggregateFunction);
 
     NODE_SET_GETTER(t, "open", OpenGetter);
 
@@ -403,6 +404,33 @@ NAN_METHOD(Database::RegisterFunction) {
     info.GetReturnValue().Set(info.This());
 }
 
+NAN_METHOD(Database::RegisterAggregateFunction) {
+
+    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+
+    REQUIRE_ARGUMENTS(2);
+    REQUIRE_ARGUMENT_STRING(0, functionName);
+    REQUIRE_ARGUMENT_FUNCTION(1, callback);
+
+    FunctionBaton *baton = new FunctionBaton(db, *functionName, callback);
+
+    sqlite3_create_function(
+        db->_handle,
+        *functionName,
+        -1, // arbitrary number of args
+        SQLITE_UTF8 | SQLITE_DETERMINISTIC,
+        baton,
+        NULL,
+        FunctionEnqueue,
+        FunctionEnqueueFinalize);
+
+    uv_mutex_init(&baton->mutex);
+    uv_cond_init(&baton->condition);
+    uv_async_init(uv_default_loop(), &baton->async, (uv_async_cb)Database::AsyncFunctionProcessQueue);
+
+    info.GetReturnValue().Set(info.This());
+}
+
 void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv) {
     // the JS function can only be safely executed on the main thread
     // (uv_default_loop), so setup an invocation w/ the relevant information,
@@ -414,6 +442,23 @@ void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value
     invocation.context = context;
     invocation.argc = argc;
     invocation.argv = argv;
+    invocation.finalize = false;
+
+    uv_async_send(&baton->async);
+    uv_mutex_lock(&baton->mutex);
+    baton->queue.push(&invocation);
+    while (!invocation.complete) {
+        uv_cond_wait(&baton->condition, &baton->mutex);
+    }
+    uv_mutex_unlock(&baton->mutex);
+}
+
+void Database::FunctionEnqueueFinalize(sqlite3_context *context) {
+    FunctionBaton *baton = (FunctionBaton *)sqlite3_user_data(context);
+    FunctionInvocation invocation = {};
+    invocation.context = context;
+    invocation.argc = 0;
+    invocation.finalize = true;
 
     uv_async_send(&baton->async);
     uv_mutex_lock(&baton->mutex);
