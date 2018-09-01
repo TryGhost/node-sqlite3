@@ -1,5 +1,5 @@
 {
-  "name": "sqlite3-extended",
+  "name": "sqlite3",
   "description": "Asynchronous, non-blocking SQLite3 bindings",
   "version": "4.0.2",
   "homepage": "http://github.com/lailune/node-sqlite3",
