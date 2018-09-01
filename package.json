@@ -7,13 +7,6 @@
     "name": "MapBox",
     "url": "https://mapbox.com/"
   },
-  "binary": {
-    "module_name": "node_sqlite3",
-    "module_path": "./lib/binding/{node_abi}-{platform}-{arch}",
-    "host": "https://mapbox-node-binary.s3.amazonaws.com",
-    "remote_path": "./{name}/v{version}/{toolset}/",
-    "package_name": "{node_abi}-{platform}-{arch}.tar.gz"
-  },
   "contributors": [
     "Konstantin Käfer <mail@kkaefer.com>",
     "Dane Springmeyer <dane@mapbox.com>",
@@ -34,7 +27,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/mapbox/node-sqlite3.git"
+    "url": "git://github.com/lailune/node-sqlite3.git"
   },
   "dependencies": {
     "nan": "~2.10.0",
