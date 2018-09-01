@@ -24,6 +24,13 @@
     "Mithgol",
     "Ben Noordhuis <ben@strongloop.com>"
   ],
+  "binary": {
+    "module_name": "node_sqlite3",
+    "module_path": "./lib/binding/{node_abi}-{platform}-{arch}",
+    "host": "nothing",
+    "remote_path": "./{name}/v{version}/{toolset}/",
+    "package_name": "{node_abi}-{platform}-{arch}.tar.gz"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/lailune/node-sqlite3.git"
@@ -40,7 +47,7 @@
     "mocha": "^5.2.0"
   },
   "scripts": {
-    "install": "node-gyp install --fallback-to-build",
+    "install": "node-pre-gyp install --build-from-source",
     "pretest": "node test/support/createdb.js",
     "test": "mocha -R spec --timeout 480000"
   },
