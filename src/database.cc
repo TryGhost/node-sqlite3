@@ -1,4 +1,5 @@
 #include <string.h>
+#include <iostream>
 
 #include "macros.h"
 #include "database.h"
@@ -377,8 +378,8 @@ NAN_METHOD(Database::Interrupt) {
 }
 
 NAN_METHOD(Database::RegisterFunction) {
-    NanScope();
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+
+    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
 
     REQUIRE_ARGUMENTS(2);
     REQUIRE_ARGUMENT_STRING(0, functionName);
@@ -399,7 +400,7 @@ NAN_METHOD(Database::RegisterFunction) {
     uv_cond_init(&baton->condition);
     uv_async_init(uv_default_loop(), &baton->async, (uv_async_cb)Database::AsyncFunctionProcessQueue);
 
-    NanReturnValue(args.This());
+    info.GetReturnValue().Set(info.This());
 }
 
 void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv) {
@@ -448,50 +449,50 @@ void Database::AsyncFunctionProcessQueue(uv_async_t *async) {
 }
 
 void Database::FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocation) {
-    NanScope();
+
+    Nan::HandleScope scope;
 
     Database *db = baton->db;
-    Local<Function> cb = NanNew(baton->callback);
+    Local<Function> cb = Nan::New(baton->callback);
     sqlite3_context *context = invocation->context;
     sqlite3_value **values = invocation->argv;
     int argc = invocation->argc;
 
     if (!cb.IsEmpty() && cb->IsFunction()) {
+       std::vector<Local<Value>> argv;
 
-        // build the argument list for the function call
-        typedef Local<Value> LocalValue;
-        std::vector<LocalValue> argv;
         for (int i = 0; i < argc; i++) {
             sqlite3_value *value = values[i];
             int type = sqlite3_value_type(value);
             Local<Value> arg;
             switch(type) {
                 case SQLITE_INTEGER: {
-                    arg = NanNew<Number>(sqlite3_value_int64(value));
+                    arg = Nan::New<Number>(sqlite3_value_int64(value));
                 } break;
                 case SQLITE_FLOAT: {
-                    arg = NanNew<Number>(sqlite3_value_double(value));
+                    arg = Nan::New<Number>(sqlite3_value_double(value));
                 } break;
                 case SQLITE_TEXT: {
                     const char* text = (const char*)sqlite3_value_text(value);
                     int length = sqlite3_value_bytes(value);
-                    arg = NanNew<String>(text, length);
+                    arg = (Nan::New<String>(text, length)).ToLocalChecked();
                 } break;
                 case SQLITE_BLOB: {
                     const void *blob = sqlite3_value_blob(value);
                     int length = sqlite3_value_bytes(value);
-                    arg = NanNew(NanNewBufferHandle((char *)blob, length));
+                    arg = (Nan::NewBuffer((char *)blob, length)).ToLocalChecked();
                 } break;
                 case SQLITE_NULL: {
-                    arg = NanNew(NanNull());
+                    arg = Nan::Null();
                 } break;
             }
 
             argv.push_back(arg);
         }
 
+
         TryCatch trycatch;
-        Local<Value> result = cb->Call(NanObjectWrapHandle(db), argc, argv.data());
+        Local<Value> result = cb->Call(Nan::Undefined(), argc, argv.data());
 
         // process the result
         if (trycatch.HasCaught()) {

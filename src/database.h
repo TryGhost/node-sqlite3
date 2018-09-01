@@ -78,19 +78,20 @@ public:
     struct FunctionBaton {
         Database* db;
         std::string name;
-        Persistent<Function> callback;
+
+        Nan::Persistent<Function> callback;
         uv_async_t async;
         uv_mutex_t mutex;
         uv_cond_t condition;
         std::queue<FunctionInvocation*> queue;
 
-        FunctionBaton(Database* db_, const char* name_, Handle<Function> cb_) :
+        FunctionBaton(Database* db_, const char* name_, Local<Function> cb_) :
                 db(db_), name(name_) {
             async.data = this;
-            NanAssignPersistent(callback, cb_);
+            callback.Reset(cb_);
         }
         virtual ~FunctionBaton() {
-            NanDisposePersistent(callback);
+            callback.Reset();
         }
     };
 
