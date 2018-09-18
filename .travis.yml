@@ -144,6 +144,22 @@ matrix:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
             packages: [ 'clang-3.5']
+     # electron MacOs
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="2.0.1"
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.8.4"
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.7.12"
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.6.2"
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="6" ELECTRON_VERSION="1.3.14"
 
 env:
   global:
