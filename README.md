@@ -169,7 +169,7 @@ In the case of MacOS with Homebrew, the command should look like the following:
 
 #### Electron static linking
 
-By default, the node-sqlite3 bindings compiles with dynamic linking to SQLite. If you're building an
+By default, the node-sqlite3 bindings compile with dynamic linking to SQLite. If you're building an
 Electron app, chances are when you package and distribute your app the user will not have the
 SQLCipher dynamic library on their computer and your app will fail to launch when sqlite3 is
 imported.
@@ -180,14 +180,15 @@ doesn't require the user to have SQLCipher on their machine.
 
 When you run `npm rebuild`, node-gyp will statically link if you provide the
 `--sqlite-static-library` argument, which should be the *absolute path* to the SQLCipher static
-library (libsqlcipher.a). If you pass the `--sqlite-static-library`, the `--sqlite` argument is
-effectively ignored.
+library (libsqlcipher.a). If you pass the `--sqlite-static-library`, the `--sqlite_libname` argument
+is effectively ignored.
 
-For example, to statically link a Homebrew-installed SQLCipher in the node-sqlite3 binding on macOS,
-the command would be:
+For example, to statically link a Homebrew-installed SQLCipher on macOS, the rebuild command would
+be:
 
-npm rebuild sqlite3 --build-from-source --sqlite-static-library=`brew --prefix`/lib/libsqlcipher.a --sqlite=`brew --prefix`
+    npm rebuild sqlite3 --build-from-source --sqlite-static-library=`brew --prefix`/lib/libsqlcipher.a --sqlite=`brew --prefix`
 
+See this project's binding.gyp for more information on how this works.
 
 # Testing
 
