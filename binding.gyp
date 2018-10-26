@@ -2,7 +2,8 @@
   "includes": [ "deps/common-sqlite.gypi" ],
   "variables": {
       "sqlite%":"internal",
-      "sqlite_libname%":"sqlite3"
+      "sqlite_libname%":"sqlite3",
+      "sqlite_static_library%": "undefined"
   },
   "targets": [
     {
@@ -11,8 +12,19 @@
       "conditions": [
         ["sqlite != 'internal'", {
             "include_dirs": [ "<(sqlite)/include" ],
-            "libraries": [
-               "-l<(sqlite_libname)"
+            "conditions": [
+              [ "sqlite_static_library=='undefined'", {
+                # Dynamic linking (default)
+                "libraries": [
+                  "-l<(sqlite_libname)"
+                ],
+              }, {
+                # Static linking (user provided absolute URL)
+                "libraries": [
+                  "<(sqlite_static_library)"
+                ],
+              }
+              ]
             ],
             "conditions": [ [ "OS=='linux'", {"libraries+":["-Wl,-rpath=<@(sqlite)/lib"]} ] ],
             "conditions": [ [ "OS!='win'", {"libraries+":["-L<@(sqlite)/lib"]} ] ],

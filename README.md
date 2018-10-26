@@ -86,7 +86,7 @@ If you wish to install against an external sqlite then you need to pass the `--s
 
 If building against an external sqlite3 make sure to have the development headers available. Mac OS X ships with these by default. If you don't have them installed, install the `-dev` package with your package manager, e.g. `apt-get install libsqlite3-dev` for Debian/Ubuntu. Make sure that you have at least `libsqlite3` >= 3.6.
 
-Note, if building against homebrew-installed sqlite on OS X you can do:
+Note, if building against Homebrew-installed sqlite on OS X you can do:
 
     npm install --build-from-source --sqlite=/usr/local/opt/sqlite/
 
@@ -122,18 +122,18 @@ Remember the following:
 
 Visit the “[Using Node modules](https://github.com/rogerwang/node-webkit/wiki/Using-Node-modules)” article in the node-webkit's wiki for more details.
 
-## Building for sqlcipher
+## Building for SQLCipher
 
-For instructions for building sqlcipher see
+For instructions for building SQLCipher see
 [Building SQLCipher for node.js](https://coolaj86.com/articles/building-sqlcipher-for-node-js-on-raspberry-pi-2/)
 
-To run node-sqlite3 against sqlcipher you need to compile from source by passing build options like:
+To run node-sqlite3 against SQLCipher you need to compile from source by passing build options like:
 
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/
 
     node -e 'require("sqlite3")'
 
-If your sqlcipher is installed in a custom location (if you compiled and installed it yourself),
+If your SQLCipher is installed in a custom location (if you compiled and installed it yourself),
 you'll also need to to set some environment variables:
 
 ### On OS X with Homebrew
@@ -159,13 +159,35 @@ Set the location where `make` installed it:
 
 ### Custom builds and Electron
 
-Running sqlite3 through [electron-rebuild](https://github.com/electron/electron-rebuild) does not preserve the sqlcipher extension, so some additional flags are needed to make this build Electron compatible. Your `npm install sqlite3 --build-from-source` command needs these additional flags (be sure to replace the target version with the current Electron version you are working with):
+Running sqlite3 through [electron-rebuild](https://github.com/electron/electron-rebuild) does not preserve the SQLCipher extension, so some additional flags are needed to make this build Electron compatible. Your `npm install sqlite3 --build-from-source` command needs these additional flags (be sure to replace the target version with the current Electron version you are working with):
 
     --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
 
 In the case of MacOS with Homebrew, the command should look like the following:
 
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix` --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
+
+#### Electron static linking
+
+By default, the node-sqlite3 bindings compiles with dynamic linking to SQLite. If you're building an
+Electron app, chances are when you package and distribute your app the user will not have the
+SQLCipher dynamic library on their computer and your app will fail to launch when sqlite3 is
+imported.
+
+In order to package SQLCipher with your app, you need to statically link the SQLCipher library
+instead of the default dynamic linking. This will ensure SQLCipher is packaged with your app and
+doesn't require the user to have SQLCipher on their machine.
+
+When you run `npm rebuild`, node-gyp will statically link if you provide the
+`--sqlite-static-library` argument, which should be the *absolute path* to the SQLCipher static
+library (libsqlcipher.a). If you pass the `--sqlite-static-library`, the `--sqlite` argument is
+effectively ignored.
+
+For example, to statically link a Homebrew-installed SQLCipher in the node-sqlite3 binding on macOS,
+the command would be:
+
+npm rebuild sqlite3 --build-from-source --sqlite-static-library=`brew --prefix`/lib/libsqlcipher.a --sqlite=`brew --prefix`
+
 
 # Testing
 
