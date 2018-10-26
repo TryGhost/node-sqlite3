@@ -19,7 +19,7 @@
                   "-l<(sqlite_libname)"
                 ],
               }, {
-                # Static linking (user provided absolute URL)
+                # Static linking (user provided absolute path)
                 "libraries": [
                   "<(sqlite_static_library)"
                 ],
