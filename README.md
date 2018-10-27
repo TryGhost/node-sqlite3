@@ -167,7 +167,7 @@ In the case of MacOS with Homebrew, the command should look like the following:
 
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix` --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
 
-#### Static linking SQLCipher
+#### Static linking SQLCipher for Electron
 
 By default, SQLite bindings are compiled with *dynamic linking* to SQLite. If you're distributing an
 Electron app with SQLCipher, it's unlikely that your users will have SQLCipher on their machine,
