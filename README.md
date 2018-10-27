@@ -167,6 +167,23 @@ In the case of MacOS with Homebrew, the command should look like the following:
 
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix` --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
 
+#### Static linking SQLCipher
+
+By default, SQLite bindings are compiled with *dynamic linking* to SQLite. If you're distributing an
+Electron app with SQLCipher, it's unlikely that your users will have SQLCipher on their machine,
+causing your Electron app to crash during deployment to machines without SQLCipher. You can force
+*static linking* of SQLCipher by adjusting LDFLAGS to point to the sqlcipher.a file. This will
+ensure SQLCipher is distribute with your app. For example, to statically link a Homebrew-installed
+SQLCipher on macOS for Electron:
+
+    export LDFLAGS="-L`brew --prefix`/opt/sqlcipher/lib/libsqlcipher.a"
+    export CPPFLAGS="-I`brew --prefix`/opt/sqlcipher/include"
+    npm rebuild sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix` --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron &>/dev/null
+
+Notice the resulting value of LDFLAGS value with this command will end up beging
+`-L/usr/local/opt/sqlcipher/lib/libsqlcipher.a` (the actual static library file) instead of
+`-L/usr/local/opt/sqlcipher/lib` (the directory, which will result in dynamic linking).
+
 # Testing
 
 [mocha](https://github.com/visionmedia/mocha) is required to run unit tests.
