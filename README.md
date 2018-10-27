@@ -122,18 +122,18 @@ Remember the following:
 
 Visit the “[Using Node modules](https://github.com/rogerwang/node-webkit/wiki/Using-Node-modules)” article in the node-webkit's wiki for more details.
 
-## Building for sqlcipher
+## Building for SQLCipher
 
-For instructions for building sqlcipher see
+For instructions for building SQLCipher see
 [Building SQLCipher for node.js](https://coolaj86.com/articles/building-sqlcipher-for-node-js-on-raspberry-pi-2/)
 
-To run node-sqlite3 against sqlcipher you need to compile from source by passing build options like:
+To run node-sqlite3 against SQLCipher you need to compile from source by passing build options like:
 
     npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/
 
     node -e 'require("sqlite3")'
 
-If your sqlcipher is installed in a custom location (if you compiled and installed it yourself),
+If your SQLCipher is installed in a custom location (if you compiled and installed it yourself),
 you'll also need to to set some environment variables:
 
 ### On OS X with Homebrew
@@ -159,7 +159,7 @@ Set the location where `make` installed it:
 
 ### Custom builds and Electron
 
-Running sqlite3 through [electron-rebuild](https://github.com/electron/electron-rebuild) does not preserve the sqlcipher extension, so some additional flags are needed to make this build Electron compatible. Your `npm install sqlite3 --build-from-source` command needs these additional flags (be sure to replace the target version with the current Electron version you are working with):
+Running sqlite3 through [electron-rebuild](https://github.com/electron/electron-rebuild) does not preserve the SQLCipher extension, so some additional flags are needed to make this build Electron compatible. Your `npm install sqlite3 --build-from-source` command needs these additional flags (be sure to replace the target version with the current Electron version you are working with):
 
     --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
 
