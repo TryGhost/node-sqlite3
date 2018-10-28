@@ -172,10 +172,10 @@ In the case of MacOS with Homebrew, the command should look like the following:
 The commands above will produce a SQLite binding that is *dynamically linked* to SQLCipher, meaning
 that your Electron app will require SQLCipher development headers to be present on the machine your
 app is running on. If you're broadly distributing an Electron app, it's unlikely that your users
-will have SQLCipher development headers installed on their machine. You should distribute a SQLite
-binding that is *statically linked* the SQLCipher library so that SQLCipher is distributed with your
-app. This requires modifying ./node_modules/sqlite3/binding.gyp and rebuilding. For more information
-on doing this, see
+will have SQLCipher development headers installed on their machine, and as a result your app will
+crash. You should distribute a SQLite binding that is *statically linked* the SQLCipher library so
+that SQLCipher is distributed with your app. This requires modifying
+./node_modules/sqlite3/binding.gyp and rebuilding. For more information on doing this, see
 [this gist](https://gist.github.com/aguynamedben/c69e4ece4c3c7f057bcaac7ad7fc30bc). It's especially
 tricky to test because as a developer you *will* have SQLCipher installed. To ensure everything is
 working for your end users, uninstall SQLCipher (i.e. `brew uninstall sqlcipher`) and ensure your
