@@ -31,6 +31,16 @@ environment:
     - nodejs_version: 10
       platform: x86
     # electron
+    - nodejs_version: 10
+      platform: x64
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 3.0.0-beta.1
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 10
+      platform: x86
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 3.0.0-beta.1
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
     - nodejs_version: 8
       platform: x64
       NODE_RUNTIME: electron
