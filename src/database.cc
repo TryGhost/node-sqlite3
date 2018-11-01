@@ -536,15 +536,15 @@ void Database::FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocat
         }
 
 
-        TryCatch trycatch;
+        //TryCatch trycatch;
         Local<Value> result = cb->Call(Nan::Undefined(), argc, argv.data());
 
         // process the result
-        if (trycatch.HasCaught()) {
+       /* if (trycatch.HasCaught()) {
             String::Utf8Value message(trycatch.Message()->Get());
             sqlite3_result_error(context, *message, message.length());
         }
-        else if (result->IsString() || result->IsRegExp()) {
+        else */if (result->IsString() || result->IsRegExp()) {
             String::Utf8Value value(result->ToString());
             sqlite3_result_text(context, *value, value.length(), SQLITE_TRANSIENT);
         }

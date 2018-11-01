@@ -41,38 +41,42 @@ First implementation by [Whitney Young](https://github.com/wbyoung)
 
 ```javascript
     var sqlite3 = require('sqlite3').verbose();
-    var db = new sqlite3.Database(':memory:');
-    
-    db.registerFunction('A_PLUS_B', function(a, b) {
-        return a+b;
+    var db = new sqlite3.Database(':memory:', function() {
+          db.registerFunction('A_PLUS_B', function(a, b) {
+              return a+b;
+          });
+          
+          db.all('SELECT A_PLUS_B(1, 2) AS val', function(err, rows) {
+              console.log(row.id + ": " + row.info); //Prints [{val: 3}]
+          });
+          
+          db.close();
     });
     
-    db.all('SELECT A_PLUS_B(1, 2) AS val', function(err, rows) {
-        console.log(row.id + ": " + row.info); //Prints [{val: 3}]
-    });
-    
-    db.close();
+
 ```
 
 # Custom aggregate
 
 ```javascript
     var sqlite3 = require('sqlite3').verbose();
-    var db = new sqlite3.Database(':memory:');
-    
-    let tempStr = '';
-    db.registerAggregateFunction('CUSTOM_AGGREGATE', function(value) {
-        if(!value){
-            return tempStr;
-        }
-        tempStr+= value;
+    var db = new sqlite3.Database(':memory:', function() {
+          let tempStr = '';
+          db.registerAggregateFunction('CUSTOM_AGGREGATE', function(value) {
+              if(!value){
+                  return tempStr;
+              }
+              tempStr+= value;
+          });
+          
+          db.all('SELECT CUSTOM_AGGREGATE(id) AS val', function(err, rows) {
+              console.log(row.id + ": " + row.info); //Prints [{val: '123456'}] if table has 6 rows with id field
+          });
+          
+          db.close();
     });
     
-    db.all('SELECT CUSTOM_AGGREGATE(id) AS val', function(err, rows) {
-        console.log(row.id + ": " + row.info); //Prints [{val: '123456'}] if table has 6 rows with id field
-    });
-    
-    db.close();
+
 ```
 
 # Features
