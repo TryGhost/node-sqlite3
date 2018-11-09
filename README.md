@@ -52,7 +52,7 @@ db.close();
  - [Extension support](https://github.com/mapbox/node-sqlite3/wiki/Extensions)
  - Big test suite
  - Written in modern C++ and tested for memory leaks
- - Bundles Sqlite3 3.15.0 as a fallback if the installing system doesn't include SQLite
+ - Bundles Sqlite3 3.24.0 as a fallback if the installing system doesn't include SQLite
 
 # API
 
