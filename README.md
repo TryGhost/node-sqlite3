@@ -90,6 +90,15 @@ Note, if building against homebrew-installed sqlite on OS X you can do:
 
     npm install --build-from-source --sqlite=/usr/local/opt/sqlite/
 
+By default the node-gyp install will use `python` as part of the installation. A
+different python executable can be specified on the command line.
+
+    npm install --build-from-source --python=/usr/bin/python2
+
+This uses the npm_config_python config, so values in .npmrc will be honoured:
+
+    python=/usr/bin/python2
+
 ## Building for node-webkit
 
 Because of ABI differences, `sqlite3` must be built in a custom to be used with [node-webkit](https://github.com/rogerwang/node-webkit).
