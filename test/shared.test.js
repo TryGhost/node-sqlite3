@@ -2,7 +2,7 @@ var sqlite3 = require('..');
 var assert = require('assert');
 var fs = require('fs');
 
-describe('exec', function() {
+describe('exec shared', function() {
     var db;
     before(function(done) {
         db = new sqlite3.Database(':memory:',sqlite3.OPEN_SHAREDCACHE,done);
