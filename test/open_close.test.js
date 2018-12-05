@@ -30,6 +30,29 @@ describe('open/close', function() {
             helper.deleteFile('test/tmp/test_create.db');
         });
     });
+    
+    describe('open and close non-existant shared database', function() {
+        before(function() {
+            helper.deleteFile('test/tmp/test_create_shared.db');
+        });
+
+        var db;
+        it('should open the database', function(done) {
+            db = new sqlite3.Database('test/tmp/test_create_shared.db',sqlite3.OPEN_SHAREDCACHE|sqlite3.SQLITE_OPEN_MEMORY, done);
+        });
+
+        it('should close the database', function(done) {
+            db.close(done);
+        });
+
+        it('should have created the file', function() {
+            assert.fileExists('test/tmp/test_create_shared.db');
+        });
+
+        after(function() {
+            helper.deleteFile('test/tmp/test_create_shared.db');
+        });
+    });
 
     it('should not be unable to open an inaccessible database', function(done) {
         // NOTE: test assumes that the user is not allowed to create new files
