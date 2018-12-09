@@ -17,10 +17,38 @@ describe('import', function() {
                 rowCount: 3
             });
             done();
-        })
+        });
     });
 
-    it('should error when import invalid filename', function(done) {
+    it('import TSV using delimiter option', function(done) {
+        db.import('test/support/import/data.tsv', 'data', { delimiter: '\t' }, function (err, res) {
+            if (err) throw err;
+            assert.deepEqual(res, {
+                tableName: 'data',
+                columnIds: ['x', 'y'],
+                columnTypes: ['integer', 'integer'],
+                rowCount: 5
+            });
+            done();
+        });
+    });    
+
+    it('import with noHeaderRow and columnIds options', function (done) {
+        const columnIds = ['col1', 'col2', 'col3', 'col4']
+        db.import('test/support/import/sample-no-header.csv', 'sampleNoHeader',
+            { columnIds, noHeaderRow: true }, function (err, res) {
+                if (err) throw err;
+                assert.deepEqual(res, {
+                    tableName: 'sampleNoHeader',
+                    columnIds,
+                    columnTypes: ['text', 'text', 'text', 'integer'],
+                    rowCount: 3
+                });
+                done();
+            });
+    });
+
+    it('should error on import with invalid filename', function(done) {
         db.import('/an/invalid/path', 'sample', {}, function (err, res) {
             if (err) {
                 assert.equal(err.message, 'SQLITE_ERROR: cannot open file "/an/invalid/path"');
@@ -32,4 +60,5 @@ describe('import', function() {
             }
         });
     });
+    
 });
