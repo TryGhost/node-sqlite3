@@ -38,7 +38,7 @@ describe('open/close', function() {
 
         var db;
         it('should open the database', function(done) {
-            db = new sqlite3.Database('test/tmp/test_create_shared.db',sqlite3.OPEN_SHAREDCACHE, done);
+            db = new sqlite3.Database('file:./test/tmp/test_create_shared.db', sqlite3.OPEN_URI | sqlite3.OPEN_SHAREDCACHE | sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, done);
         });
 
         it('should close the database', function(done) {
@@ -51,6 +51,41 @@ describe('open/close', function() {
 
         after(function() {
             helper.deleteFile('test/tmp/test_create_shared.db');
+        });
+    });
+
+
+    describe('open and close shared memory database', function() {
+
+        var db1;
+        var db2;
+
+        it('should open the first database', function(done) {
+            db1 = new sqlite3.Database('file:./test/tmp/test_memory.db?mode=memory', sqlite3.OPEN_URI | sqlite3.OPEN_SHAREDCACHE | sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, done);
+        });
+
+        it('should open the second database', function(done) {
+            db2 = new sqlite3.Database('file:./test/tmp/test_memory.db?mode=memory', sqlite3.OPEN_URI | sqlite3.OPEN_SHAREDCACHE | sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, done);
+        });
+
+        it('first database should set the user_version', function(done) {
+            db1.exec('PRAGMA user_version=42', done);
+        });
+
+        it('second database should get the user_version', function(done) {
+            db2.get('PRAGMA user_version', function(err, row) {
+                if (err) throw err;
+                assert.equal(row.user_version, 42);
+                done();
+            });
+        });
+
+        it('should close the first database', function(done) {
+            db1.close(done);
+        });
+
+        it('should close the second database', function(done) {
+            db2.close(done);
         });
     });
 
