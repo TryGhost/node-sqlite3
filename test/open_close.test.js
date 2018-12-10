@@ -55,7 +55,7 @@ describe('open/close', function() {
     });
 
 
-    describe('open and close shared memory database', function() {
+    (sqlite3.VERSION_NUMBER < 3008000 ? describe.skip : describe)('open and close shared memory database', function() {
 
         var db1;
         var db2;
