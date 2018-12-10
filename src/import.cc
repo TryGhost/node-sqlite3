@@ -121,7 +121,7 @@ struct ImportCtx {
 static void import_append_char(ImportCtx *p, int c){
   if( p->n+1>=p->nAlloc ){
     p->nAlloc += p->nAlloc + 100;
-    p->z = reinterpret_cast<char*>(sqlite3_realloc64(p->z, p->nAlloc));
+    p->z = reinterpret_cast<char*>(sqlite3_realloc(p->z, p->nAlloc));
     if( p->z==0 ){
       raw_printf(stderr, "out of memory\n");
       exit(1);
@@ -135,7 +135,7 @@ static void import_append_char(ImportCtx *p, int c){
 **
 **   +  Input comes from p->in.
 **   +  Store results in p->z of length p->n.  Space to hold p->z comes
-**      from sqlite3_malloc64().
+**      from sqlite3_malloc().
 **   +  Use p->cSep as the column separator.  The default is ",".
 **   +  Use p->rSep as the row separator.  The default is "\n".
 **   +  Keep track of the line number in p->nLine.
@@ -428,7 +428,7 @@ ImportResult *sqlite_import(
     return NULL;
   }
 
-  zSql = reinterpret_cast<char*>(sqlite3_malloc64( nByte*2 + 20 + nCol*2 ));
+  zSql = reinterpret_cast<char*>(sqlite3_malloc( nByte*2 + 20 + nCol*2 ));
   if( zSql==0 ){
     raw_printf(stderr, "Error: out of memory\n");
     fclose(sCtx.in);
