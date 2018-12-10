@@ -282,6 +282,9 @@ int metascan(std::vector<ColType> &colTypes, ImportCtx &ctx, int nCol) {
   return 0;
 }
 
+const char *NO_TABLE_ERR_PREFIX = "no such table:";
+const size_t NO_TABLE_ERR_LEN = strlen(NO_TABLE_ERR_PREFIX);
+
 ImportResult *sqlite_import(
   sqlite3 *db,
   const char *zFile,      // CSV file to import
@@ -353,7 +356,7 @@ ImportResult *sqlite_import(
   nByte = strlen30(zSql);
   std::vector<std::string> colNames;
   rc = sqlite3_prepare_v2(db, zSql, -1, &pStmt, 0);
-  if (!(rc && sqlite3_strglob("no such table: *", sqlite3_errmsg(db))==0)) {
+  if (rc && strncmp(sqlite3_errmsg(db), NO_TABLE_ERR_PREFIX, NO_TABLE_ERR_LEN)) {
     ssErr << "Error: " << rc << ": " << sqlite3_errmsg(db);
     errMsg = ssErr.str();
     sqlite3_free(zSql);
