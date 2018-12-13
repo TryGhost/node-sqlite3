@@ -30,6 +30,64 @@ describe('open/close', function() {
             helper.deleteFile('test/tmp/test_create.db');
         });
     });
+    
+    describe('open and close non-existant shared database', function() {
+        before(function() {
+            helper.deleteFile('test/tmp/test_create_shared.db');
+        });
+
+        var db;
+        it('should open the database', function(done) {
+            db = new sqlite3.Database('file:./test/tmp/test_create_shared.db', sqlite3.OPEN_URI | sqlite3.OPEN_SHAREDCACHE | sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, done);
+        });
+
+        it('should close the database', function(done) {
+            db.close(done);
+        });
+
+        it('should have created the file', function() {
+            assert.fileExists('test/tmp/test_create_shared.db');
+        });
+
+        after(function() {
+            helper.deleteFile('test/tmp/test_create_shared.db');
+        });
+    });
+
+
+    (sqlite3.VERSION_NUMBER < 3008000 ? describe.skip : describe)('open and close shared memory database', function() {
+
+        var db1;
+        var db2;
+
+        it('should open the first database', function(done) {
+            db1 = new sqlite3.Database('file:./test/tmp/test_memory.db?mode=memory', sqlite3.OPEN_URI | sqlite3.OPEN_SHAREDCACHE | sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, done);
+        });
+
+        it('should open the second database', function(done) {
+            db2 = new sqlite3.Database('file:./test/tmp/test_memory.db?mode=memory', sqlite3.OPEN_URI | sqlite3.OPEN_SHAREDCACHE | sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, done);
+        });
+
+        it('first database should set the user_version', function(done) {
+            db1.exec('PRAGMA user_version=42', done);
+        });
+
+        it('second database should get the user_version', function(done) {
+            db2.get('PRAGMA user_version', function(err, row) {
+                if (err) throw err;
+                assert.equal(row.user_version, 42);
+                done();
+            });
+        });
+
+        it('should close the first database', function(done) {
+            db1.close(done);
+        });
+
+        it('should close the second database', function(done) {
+            db2.close(done);
+        });
+    });
 
     it('should not be unable to open an inaccessible database', function(done) {
         // NOTE: test assumes that the user is not allowed to create new files

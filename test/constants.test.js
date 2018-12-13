@@ -6,7 +6,10 @@ describe('constants', function() {
         assert.ok(sqlite3.OPEN_READONLY === 1);
         assert.ok(sqlite3.OPEN_READWRITE === 2);
         assert.ok(sqlite3.OPEN_CREATE === 4);
+        assert.ok(sqlite3.OPEN_URI === 0x00000040);
         assert.ok(sqlite3.OPEN_FULLMUTEX === 0x00010000);
+        assert.ok(sqlite3.OPEN_SHAREDCACHE === 0x00020000);
+        assert.ok(sqlite3.OPEN_PRIVATECACHE === 0x00040000);
     });
 
     it('should have the right error flags', function() {
