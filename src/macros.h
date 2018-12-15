@@ -83,20 +83,14 @@ const char* sqlite_authorizer_string(int type);
         Nan::New(property).ToLocalChecked()).ToLocalChecked()).FromJust();
 
 #define EXCEPTION(msg, errno, name)                                            \
-    Local<Value> name = Exception::Error(                                      \
-        String::Concat(                                                        \
-            String::Concat(                                                    \
-                Nan::New(sqlite_code_string(errno)).ToLocalChecked(),          \
-                Nan::New(": ").ToLocalChecked()                                \
-            ),                                                                 \
-            (msg)                                                              \
-        )                                                                      \
-    );                                                                         \
+    Local<Value> name = Exception::Error(Nan::New(                             \
+        std::string(sqlite_code_string(errno)) +                               \
+        std::string(": ") + std::string(msg)                                   \
+    ).ToLocalChecked());                                                                        \
     Local<Object> name ##_obj = name.As<Object>();                             \
     Nan::Set(name ##_obj, Nan::New("errno").ToLocalChecked(), Nan::New(errno));\
     Nan::Set(name ##_obj, Nan::New("code").ToLocalChecked(),                   \
         Nan::New(sqlite_code_string(errno)).ToLocalChecked());
-
 
 #define EMIT_EVENT(obj, argc, argv)                                            \
     TRY_CATCH_CALL((obj),                                                      \

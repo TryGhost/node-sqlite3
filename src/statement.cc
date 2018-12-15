@@ -65,7 +65,7 @@ template <class T> void Statement::Error(T* baton) {
     Statement* stmt = baton->stmt;
     // Fail hard on logic errors.
     assert(stmt->status != 0);
-    EXCEPTION(Nan::New(stmt->message.c_str()).ToLocalChecked(), stmt->status, exception);
+    EXCEPTION(stmt->message, stmt->status, exception);
 
     Local<Function> cb = Nan::New(baton->callback);
 
@@ -857,7 +857,7 @@ void Statement::CleanQueue() {
     if (prepared && !queue.empty()) {
         // This statement has already been prepared and is now finalized.
         // Fire error for all remaining items in the queue.
-        EXCEPTION(Nan::New<String>("Statement is already finalized").ToLocalChecked(), SQLITE_MISUSE, exception);
+        EXCEPTION("Statement is already finalized", SQLITE_MISUSE, exception);
         Local<Value> argv[] = { exception };
         bool called = false;
 
