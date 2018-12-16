@@ -212,15 +212,13 @@ static char *csv_read_one_field(ImportCtx *p){
   return p->z;
 }
 
-std::regex intRE("^(\\+|-)?\\$?[[:digit:],]+$");
-std::regex realRE("(^\\+|-)?\\$?[[:digit:],]*\\.?[[:digit:]]+([eE][-+]?[[:digit:]]+)?$");
 /**
  * Given the current guess for a column type and cell value string cs
  * make a conservative guess at column type.
  * We use the order none <: int <: real <: text, and a guess will only become more general.
  * TODO: support various date formats
  */
-ColType guess_column_type(ColType cg, const char *s) {
+ColType guess_column_type(std::regex const &intRE, std::regex const &realRE, ColType cg, const char *s) {
   if (cg == CT_TEXT) {
     return cg;
   }
@@ -249,13 +247,16 @@ ColType guess_column_type(ColType cg, const char *s) {
  * column types
  */
 int metascan(std::vector<ColType> &colTypes, ImportCtx &ctx, int nCol) {
+  std::regex intRE("^(\\+|-)?\\$?[[:digit:],]+$");
+  std::regex realRE("(^\\+|-)?\\$?[[:digit:],]*\\.?[[:digit:]]+([eE][-+]?[[:digit:]]+)?$");
+
   int i;
   for (int row = 0; row < METASCAN_ROWS; row++) {
     int startLine = ctx.nLine;
     for (i = 0; i < nCol; i++) {
       char *z = csv_read_one_field(&ctx);
       if (colTypes[i] != CT_TEXT) {
-        colTypes[i]=guess_column_type(colTypes[i], z);
+        colTypes[i]=guess_column_type(intRE, realRE, colTypes[i], z);
       }
       /*
       ** Did we reach end-of-file before finding any columns?
