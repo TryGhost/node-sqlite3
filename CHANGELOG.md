@@ -1,5 +1,11 @@
 # Changelog
 
+
+## 4.0.5
+- **SECURITY:** Upgrade SQLite to 3.26.0 [#1088](https://github.com/mapbox/node-sqlite3/pull/1088)
+- add constants for file open (shared databases) [#1078](https://github.com/mapbox/node-sqlite3/pull/1078)
+- Allow specifying the python to use [#1089](https://github.com/mapbox/node-sqlite3/pull/1089)
+
 ## 4.0.4
 - Add NodeJS 11 support [#1072](https://github.com/mapbox/node-sqlite3/pull/1072)
 - Add electron osx 3.0.0 support [#1071](https://github.com/mapbox/node-sqlite3/pull/1071)
