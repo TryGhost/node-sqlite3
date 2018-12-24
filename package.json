@@ -1,5 +1,5 @@
 {
-  "name": "sqlite3",
+  "name": "sqlite3_ac",
   "description": "Asynchronous, non-blocking SQLite3 bindings",
   "version": "4.1.1",
   "homepage": "https://github.com/mapbox/node-sqlite3",
