@@ -112,7 +112,6 @@ environment:
 
 os: Visual Studio 2015
 
-
 install:
   - scripts\build-appveyor.bat
 
