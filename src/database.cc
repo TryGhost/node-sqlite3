@@ -37,7 +37,7 @@ void Database::Process() {
     Nan::HandleScope scope;
 
     if (!open && locked && !queue.empty()) {
-        EXCEPTION(Nan::New("Database handle is closed").ToLocalChecked(), SQLITE_MISUSE, exception);
+        EXCEPTION("Database handle is closed", SQLITE_MISUSE, exception);
         Local<Value> argv[] = { exception };
         bool called = false;
 
@@ -85,7 +85,7 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
     Nan::HandleScope scope;
 
     if (!open && locked) {
-        EXCEPTION(Nan::New("Database is closed").ToLocalChecked(), SQLITE_MISUSE, exception);
+        EXCEPTION("Database is closed", SQLITE_MISUSE, exception);
         Local<Function> cb = Nan::New(baton->callback);
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[] = { exception };
@@ -176,7 +176,7 @@ void Database::Work_AfterOpen(uv_work_t* req) {
 
     Local<Value> argv[1];
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(Nan::New(baton->message.c_str()).ToLocalChecked(), baton->status, exception);
+        EXCEPTION(baton->message, baton->status, exception);
         argv[0] = exception;
     }
     else {
@@ -256,7 +256,7 @@ void Database::Work_AfterClose(uv_work_t* req) {
 
     Local<Value> argv[1];
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(Nan::New(baton->message.c_str()).ToLocalChecked(), baton->status, exception);
+        EXCEPTION(baton->message, baton->status, exception);
         argv[0] = exception;
     }
     else {
@@ -346,6 +346,9 @@ NAN_METHOD(Database::Configure) {
     }
     else {
         return Nan::ThrowError(Exception::Error(String::Concat(
+#if V8_MAJOR_VERSION > 6
+            info.GetIsolate(),
+#endif
             Nan::To<String>(info[0]).ToLocalChecked(),
             Nan::New(" is not a valid configuration option").ToLocalChecked()
         )));
@@ -554,7 +557,7 @@ void Database::Work_AfterExec(uv_work_t* req) {
     Local<Function> cb = Nan::New(baton->callback);
 
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(Nan::New(baton->message.c_str()).ToLocalChecked(), baton->status, exception);
+        EXCEPTION(baton->message, baton->status, exception);
 
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[] = { exception };
@@ -656,7 +659,7 @@ void Database::Work_AfterLoadExtension(uv_work_t* req) {
     Local<Function> cb = Nan::New(baton->callback);
 
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(Nan::New(baton->message.c_str()).ToLocalChecked(), baton->status, exception);
+        EXCEPTION(baton->message, baton->status, exception);
 
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[] = { exception };
