@@ -25,6 +25,7 @@ publish
 echo "building from source to test against external libsqlite3"
 export NODE_SQLITE3_JSON1=no
 if [[ $(uname -s) == 'Darwin' ]]; then
+    brew update
     brew install sqlite
     npm install --build-from-source --sqlite=$(brew --prefix) --clang=1
 else
