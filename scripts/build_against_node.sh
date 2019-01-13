@@ -29,6 +29,7 @@ publish
 # now test building against shared sqlite
 export NODE_SQLITE3_JSON1=no
 if [[ $(uname -s) == 'Darwin' ]]; then
+    brew update
     brew install sqlite
     npm install --build-from-source --sqlite=$(brew --prefix) --clang=1
 else
