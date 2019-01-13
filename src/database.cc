@@ -430,7 +430,7 @@ void Database::Work_AfterBackup(uv_work_t* req) {
     Local<Function> cb = Nan::New(baton->callback);
 
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(Nan::New(baton->message.c_str()).ToLocalChecked(), baton->status, exception);
+        EXCEPTION(baton->message, baton->status, exception);
 
         if (!cb.IsEmpty() && cb->IsFunction()) {
             Local<Value> argv[] = { exception };
