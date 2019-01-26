@@ -31,6 +31,11 @@ const char* sqlite_authorizer_string(int type);
     }                                                                          \
     Nan::Utf8String var(info[i]);
 
+#define REQUIRE_ARGUMENT_INTEGER(i, var)                                        \
+    if (info.Length() <= (i) || !info[i]->IsInt32()) {                        \
+        return Nan::ThrowTypeError("Argument " #i " must be an integer");        \
+    }                                                                          \
+    int var(Nan::To<int32_t>(info[i]).FromJust());
 
 #define OPTIONAL_ARGUMENT_FUNCTION(i, var)                                     \
     Local<Function> var;                                                       \
@@ -73,6 +78,10 @@ const char* sqlite_authorizer_string(int type);
 #define NODE_SET_GETTER(target, name, function)                                \
     Nan::SetAccessor((target)->InstanceTemplate(),                             \
         Nan::New(name).ToLocalChecked(), (function));
+
+#define NODE_SET_SETTER(target, name, getter, setter)                          \
+    Nan::SetAccessor((target)->InstanceTemplate(),                             \
+        Nan::New(name).ToLocalChecked(), getter, setter);
 
 #define GET_STRING(source, name, property)                                     \
     Nan::Utf8String name(Nan::Get(source,                                      \
@@ -132,6 +141,32 @@ const char* sqlite_authorizer_string(int type);
     stmt->db->pending--;                                                       \
     stmt->Process();                                                           \
     stmt->db->Process();                                                       \
+    delete baton;
+
+#define BACKUP_BEGIN(type)                                                     \
+    assert(baton);                                                             \
+    assert(baton->backup);                                                     \
+    assert(!baton->backup->locked);                                            \
+    assert(!baton->backup->finished);                                          \
+    assert(baton->backup->inited);                                             \
+    baton->backup->locked = true;                                              \
+    baton->backup->db->pending++;                                              \
+    int status = uv_queue_work(uv_default_loop(),                              \
+        &baton->request,                                                       \
+        Work_##type, reinterpret_cast<uv_after_work_cb>(Work_After##type));    \
+    assert(status == 0);
+
+#define BACKUP_INIT(type)                                                      \
+    type* baton = static_cast<type*>(req->data);                               \
+    Backup* backup = baton->backup;
+
+#define BACKUP_END()                                                           \
+    assert(backup->locked);                                                    \
+    assert(backup->db->pending);                                               \
+    backup->locked = false;                                                    \
+    backup->db->pending--;                                                     \
+    backup->Process();                                                         \
+    backup->db->Process();                                                     \
     delete baton;
 
 #define DELETE_FIELD(field)                                                    \
