@@ -78,6 +78,7 @@
         'include_dirs': [ '<(SHARED_INTERMEDIATE_DIR)/sqlite-autoconf-<@(sqlite_version)/' ],
         'defines': [
           'SQLITE_THREADSAFE=1',
+          'HAVE_USLEEP=1',
           'SQLITE_ENABLE_FTS3',
           'SQLITE_ENABLE_FTS4',
           'SQLITE_ENABLE_FTS5',
@@ -91,6 +92,7 @@
       'defines': [
         '_REENTRANT=1',
         'SQLITE_THREADSAFE=1',
+        'HAVE_USLEEP=1',
         'SQLITE_ENABLE_FTS3',
         'SQLITE_ENABLE_FTS4',
         'SQLITE_ENABLE_FTS5',
