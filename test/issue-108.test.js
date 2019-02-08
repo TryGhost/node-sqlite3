@@ -18,7 +18,7 @@ describe('buffer', function() {
             });
 
             var buff = new Buffer(2);
-            stmt.run('a');
+            stmt.run(buff);
             stmt.finalize();
         });
 
