@@ -98,6 +98,7 @@ public:
     typedef Async<UpdateInfo, Database> AsyncUpdate;
 
     friend class Statement;
+    friend class Backup;
 
 protected:
     Database() : Nan::ObjectWrap(),

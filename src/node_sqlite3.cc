@@ -7,6 +7,7 @@
 #include "macros.h"
 #include "database.h"
 #include "statement.h"
+#include "backup.h"
 
 using namespace node_sqlite3;
 
@@ -17,6 +18,7 @@ NAN_MODULE_INIT(RegisterModule) {
 
     Database::Init(target);
     Statement::Init(target);
+    Backup::Init(target);
 
     DEFINE_CONSTANT_INTEGER(target, SQLITE_OPEN_READONLY, OPEN_READONLY);
     DEFINE_CONSTANT_INTEGER(target, SQLITE_OPEN_READWRITE, OPEN_READWRITE);
