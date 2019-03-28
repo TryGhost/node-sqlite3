@@ -133,9 +133,8 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
         Napi::TypeError::New(env, "Database object expected").ThrowAsJavaScriptException();
         return;
     }
-    else if (length <= 1 || !info[1].IsString()) {
-        Napi::TypeError::New(env, "Filename expected").ThrowAsJavaScriptException();
-        return;
+    else if (length <= 1 || !(info[1]->IsString() || info[1]->IsObject())) {
+        return Nan::ThrowTypeError("Filename or database object expected");
     }
     else if (length <= 2 || !info[2].IsString()) {
         Napi::TypeError::New(env, "Source database name expected").ThrowAsJavaScriptException();
@@ -155,6 +154,12 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
     }
 
     Database* db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    Database* otherDb = NULL;
+    if (info[1]->IsObject()) {
+        // A database instance was passed instead of a filename
+        otherDb = Napi::ObjectWrap<Database>::Unwrap(info[1].As<Napi::Object>());
+        otherDb->Ref();
+    }    
     Napi::String filename = info[1].As<Napi::String>();
     Napi::String sourceName = info[2].As<Napi::String>();
     Napi::String destName = info[3].As<Napi::String>();
@@ -168,11 +173,26 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
     init(db);
 
     InitializeBaton* baton = new InitializeBaton(db, info[5].As<Napi::Function>(), this);
+    baton->otherDb = otherDb;
     baton->filename = filename.Utf8Value();
     baton->sourceName = sourceName.Utf8Value();
     baton->destName = destName.Utf8Value();
     baton->filenameIsDest = filenameIsDest.Value();
-    db->Schedule(Work_BeginInitialize, baton);
+
+    if (otherDb) {
+        otherDb->Schedule(Work_BeforeInitialize, baton, true);
+    } else {
+        db->Schedule(Work_BeginInitialize, baton);
+    }
+    info.GetReturnValue().Set(info.This());
+}
+
+void Backup::Work_BeforeInitialize(Database::Baton* baton) {
+    InitializeBaton *initBaton = static_cast<InitializeBaton *>(baton);
+    // at this point, the target database object is locked (it is
+    // important that its database connection remains unused).
+    initBaton->otherDb->pending++;
+    baton->db->Schedule(Work_BeginInitialize, baton);
 }
 
 void Backup::Work_BeginInitialize(Database::Baton* baton) {
@@ -195,22 +215,32 @@ void Backup::Work_Initialize(napi_env e, void* data) {
     sqlite3_mutex* mtx = sqlite3_db_mutex(baton->db->_handle);
     sqlite3_mutex_enter(mtx);
 
-    backup->status = sqlite3_open(baton->filename.c_str(), &backup->_otherDb);
+    backup->message = "";
+    if (baton->otherDb) {
+        backup->otherDb = baton->otherDb;
+        backup->_otherDbHandle = baton->otherDb->_handle;
+        backup->status = SQLITE_OK;
+        if (!baton->filenameIsDest) {
+            backup->status = SQLITE_MISUSE;
+            backup->message = "do not toggle filenameIsDest when backing up between sqlite3.Database instances";
+        }
+    } else {
+        backup->otherDb = NULL;
+        backup->status = sqlite3_open(baton->filename.c_str(), &backup->_otherDbHandle);
+    }
 
     if (backup->status == SQLITE_OK) {
         backup->_handle = sqlite3_backup_init(
-            baton->filenameIsDest ? backup->_otherDb : backup->db->_handle,
+            baton->filenameIsDest ? backup->_otherDbHandle : backup->db->_handle,
             baton->destName.c_str(),
-            baton->filenameIsDest ? backup->db->_handle : backup->_otherDb,
+            baton->filenameIsDest ? backup->db->_handle : backup->_otherDbHandle,
             baton->sourceName.c_str());
     }
-    backup->_destDb = baton->filenameIsDest ? backup->_otherDb : backup->db->_handle;
+    backup->_destDbHandle = baton->filenameIsDest ? backup->_otherDbHandle : backup->db->_handle;
 
     if (backup->status != SQLITE_OK) {
-        backup->message = std::string(sqlite3_errmsg(backup->_destDb));
-        sqlite3_close(backup->_otherDb);
-        backup->_otherDb = NULL;
-        backup->_destDb = NULL;
+        if (backup->message == "") backup->message = std::string(sqlite3_errmsg(backup->_destDbHandle));
+        backup->FinishSqlite();
     }
 
     sqlite3_mutex_leave(mtx);
@@ -354,6 +384,13 @@ void Backup::FinishAll() {
     CleanQueue();
     FinishSqlite();
     db->Unref();
+    if (otherDb) {
+        assert(otherDb->locked);
+        otherDb->pending--;
+        otherDb->Process();
+        otherDb->Unref();
+        otherDb = NULL;
+    }
 }
 
 void Backup::FinishSqlite() {
@@ -361,11 +398,13 @@ void Backup::FinishSqlite() {
         sqlite3_backup_finish(_handle);
         _handle = NULL;
     }
-    if (_otherDb) {
-        sqlite3_close(_otherDb);
-        _otherDb = NULL;
+    if (_otherDbHandle) {
+        if (!otherDb) {
+            sqlite3_close(_otherDbHandle);
+        }
+        _otherDbHandle = NULL;
     }
-    _destDb = NULL;
+    _destDbHandle = NULL;
 }
 
 Napi::Value Backup::IdleGetter(const Napi::CallbackInfo& info) {

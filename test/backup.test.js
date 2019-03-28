@@ -276,4 +276,55 @@ describe('backup', function() {
             });
         });
     });
+
+    it ('can backup between two sqlite3.Database instances', function(done) {
+        var src = new sqlite3.Database(':memory:', function(err) {
+            if (err) throw err;
+            src.exec("CREATE TABLE space (txt TEXT)", function(err) {
+                if (err) throw err;
+                src.exec("INSERT INTO space(txt) VALUES('monkey')", function(err) {
+                    if (err) throw err;
+                    var dest = new sqlite3.Database(':memory:', function(err) {
+                        if (err) throw err;
+                        var backup = src.backup(dest);
+                        backup.step(-1);
+                        backup.finish(function(err) {
+                            if (err) throw err;
+                            assertRowsMatchDb(src, 'space', dest, 'space', done);
+                        });
+                    });
+                });
+            });
+        });
+    });
+
+    it ('locks destination when backing up between two sqlite3.Database instances', function(done) {
+        var src = new sqlite3.Database(':memory:', function(err) {
+            if (err) throw err;
+            src.exec("CREATE TABLE space (txt TEXT)", function(err) {
+                if (err) throw err;
+                src.exec("INSERT INTO space(txt) VALUES('monkey')", function(err) {
+                    if (err) throw err;
+                    var dest = new sqlite3.Database(':memory:', function(err) {
+                        if (err) throw err;
+                        var backup = src.backup(dest, function(err) {
+                            if (err) throw err;
+                            var finished = false;
+                            // This action on dest db should be held until backup finishes.
+                            dest.exec("CREATE TABLE space2 (txt TEXT)", function(err) {
+                                if (err) throw err;
+                                assert(finished);
+                                done();
+                            });
+                            backup.step(-1);
+                            backup.finish(function(err) {
+                                if (err) throw err;
+                                finished = true;
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
 });

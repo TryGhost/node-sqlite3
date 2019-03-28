@@ -113,6 +113,7 @@ public:
 
     struct InitializeBaton : Database::Baton {
         Backup* backup;
+        Database* otherDb;
         std::string filename;
         std::string sourceName;
         std::string destName;
@@ -147,9 +148,10 @@ public:
 
     void init(Database* db_) {
         db = db_;
+        otherDb = NULL;
         _handle = NULL;
-        _otherDb = NULL;
-        _destDb = NULL;
+        _otherDbHandle = NULL;
+        _destDbHandle = NULL;
         inited = false;
         locked = true;
         completed = false;
@@ -157,7 +159,6 @@ public:
         remaining = -1;
         pageCount = -1;
         finished = false;
-        db->Ref();
     }
 
     Backup(const Napi::CallbackInfo& info);
@@ -183,6 +184,7 @@ public:
     void RetryErrorSetter(const Napi::CallbackInfo& info, const Napi::Value& value);
 
 protected:
+    static void Work_BeforeInitialize(Database::Baton* baton);
     static void Work_BeginInitialize(Database::Baton* baton);
     static void Work_Initialize(napi_env env, void* data);
     static void Work_AfterInitialize(napi_env env, napi_status status, void* data);
@@ -197,10 +199,11 @@ protected:
     void GetRetryErrors(std::set<int>& retryErrorsSet);
 
     Database* db;
+    Database* otherDb;
 
     sqlite3_backup* _handle;
-    sqlite3* _otherDb;
-    sqlite3* _destDb;
+    sqlite3* _otherDbHandle;
+    sqlite3* _destDbHandle;
     int status;
     std::string message;
 
