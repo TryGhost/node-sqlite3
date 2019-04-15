@@ -99,6 +99,17 @@ This uses the npm_config_python config, so values in .npmrc will be honoured:
 
     python=/usr/bin/python2
 
+## Custom file header (magic)
+
+The default sqlite file header is "SQLite format 3".  
+You can specify a different magic, though this will make standard tools and libraries unable to work with your files.
+
+
+    npm install --build-from-source --sqlite_magic="MyCustomMagic15"
+
+
+Note that the magic *must* be exactly 15 characters long (16 bytes including null terminator).
+    
 ## Building for node-webkit
 
 Because of ABI differences, `sqlite3` must be built in a custom to be used with [node-webkit](https://github.com/rogerwang/node-webkit).
