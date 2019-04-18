@@ -2,7 +2,7 @@ sudo: false
 
 language: generic
 
-dist: precise
+# dist: precise
 
 git:
   depth: 10
@@ -15,8 +15,14 @@ addons:
   #   packages:
   #    - clang-3.5
 
+services:
+  - docker
+
 matrix:
   include:
+    # ARM with Docker
+     - os: linux
+       env: NODE_VERSION="8" USE_DOCKER=1
     #  # Linux
     #  - os: linux
     #    compiler: clang
@@ -208,6 +214,9 @@ before_script:
 - export COMMIT_MESSAGE=$(git show -s --format=%B $TRAVIS_COMMIT | tr -d '\n')
 
 script:
+- docker run --rm --privileged multiarch/qemu-user-static:register --reset
+- "mkdir tmp && pushd tmp && curl -L -o qemu-arm-static.tar.gz https://github.com/multiarch/qemu-user-static/releases/download/v3.1.0-3/qemu-arm-static.tar.gz && tar xzf qemu-arm-static.tar.gz && popd"
+- travis_wait docker run --rm -v "$(pwd)":/build -v "$(pwd)"/tmp/qemu-arm-static:/usr/bin/qemu-arm-static arm32v7/node:8 bash -c 'cd /build && npm install --unsafe-perm --build-from-source && node_modules/.bin/node-pre-gyp package testpackage publish info'
 # - if [[ "${NODE_VERSION}" ]]; then
 #     if [[ "${ELECTRON_VERSION}" ]]; then
 #       ./scripts/build_against_electron.sh;
