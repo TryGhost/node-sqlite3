@@ -151,7 +151,7 @@ describe('backup', function() {
         });
     });
 
-    (sqlite3.VERSION_NUMBER < 3007011 ? it.skip : it) ('can backup from temp to main', function(done) {
+    (sqlite3.VERSION_NUMBER < 3026000 ? it.skip : it) ('can backup from temp to main', function(done) {
         db.exec("CREATE TEMP TABLE space (txt TEXT)", function(err) {
             if (err) throw err;
             db.exec("INSERT INTO space(txt) VALUES('monkey')", function(err) {
@@ -177,7 +177,7 @@ describe('backup', function() {
         });
     });
 
-    (sqlite3.VERSION_NUMBER < 3007011 ? it.skip : it) ('can backup from main to temp', function(done) {
+    (sqlite3.VERSION_NUMBER < 3026000 ? it.skip : it) ('can backup from main to temp', function(done) {
         var backup = db.backup('test/support/prepare.db', 'main', 'temp', false, function(err) {
             if (err) throw err;
             backup.step(-1, function(err) {
