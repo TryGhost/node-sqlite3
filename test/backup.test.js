@@ -151,22 +151,24 @@ describe('backup', function() {
         });
     });
 
-    (sqlite3.VERSION_NUMBER < 3007011 ? it.skip : it) ('can backup from temp to main', function(done) {
+    (sqlite3.VERSION_NUMBER < 3026000 ? it.skip : it) ('can backup from temp to main', function(done) {
         db.exec("CREATE TEMP TABLE space (txt TEXT)", function(err) {
             if (err) throw err;
             db.exec("INSERT INTO space(txt) VALUES('monkey')", function(err) {
                 if (err) throw err;
                 var backup = db.backup('test/tmp/backup.db', 'temp', 'main', true, function(err) {
                     if (err) throw err;
-                    backup.step(-1);
-                    backup.finish(function(err) {
+                    backup.step(-1, function(err) {
                         if (err) throw err;
-                        var db2 = new sqlite3.Database('test/tmp/backup.db', function(err) {
+                        backup.finish(function(err) {
                             if (err) throw err;
-                            db2.get("SELECT * FROM space", function(err, row) {
+                            var db2 = new sqlite3.Database('test/tmp/backup.db', function(err) {
                                 if (err) throw err;
-                                assert.equal(row.txt, 'monkey');
-                                db2.close(done);
+                                db2.get("SELECT * FROM space", function(err, row) {
+                                    if (err) throw err;
+                                    assert.equal(row.txt, 'monkey');
+                                    db2.close(done);
+                                });
                             });
                         });
                     });
@@ -175,13 +177,15 @@ describe('backup', function() {
         });
     });
 
-    (sqlite3.VERSION_NUMBER < 3007011 ? it.skip : it) ('can backup from main to temp', function(done) {
+    (sqlite3.VERSION_NUMBER < 3026000 ? it.skip : it) ('can backup from main to temp', function(done) {
         var backup = db.backup('test/support/prepare.db', 'main', 'temp', false, function(err) {
             if (err) throw err;
-            backup.step(-1);
-            backup.finish(function(err) {
+            backup.step(-1, function(err) {
                 if (err) throw err;
-                assertRowsMatchDb(db, 'temp.foo', db, 'main.foo', done);
+                backup.finish(function(err) {
+                    if (err) throw err;
+                    assertRowsMatchDb(db, 'temp.foo', db, 'main.foo', done);
+                });
             });
         });
     });
