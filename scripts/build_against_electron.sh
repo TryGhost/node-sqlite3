@@ -23,11 +23,6 @@ function electron_pretest() {
     else
         npm install -g electron-mocha
     fi
-    if [ "${TRAVIS_OS_NAME}" = "osx" ]; then 
-        (sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )&
-    else
-        sh -e /etc/init.d/xvfb start 
-    fi
 
     sleep 3
 }

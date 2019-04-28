@@ -2,7 +2,7 @@ sudo: false
 
 language: generic
 
-dist: precise
+dist: xenial
 
 git:
   depth: 10
@@ -206,6 +206,9 @@ install:
 before_script:
 # get commit message
 - export COMMIT_MESSAGE=$(git show -s --format=%B $TRAVIS_COMMIT | tr -d '\n')
+
+services:
+  - xvfb
 
 script:
 - if [[ "${NODE_VERSION}" ]]; then
