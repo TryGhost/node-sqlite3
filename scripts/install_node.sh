@@ -19,8 +19,7 @@ source ./__nvm/nvm.sh
 npm config delete prefix
 nvm install ${NODE_VERSION}
 npm config delete prefix
-nvm use ${NODE_VERSION}
-npm config delete prefix
+nvm use --delete-prefix ${NODE_VERSION}
 node --version
 npm --version
 which node
