@@ -14,7 +14,7 @@ nvm unload || true
 # This is done manually so that the build works the same on OS X
 rm -rf ./__nvm/ && git clone --depth 1 https://github.com/creationix/nvm.git ./__nvm
 source ./__nvm/nvm.sh
-nvm install -s ${NODE_VERSION}
+nvm install ${NODE_VERSION}
 nvm use --delete-prefix ${NODE_VERSION}
 node --version
 npm --version
