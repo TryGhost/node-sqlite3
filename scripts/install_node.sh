@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -x
+
 if [[ ${1:-false} == 'false' ]]; then
     echo "Error: pass node version as first argument"
     exit 1
@@ -16,7 +18,9 @@ rm -rf ./__nvm/ && git clone --depth 1 https://github.com/creationix/nvm.git ./_
 source ./__nvm/nvm.sh
 npm config delete prefix
 nvm install ${NODE_VERSION}
+npm config delete prefix
 nvm use ${NODE_VERSION}
+npm config delete prefix
 node --version
 npm --version
 which node
