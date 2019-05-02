@@ -34,6 +34,10 @@ environment:
       platform: x64
     - nodejs_version: 11
       platform: x86
+    - nodejs_version: 12
+      platform: x64
+    - nodejs_version: 12
+      platform: x86
     # electron
     - nodejs_version: 10
       platform: x64
@@ -114,6 +118,7 @@ os: Visual Studio 2015
 
 
 install:
+  - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version) $env:PLATFORM
   - scripts\build-appveyor.bat
 
 build: OFF
