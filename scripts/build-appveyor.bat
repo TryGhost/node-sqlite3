@@ -31,11 +31,6 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 ECHO using MSBuild^: && CALL msbuild /version && ECHO.
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
-ECHO downloading/installing node
-IF /I "%platform%"=="x64" powershell Install-Product node $env:nodejs_version x64
-IF /I "%platform%"=="x86" powershell Install-Product node $env:nodejs_version x86
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-
 powershell Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
