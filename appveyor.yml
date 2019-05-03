@@ -118,7 +118,6 @@ os: Visual Studio 2015
 
 
 install:
-  - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version) $env:PLATFORM
   - scripts\build-appveyor.bat
 
 build: OFF
