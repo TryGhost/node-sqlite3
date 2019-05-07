@@ -15,7 +15,7 @@ nvm unload || true
 rm -rf ./__nvm/ && git clone --depth 1 https://github.com/creationix/nvm.git ./__nvm
 source ./__nvm/nvm.sh
 nvm install ${NODE_VERSION}
-nvm use ${NODE_VERSION}
+nvm use --delete-prefix ${NODE_VERSION}
 node --version
 npm --version
 which node
