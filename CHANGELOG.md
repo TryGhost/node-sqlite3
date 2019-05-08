@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.0.7
+
+- Node v12 support
+- Electron v5 support
+- Fix backup API tests
+- HAVE_USLEEP=1 for all platforms
+- docker suport 
+
+## 4.0.6
+- Release of 4.0.5 (again due CI)
 
 ## 4.0.5
 - **SECURITY:** Upgrade SQLite to 3.26.0 [#1088](https://github.com/mapbox/node-sqlite3/pull/1088)
