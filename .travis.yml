@@ -19,7 +19,6 @@ matrix:
   include:
      # Linux
      - os: linux
-       dist: xenial
        compiler: clang
        env: NODE_VERSION="12"
        addons:
