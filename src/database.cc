@@ -335,6 +335,15 @@ NAN_METHOD(Database::Configure) {
         Baton* baton = new Baton(db, handle);
         db->Schedule(RegisterProfileCallback, baton);
     }
+    else if (
+        Nan::Equals(info[0], Nan::New("insert").ToLocalChecked()).FromJust() ||
+        Nan::Equals(info[0], Nan::New("update").ToLocalChecked()).FromJust() ||
+        Nan::Equals(info[0], Nan::New("delete").ToLocalChecked()).FromJust()
+    ) {
+        Local<Function> handle;
+        Baton* baton = new Baton(db, handle);
+        db->Schedule(RegisterUpdateCallback, baton);
+    }
     else if (Nan::Equals(info[0], Nan::New("busyTimeout").ToLocalChecked()).FromJust()) {
         if (!info[1]->IsInt32()) {
             return Nan::ThrowTypeError("Value must be an integer");
