@@ -23,7 +23,7 @@ fi
 
 if [[ $(uname -s) == 'Darwin' ]]; then
     export NW_DOWNLOAD=node-webkit-v${NODE_WEBKIT}-osx-${TARGET_ARCH}
-    wget http://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.zip
+    wget https://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.zip
     unzip -q ${NW_DOWNLOAD}.zip
     export PATH=$(pwd)/node-webkit.app/Contents/MacOS/:${PATH}
     # v0.10.0-rc1 unzips with extra folder
@@ -36,9 +36,9 @@ else
     # for testing node-webkit, launch a virtual display
     export DISPLAY=:99.0
     # NOTE: travis already has xvfb installed
-    # http://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-GUI-%28e.g.-a-Web-browser%29
+    # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-GUI-%28e.g.-a-Web-browser%29
     sh -e /etc/init.d/xvfb start +extension RANDR
-    wget http://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.tar.gz
+    wget https://dl.node-webkit.org/v${NODE_WEBKIT}/${NW_DOWNLOAD}.tar.gz
     tar xf ${NW_DOWNLOAD}.tar.gz
     export PATH=$(pwd)/${NW_DOWNLOAD}:${PATH}
     if [[ "${TARGET_ARCH}" == 'ia32' ]]; then

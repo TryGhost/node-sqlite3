@@ -1,4 +1,4 @@
-Asynchronous, non-blocking [SQLite3](http://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
+Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
 [![NPM](https://nodei.co/npm/sqlite3.png?downloads=true&downloadRank=true)](https://nodei.co/npm/sqlite3/)
 
@@ -207,7 +207,7 @@ Thanks to [Orlando Vazquez](https://github.com/orlandov),
 [Eric Fredricksen](https://github.com/grumdrig) and
 [Ryan Dahl](https://github.com/ry) for their SQLite bindings for node, and to mraleph on Freenode's #v8 for answering questions.
 
-Development of this module is sponsored by [MapBox](http://mapbox.org/).
+Development of this module is sponsored by [MapBox](https://mapbox.org/).
 
 # License
 
