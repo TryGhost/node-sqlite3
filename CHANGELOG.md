@@ -143,7 +143,7 @@
  - Upgraded node-pre-gyp@0.6.5
  - Upgraded nan@1.8.4
  - Fixed binaries to work on older linux systems (circa GLIBC_2.2.5 like centos 6) @bnoordhuis
- - Updated internal libsqlite3 from 3.8.7.1 -> 3.8.9 (http://www.sqlite.org/news.html)
+ - Updated internal libsqlite3 from 3.8.7.1 -> 3.8.9 (https://www.sqlite.org/news.html)
 
 ## 3.0.5
 
@@ -202,7 +202,7 @@ Released July 14th, 2014
  - Now supporting node v0.11.x (specifically >=0.11.13)
  - Fix db opening error with absolute path on windows
  - Updated to node-pre-gyp@0.5.18
- - updated internal libsqlite3 from 3.8.4.3 -> 3.8.5 (http://www.sqlite.org/news.html)
+ - updated internal libsqlite3 from 3.8.4.3 -> 3.8.5 (https://www.sqlite.org/news.html)
 
 ## 2.2.3
 
@@ -226,7 +226,7 @@ Released July 14th, 2014
 
 Released Jan 13th, 2014
 
- - updated internal libsqlite3 from 3.7.17 -> 3.8.2 (http://www.sqlite.org/news.html) which includes the next-generation query planner http://www.sqlite.org/queryplanner-ng.html
+ - updated internal libsqlite3 from 3.7.17 -> 3.8.2 (https://www.sqlite.org/news.html) which includes the next-generation query planner http://www.sqlite.org/queryplanner-ng.html
  - improved binary deploy system using https://github.com/springmeyer/node-pre-gyp
  - binary install now supports http proxies
  - source compile now supports freebsd

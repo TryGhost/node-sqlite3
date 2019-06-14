@@ -1,4 +1,4 @@
-#http://www.gnu.org/prep/standards/html_node/Standard-Targets.html#Standard-Targets
+#https://www.gnu.org/prep/standards/html_node/Standard-Targets.html#Standard-Targets
 
 all: build
 
