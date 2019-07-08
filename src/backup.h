@@ -12,7 +12,6 @@
 #include <uv.h>
 
 using namespace Napi;
-using namespace Napi;
 
 namespace node_sqlite3 {
 
@@ -98,7 +97,6 @@ public:
     static Napi::FunctionReference constructor;
 
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
-    static Napi::Value New(const Napi::CallbackInfo& info);
 
     struct Baton {
         uv_work_t request;
@@ -150,20 +148,22 @@ public:
         Baton* baton;
     };
 
-    Backup(Database* db_) : Napi::ObjectWrap<Backup>(),
-           db(db_),
-           _handle(NULL),
-           _otherDb(NULL),
-           _destDb(NULL),
-           inited(false),
-           locked(true),
-           completed(false),
-           failed(false),
-           remaining(-1),
-           pageCount(-1),
-           finished(false) {
+    void init(Database* db_) {
+        db = db_;
+        _handle = NULL;
+        _otherDb = NULL;
+        _destDb = NULL;
+        inited = false;
+        locked = true;
+        completed = false;
+        failed = false;
+        remaining = -1;
+        pageCount = -1;
+        finished = false;
         db->Ref();
     }
+
+    Backup(const Napi::CallbackInfo& info);
 
     ~Backup() {
         if (!finished) {
@@ -216,7 +216,7 @@ protected:
     bool finished;
     std::queue<Call*> queue;
 
-    Napi::Persistent<Array> retryErrors;
+    Napi::Reference<Array> retryErrors;
 };
 
 }

@@ -29,7 +29,7 @@ public:
         Napi::HandleScope scope(env);
         if (!val.IsObject()) return false;
         Napi::Object obj = val.As<Napi::Object>();
-        return Napi::New(env, constructor)->HasInstance(obj);
+        return obj.InstanceOf(constructor.Value());
     }
 
     struct Baton {
@@ -43,7 +43,9 @@ public:
                 db(db_), status(SQLITE_OK) {
             db->Ref();
             request.data = this;
-            callback.Reset(cb_);
+            if (!cb_.IsUndefined() && cb_.IsFunction()) {
+                callback.Reset(cb_, 1);
+            }
         }
         virtual ~Baton() {
             db->Unref();
@@ -102,18 +104,19 @@ public:
     friend class Statement;
     friend class Backup;
 
-protected:
-    Database() : Napi::ObjectWrap<Database>(),
-        _handle(NULL),
-        open(false),
-        closing(false),
-        locked(false),
-        pending(0),
-        serialize(false),
-        debug_trace(NULL),
-        debug_profile(NULL),
-        update_event(NULL) {
+    void init() {
+        _handle = NULL;
+        open = false;
+        closing = false;
+        locked = false;
+        pending = 0;
+        serialize = false;
+        debug_trace = NULL;
+        debug_profile = NULL;
+        update_event = NULL;
     }
+
+    Database(const Napi::CallbackInfo& info);
 
     ~Database() {
         RemoveCallbacks();
@@ -122,7 +125,7 @@ protected:
         open = false;
     }
 
-    static Napi::Value New(const Napi::CallbackInfo& info);
+protected:
     static void Work_BeginOpen(Baton* baton);
     static void Work_Open(uv_work_t* req);
     static void Work_AfterOpen(uv_work_t* req);
@@ -132,30 +135,30 @@ protected:
     void Schedule(Work_Callback callback, Baton* baton, bool exclusive = false);
     void Process();
 
-    static Napi::Value Exec(const Napi::CallbackInfo& info);
+    Napi::Value Exec(const Napi::CallbackInfo& info);
     static void Work_BeginExec(Baton* baton);
     static void Work_Exec(uv_work_t* req);
     static void Work_AfterExec(uv_work_t* req);
 
-    static Napi::Value Wait(const Napi::CallbackInfo& info);
+    Napi::Value Wait(const Napi::CallbackInfo& info);
     static void Work_Wait(Baton* baton);
 
-    static Napi::Value Close(const Napi::CallbackInfo& info);
+    Napi::Value Close(const Napi::CallbackInfo& info);
     static void Work_BeginClose(Baton* baton);
     static void Work_Close(uv_work_t* req);
     static void Work_AfterClose(uv_work_t* req);
 
-    static Napi::Value LoadExtension(const Napi::CallbackInfo& info);
+    Napi::Value LoadExtension(const Napi::CallbackInfo& info);
     static void Work_BeginLoadExtension(Baton* baton);
     static void Work_LoadExtension(uv_work_t* req);
     static void Work_AfterLoadExtension(uv_work_t* req);
 
-    static Napi::Value Serialize(const Napi::CallbackInfo& info);
-    static Napi::Value Parallelize(const Napi::CallbackInfo& info);
+    Napi::Value Serialize(const Napi::CallbackInfo& info);
+    Napi::Value Parallelize(const Napi::CallbackInfo& info);
 
-    static Napi::Value Configure(const Napi::CallbackInfo& info);
+    Napi::Value Configure(const Napi::CallbackInfo& info);
 
-    static Napi::Value Interrupt(const Napi::CallbackInfo& info);
+    Napi::Value Interrupt(const Napi::CallbackInfo& info);
 
     static void SetBusyTimeout(Baton* baton);
 

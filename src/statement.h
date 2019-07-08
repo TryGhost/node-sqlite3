@@ -16,7 +16,6 @@
 #include <uv.h>
 
 using namespace Napi;
-using namespace Napi;
 
 namespace node_sqlite3 {
 
@@ -144,7 +143,7 @@ public:
             if (!db->IsOpen() && db->IsLocked()) {
                 // The database handle was closed before the statement could be
                 // prepared.
-                stmt->Finalize();
+                stmt->Finalize_();
             }
         }
     };
@@ -186,18 +185,20 @@ public:
         }
     };
 
-    Statement(Database* db_) : Napi::ObjectWrap<Statement>(),
-            db(db_),
-            _handle(NULL),
-            status(SQLITE_OK),
-            prepared(false),
-            locked(true),
-            finalized(false) {
+    void init(Database* db_) {
+        db = db_;
+        _handle = NULL;
+        status = SQLITE_OK;
+        prepared = false;
+        locked = true;
+        finalized = false;
         db->Ref();
     }
 
+    Statement(const Napi::CallbackInfo& info);
+
     ~Statement() {
-        if (!finalized) Finalize();
+        if (!finalized) Finalize_();
     }
 
     WORK_DEFINITION(Bind);
@@ -207,7 +208,7 @@ public:
     WORK_DEFINITION(Each);
     WORK_DEFINITION(Reset);
 
-    static Napi::Value Finalize(const Napi::CallbackInfo& info);
+    Napi::Value Finalize_(const Napi::CallbackInfo& info);
 
 protected:
     static void Work_BeginPrepare(Database::Baton* baton);
@@ -217,15 +218,15 @@ protected:
     static void AsyncEach(uv_async_t* handle, int status);
     static void CloseCallback(uv_handle_t* handle);
 
-    static void Finalize(Baton* baton);
-    void Finalize();
+    static void Finalize_(Baton* baton);
+    void Finalize_();
 
     template <class T> inline Values::Field* BindParameter(const Napi::Value source, T pos);
     template <class T> T* Bind(const Napi::CallbackInfo& info, int start = 0, int end = -1);
     bool Bind(const Parameters &parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
-    static Napi::Object RowToJS(Row* row);
+    static Napi::Value RowToJS(Napi::Env env, Row* row);
     void Schedule(Work_Callback callback, Baton* baton);
     void Process();
     void CleanQueue();

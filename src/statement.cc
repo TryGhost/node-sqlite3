@@ -11,26 +11,49 @@
 using namespace node_sqlite3;
 
 Napi::FunctionReference Statement::constructor;
+static Napi::FunctionReference date;
+static Napi::FunctionReference regexp;
 
 Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
-    Napi::FunctionReference t = Napi::Function::New(env, New);
+    Napi::Function t = DefineClass(env, "Statement", {
+      InstanceMethod("bind", &Statement::Bind),
+      InstanceMethod("get", &Statement::Get),
+      InstanceMethod("run", &Statement::Run),
+      InstanceMethod("all", &Statement::All),
+      InstanceMethod("each", &Statement::Each),
+      InstanceMethod("reset", &Statement::Reset),
+      InstanceMethod("finalize", &Statement::Finalize_),
+    });
 
+    constructor = Napi::Persistent(t);
+    constructor.SuppressDestruct();
 
-    t->SetClassName(Napi::String::New(env, "Statement"));
+    exports.Set("Statement", t);
+    return exports;
+}
 
-    InstanceMethod("bind", &Bind),
-    InstanceMethod("get", &Get),
-    InstanceMethod("run", &Run),
-    InstanceMethod("all", &All),
-    InstanceMethod("each", &Each),
-    InstanceMethod("reset", &Reset),
-    InstanceMethod("finalize", &Finalize),
+// A Napi InstanceOf for Javascript Objects "Date" and "RegExp"
+bool OtherInstanceOf(Napi::Object source, char* object_type) {
+    if (date.IsEmpty()) {
+        Napi::Function date_func = source.Env().Global().Get("Date").As<Function>();
+        Napi::Function regexp_func = source.Env().Global().Get("RegExp").As<Function>();
 
-    constructor.Reset(t);
-    (target).Set(Napi::String::New(env, "Statement"),
-        Napi::GetFunction(t));
+        date = Napi::Persistent(date_func);
+        date.SuppressDestruct();
+
+        regexp = Napi::Persistent(regexp_func);
+        regexp.SuppressDestruct();
+    }
+
+    if (object_type == "Date") {
+        return source.InstanceOf(date.Value());
+    } else if (object_type == "RegExp") {
+        return source.InstanceOf(regexp.Value());
+    }
+
+    return false;
 }
 
 void Statement::Process() {
@@ -61,60 +84,56 @@ void Statement::Schedule(Work_Callback callback, Baton* baton) {
 }
 
 template <class T> void Statement::Error(T* baton) {
+    Statement* stmt = baton->stmt;
+
+    Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
-    Statement* stmt = baton->stmt;
     // Fail hard on logic errors.
     assert(stmt->status != 0);
-    EXCEPTION(stmt->message, stmt->status, exception);
+    EXCEPTION(Napi::String::New(env, stmt->message.c_str()), stmt->status, exception);
 
-    Napi::Function cb = Napi::New(env, baton->callback);
+    Napi::Function cb = baton->callback.Value();
 
-    if (!cb.IsEmpty() && cb->IsFunction()) {
+    if (!cb.IsUndefined() && cb.IsFunction()) {
         Napi::Value argv[] = { exception };
-        TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
+        TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
     }
     else {
         Napi::Value argv[] = { Napi::String::New(env, "error"), exception };
-        EMIT_EVENT(stmt->handle(), 2, argv);
+        EMIT_EVENT(stmt->Value(), 2, argv);
     }
 }
 
 // { Database db, String sql, Array params, Function callback }
-Napi::Value Statement::New(const Napi::CallbackInfo& info) {
-    if (!info.IsConstructCall()) {
-        Napi::TypeError::New(env, "Use the new operator to create new Statement objects").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
+Statement::Statement(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Statement>(info) {
+    Napi::Env env = info.Env();
     int length = info.Length();
 
     if (length <= 0 || !Database::HasInstance(info[0])) {
         Napi::TypeError::New(env, "Database object expected").ThrowAsJavaScriptException();
-        return env.Null();
+        return;
     }
     else if (length <= 1 || !info[1].IsString()) {
         Napi::TypeError::New(env, "SQL query expected").ThrowAsJavaScriptException();
-        return env.Null();
+        return;
     }
     else if (length > 2 && !info[2].IsUndefined() && !info[2].IsFunction()) {
         Napi::TypeError::New(env, "Callback expected").ThrowAsJavaScriptException();
-        return env.Null();
+        return;
     }
 
-    Database* db = info[0].As<Napi::Object>().Unwrap<Database>();
+    Database* db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
     Napi::String sql = info[1].As<Napi::String>();
 
-    info.This().DefineProperty(Napi::String::New(env, "sql"), sql, ReadOnly);
+    info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("sql", sql, napi_default));
 
-    Statement* stmt = new Statement(db);
-    stmt->Wrap(info.This());
+    init(db);
+    Statement* stmt = this;
 
     PrepareBaton* baton = new PrepareBaton(db, info[2].As<Napi::Function>(), stmt);
-    baton->sql = std::string(sql->As<Napi::String>().Utf8Value().c_str());
+    baton->sql = std::string(sql.As<Napi::String>().Utf8Value().c_str());
     db->Schedule(Work_BeginPrepare, baton);
-
-    return info.This();
 }
 
 void Statement::Work_BeginPrepare(Database::Baton* baton) {
@@ -150,20 +169,21 @@ void Statement::Work_Prepare(uv_work_t* req) {
 }
 
 void Statement::Work_AfterPrepare(uv_work_t* req) {
-    Napi::HandleScope scope(env);
-
     STATEMENT_INIT(PrepareBaton);
+
+    Napi::Env env = stmt->Env();
+    Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_OK) {
         Error(baton);
-        stmt->Finalize();
+        stmt->Finalize_();
     }
     else {
         stmt->prepared = true;
-        Napi::Function cb = Napi::New(env, baton->callback);
-        if (!cb.IsEmpty() && cb->IsFunction()) {
+        if (!baton->callback.IsEmpty() && baton->callback.Value().IsFunction()) {
+            Napi::Function cb = baton->callback.Value();
             Napi::Value argv[] = { env.Null() };
-            TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
+            TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
         }
     }
 
@@ -172,28 +192,37 @@ void Statement::Work_AfterPrepare(uv_work_t* req) {
 
 template <class T> Values::Field*
                    Statement::BindParameter(const Napi::Value source, T pos) {
-    if (source.IsString() || source->IsRegExp()) {
-        std::string val = source.As<Napi::String>();
-        return new Values::Text(pos, val.Length(), *val);
+    if (source.IsString()) {
+        std::string val = source.As<Napi::String>().Utf8Value();
+        return new Values::Text(pos, val.length(), val.c_str());
+    }
+    else if (OtherInstanceOf(source.As<Object>(), "RegExp")) {
+        std::string val = source.ToString().Utf8Value();
+        return new Values::Text(pos, val.length(), val.c_str());
     }
     else if (source.IsNumber()) {
-        return new Values::Integer(pos, source.As<Napi::Number>().Int32Value());
+        if (OtherIsInt(source.As<Napi::Number>())) {
+            return new Values::Integer(pos, source.As<Napi::Number>().Int32Value());
+        } else {
+            return new Values::Float(pos, source.As<Napi::Number>().DoubleValue());
+        }
     }
-    else if (source.IsNumber()) {
-        return new Values::Float(pos, source.As<Napi::Number>().DoubleValue());
-    }
-    else if (source->IsBoolean()) {
+    else if (source.IsBoolean()) {
         return new Values::Integer(pos, source.As<Napi::Boolean>().Value() ? 1 : 0);
     }
-    else if (source->IsNull()) {
+    else if (source.IsNull()) {
         return new Values::Null(pos);
     }
     else if (source.IsBuffer()) {
-        Napi::Object buffer = source.To<Napi::Object>();
-        return new Values::Blob(pos, Buffer::Length(buffer), Buffer::Data(buffer));
+        Napi::Buffer<char> buffer = source.As<Napi::Buffer<char>>();
+        return new Values::Blob(pos, buffer.Length(), buffer.Data());
     }
-    else if (source->IsDate()) {
-        return new Values::Float(pos, source.As<Napi::Number>().DoubleValue());
+    else if (OtherInstanceOf(source.As<Object>(), "Date")) {
+        return new Values::Float(pos, source.ToNumber().DoubleValue());
+    }
+    else if (source.IsObject()) {
+        std::string val = source.ToString().Utf8Value();
+        return new Values::Text(pos, val.length(), val.c_str());
     }
     else {
         return NULL;
@@ -201,11 +230,12 @@ template <class T> Values::Field*
 }
 
 template <class T> T* Statement::Bind(const Napi::CallbackInfo& info, int start, int last) {
+    Napi::Env env = info.Env();
     Napi::HandleScope scope(env);
 
     if (last < 0) last = info.Length();
     Napi::Function callback;
-    if (last > start && info[last - 1]->IsFunction()) {
+    if (last > start && info[last - 1].IsFunction()) {
         callback = info[last - 1].As<Napi::Function>();
         last--;
     }
@@ -215,13 +245,13 @@ template <class T> T* Statement::Bind(const Napi::CallbackInfo& info, int start,
     if (start < last) {
         if (info[start].IsArray()) {
             Napi::Array array = info[start].As<Napi::Array>();
-            int length = array->Length();
+            int length = array.Length();
             // Note: bind parameters start with 1.
             for (int i = 0, pos = 1; i < length; i++, pos++) {
                 baton->parameters.push_back(BindParameter((array).Get(i), pos));
             }
         }
-        else if (!info[start].IsObject() || info[start].IsRegExp() || info[start].IsDate() || info[start].IsBuffer()) {
+        else if (!info[start].IsObject() || OtherInstanceOf(info[start].As<Object>(), "RegExp") || OtherInstanceOf(info[start].As<Object>(), "Date") || info[start].IsBuffer()) {
             // Parameters directly in array.
             // Note: bind parameters start with 1.
             for (int i = start, pos = 1; i < last; i++, pos++) {
@@ -230,8 +260,8 @@ template <class T> T* Statement::Bind(const Napi::CallbackInfo& info, int start,
         }
         else if (info[start].IsObject()) {
             Napi::Object object = info[start].As<Napi::Object>();
-            Napi::Array array = Napi::GetPropertyNames(object);
-            int length = array->Length();
+            Napi::Array array = object.GetPropertyNames();
+            int length = array.Length();
             for (int i = 0; i < length; i++) {
                 Napi::Value name = (array).Get(i);
 
@@ -241,7 +271,7 @@ template <class T> T* Statement::Bind(const Napi::CallbackInfo& info, int start,
                 }
                 else {
                     baton->parameters.push_back(BindParameter((object).Get(name),
-                        name->As<Napi::String>().Utf8Value().c_str()));
+                        name.As<Napi::String>().Utf8Value().c_str()));
                 }
             }
         }
@@ -268,7 +298,7 @@ bool Statement::Bind(const Parameters & parameters) {
         Values::Field* field = *it;
 
         if (field != NULL) {
-            int pos;
+            unsigned int pos;
             if (field->index > 0) {
                 pos = field->index;
             }
@@ -311,6 +341,7 @@ bool Statement::Bind(const Parameters & parameters) {
 }
 
 Napi::Value Statement::Bind(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     Statement* stmt = this;
 
     Baton* baton = stmt->Bind<Baton>(info);
@@ -338,19 +369,20 @@ void Statement::Work_Bind(uv_work_t* req) {
 }
 
 void Statement::Work_AfterBind(uv_work_t* req) {
-    Napi::HandleScope scope(env);
-
     STATEMENT_INIT(Baton);
+
+    Napi::Env env = stmt->Env();
+    Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_OK) {
         Error(baton);
     }
     else {
         // Fire callbacks.
-        Napi::Function cb = Napi::New(env, baton->callback);
-        if (!cb.IsEmpty() && cb->IsFunction()) {
+        Napi::Function cb = baton->callback.Value();
+        if (!cb.IsUndefined() && cb.IsFunction()) {
             Napi::Value argv[] = { env.Null() };
-            TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
+            TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
         }
     }
 
@@ -360,6 +392,7 @@ void Statement::Work_AfterBind(uv_work_t* req) {
 
 
 Napi::Value Statement::Get(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     Statement* stmt = this;
 
     Baton* baton = stmt->Bind<RowBaton>(info);
@@ -402,25 +435,26 @@ void Statement::Work_Get(uv_work_t* req) {
 }
 
 void Statement::Work_AfterGet(uv_work_t* req) {
-    Napi::HandleScope scope(env);
-
     STATEMENT_INIT(RowBaton);
+
+    Napi::Env env = stmt->Env();
+    Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton);
     }
     else {
         // Fire callbacks.
-        Napi::Function cb = Napi::New(env, baton->callback);
-        if (!cb.IsEmpty() && cb->IsFunction()) {
+        Napi::Function cb = baton->callback.Value();
+        if (!cb.IsUndefined() && cb.IsFunction()) {
             if (stmt->status == SQLITE_ROW) {
                 // Create the result array from the data we acquired.
-                Napi::Value argv[] = { env.Null(), RowToJS(&baton->row) };
-                TRY_CATCH_CALL(stmt->handle(), cb, 2, argv);
+                Napi::Value argv[] = { env.Null(), RowToJS(env, &baton->row) };
+                TRY_CATCH_CALL(stmt->Value(), cb, 2, argv);
             }
             else {
                 Napi::Value argv[] = { env.Null() };
-                TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
+                TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
             }
         }
     }
@@ -429,6 +463,7 @@ void Statement::Work_AfterGet(uv_work_t* req) {
 }
 
 Napi::Value Statement::Run(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     Statement* stmt = this;
 
     Baton* baton = stmt->Bind<RunBaton>(info);
@@ -473,22 +508,23 @@ void Statement::Work_Run(uv_work_t* req) {
 }
 
 void Statement::Work_AfterRun(uv_work_t* req) {
-    Napi::HandleScope scope(env);
-
     STATEMENT_INIT(RunBaton);
+
+    Napi::Env env = stmt->Env();
+    Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton);
     }
     else {
         // Fire callbacks.
-        Napi::Function cb = Napi::New(env, baton->callback);
-        if (!cb.IsEmpty() && cb->IsFunction()) {
-            (stmt->handle()).Set(Napi::String::New(env, "lastID"), Napi::Number::New(env, baton->inserted_id));
-            (stmt->handle()).Set(Napi::String::New(env, "changes"), Napi::New(env, baton->changes));
+        Napi::Function cb = baton->callback.Value();
+        if (!cb.IsUndefined() && cb.IsFunction()) {
+            (stmt->Value()).Set(Napi::String::New(env, "lastID"), Napi::Number::New(env, baton->inserted_id));
+            (stmt->Value()).Set( Napi::String::New(env, "changes"), Napi::Number::New(env, baton->changes));
 
             Napi::Value argv[] = { env.Null() };
-            TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
+            TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
         }
     }
 
@@ -496,6 +532,7 @@ void Statement::Work_AfterRun(uv_work_t* req) {
 }
 
 Napi::Value Statement::All(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     Statement* stmt = this;
 
     Baton* baton = stmt->Bind<RowsBaton>(info);
@@ -540,29 +577,30 @@ void Statement::Work_All(uv_work_t* req) {
 }
 
 void Statement::Work_AfterAll(uv_work_t* req) {
-    Napi::HandleScope scope(env);
-
     STATEMENT_INIT(RowsBaton);
+
+    Napi::Env env = stmt->Env();
+    Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_DONE) {
         Error(baton);
     }
     else {
         // Fire callbacks.
-        Napi::Function cb = Napi::New(env, baton->callback);
-        if (!cb.IsEmpty() && cb->IsFunction()) {
+        Napi::Function cb = baton->callback.Value();
+        if (!cb.IsUndefined() && cb.IsFunction()) {
             if (baton->rows.size()) {
                 // Create the result array from the data we acquired.
                 Napi::Array result(Napi::Array::New(env, baton->rows.size()));
                 Rows::const_iterator it = baton->rows.begin();
                 Rows::const_iterator end = baton->rows.end();
                 for (int i = 0; it < end; ++it, i++) {
-                    (result).Set(i, RowToJS(*it));
+                    (result).Set(i, RowToJS(env,*it));
                     delete *it;
                 }
 
                 Napi::Value argv[] = { env.Null(), result };
-                TRY_CATCH_CALL(stmt->handle(), cb, 2, argv);
+                TRY_CATCH_CALL(stmt->Value(), cb, 2, argv);
             }
             else {
                 // There were no result rows.
@@ -570,7 +608,7 @@ void Statement::Work_AfterAll(uv_work_t* req) {
                     env.Null(),
                     Napi::Array::New(env, 0)
                 };
-                TRY_CATCH_CALL(stmt->handle(), cb, 2, argv);
+                TRY_CATCH_CALL(stmt->Value(), cb, 2, argv);
             }
         }
     }
@@ -579,12 +617,13 @@ void Statement::Work_AfterAll(uv_work_t* req) {
 }
 
 Napi::Value Statement::Each(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     Statement* stmt = this;
 
     int last = info.Length();
 
     Napi::Function completed;
-    if (last >= 2 && info[last - 1]->IsFunction() && info[last - 2]->IsFunction()) {
+    if (last >= 2 && info[last - 1].IsFunction() && info[last - 2].IsFunction()) {
         completed = info[--last].As<Napi::Function>();
     }
 
@@ -605,8 +644,8 @@ void Statement::Work_BeginEach(Baton* baton) {
     // the event loop. This prevents dangling events.
     EachBaton* each_baton = static_cast<EachBaton*>(baton);
     each_baton->async = new Async(each_baton->stmt, reinterpret_cast<uv_async_cb>(AsyncEach));
-    each_baton->async->item_cb.Reset(each_baton->callback);
-    each_baton->async->completed_cb.Reset(each_baton->completed);
+    each_baton->async->item_cb.Reset(each_baton->callback.Value(), 1);
+    each_baton->async->completed_cb.Reset(each_baton->completed.Value(), 1);
 
     STATEMENT_BEGIN(Each);
 }
@@ -662,9 +701,10 @@ void Statement::CloseCallback(uv_handle_t* handle) {
 }
 
 void Statement::AsyncEach(uv_async_t* handle, int status) {
-    Napi::HandleScope scope(env);
-
     Async* async = static_cast<Async*>(handle->data);
+
+    Napi::Env env = async->stmt->Env();
+    Napi::HandleScope scope(env);
 
     while (true) {
         // Get the contents out of the data cache for us to process in the JS callback.
@@ -677,40 +717,41 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
             break;
         }
 
-        Napi::Function cb = Napi::New(env, async->item_cb);
-        if (!cb.IsEmpty() && cb->IsFunction()) {
+        Napi::Function cb = async->item_cb.Value();
+        if (!cb.IsUndefined() && cb.IsFunction()) {
             Napi::Value argv[2];
             argv[0] = env.Null();
 
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
             for (int i = 0; it < end; ++it, i++) {
-                argv[1] = RowToJS(*it);
+                argv[1] = RowToJS(env,*it);
                 async->retrieved++;
-                TRY_CATCH_CALL(async->stmt->handle(), cb, 2, argv);
+                TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
                 delete *it;
             }
         }
     }
 
-    Napi::Function cb = Napi::New(env, async->completed_cb);
+    Napi::Function cb = async->completed_cb.Value();
     if (async->completed) {
         if (!cb.IsEmpty() &&
-                cb->IsFunction()) {
+                cb.IsFunction()) {
             Napi::Value argv[] = {
                 env.Null(),
-                Napi::New(env, async->retrieved)
+                Napi::Number::New(env, async->retrieved)
             };
-            TRY_CATCH_CALL(async->stmt->handle(), cb, 2, argv);
+            TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
         }
         uv_close(reinterpret_cast<uv_handle_t*>(handle), CloseCallback);
     }
 }
 
 void Statement::Work_AfterEach(uv_work_t* req) {
-    Napi::HandleScope scope(env);
-
     STATEMENT_INIT(EachBaton);
+
+    Napi::Env env = stmt->Env();
+    Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_DONE) {
         Error(baton);
@@ -720,6 +761,7 @@ void Statement::Work_AfterEach(uv_work_t* req) {
 }
 
 Napi::Value Statement::Reset(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     Statement* stmt = this;
 
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
@@ -742,21 +784,22 @@ void Statement::Work_Reset(uv_work_t* req) {
 }
 
 void Statement::Work_AfterReset(uv_work_t* req) {
-    Napi::HandleScope scope(env);
-
     STATEMENT_INIT(Baton);
 
+    Napi::Env env = stmt->Env();
+    Napi::HandleScope scope(env);
+
     // Fire callbacks.
-    Napi::Function cb = Napi::New(env, baton->callback);
-    if (!cb.IsEmpty() && cb->IsFunction()) {
+    Napi::Function cb = baton->callback.Value();
+    if (!cb.IsUndefined() && cb.IsFunction()) {
         Napi::Value argv[] = { env.Null() };
-        TRY_CATCH_CALL(stmt->handle(), cb, 1, argv);
+        TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
     }
 
     STATEMENT_END();
 }
 
-Napi::Object Statement::RowToJS(Row* row) {
+Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
     Napi::EscapableHandleScope scope(env);
 
     Napi::Object result = Napi::Object::New(env);
@@ -779,14 +822,14 @@ Napi::Object Statement::RowToJS(Row* row) {
                 value = Napi::String::New(env, ((Values::Text*)field)->value.c_str(), ((Values::Text*)field)->value.size());
             } break;
             case SQLITE_BLOB: {
-                value = Napi::Buffer::Copy(env, ((Values::Blob*)field)->value, ((Values::Blob*)field)->length);
+                value = Napi::Buffer<char>::Copy(env, ((Values::Blob*)field)->value, ((Values::Blob*)field)->length);
             } break;
             case SQLITE_NULL: {
                 value = env.Null();
             } break;
         }
 
-        (result).Set(Napi::New(env, field->name.c_str()), value);
+        (result).Set(Napi::String::New(env, field->name.c_str()), value);
 
         DELETE_FIELD(field);
     }
@@ -826,31 +869,33 @@ void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
     }
 }
 
-Napi::Value Statement::Finalize(const Napi::CallbackInfo& info) {
+Napi::Value Statement::Finalize_(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     Statement* stmt = this;
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     Baton* baton = new Baton(stmt, callback);
-    stmt->Schedule(Finalize, baton);
+    stmt->Schedule(Finalize_, baton);
 
-    return stmt->db->handle();
+    return stmt->db->Value();
 }
 
-void Statement::Finalize(Baton* baton) {
+void Statement::Finalize_(Baton* baton) {
+    Napi::Env env = baton->stmt->Env();
     Napi::HandleScope scope(env);
 
-    baton->stmt->Finalize();
+    baton->stmt->Finalize_();
 
     // Fire callback in case there was one.
-    Napi::Function cb = Napi::New(env, baton->callback);
-    if (!cb.IsEmpty() && cb->IsFunction()) {
-        TRY_CATCH_CALL(baton->stmt->handle(), cb, 0, NULL);
+    Napi::Function cb = baton->callback.Value();
+    if (!cb.IsUndefined() && cb.IsFunction()) {
+        TRY_CATCH_CALL(baton->stmt->Value(), cb, 0, NULL);
     }
 
     delete baton;
 }
 
-void Statement::Finalize() {
+void Statement::Finalize_() {
     assert(!finalized);
     finalized = true;
     CleanQueue();
@@ -862,12 +907,13 @@ void Statement::Finalize() {
 }
 
 void Statement::CleanQueue() {
+    Napi::Env env = this->Env(); 
     Napi::HandleScope scope(env);
 
     if (prepared && !queue.empty()) {
         // This statement has already been prepared and is now finalized.
         // Fire error for all remaining items in the queue.
-        EXCEPTION("Statement is already finalized", SQLITE_MISUSE, exception);
+        EXCEPTION(Napi::String::New(env, "Statement is already finalized"), SQLITE_MISUSE, exception);
         Napi::Value argv[] = { exception };
         bool called = false;
 
@@ -876,11 +922,11 @@ void Statement::CleanQueue() {
             Call* call = queue.front();
             queue.pop();
 
-            Napi::Function cb = Napi::New(env, call->baton->callback);
+            Napi::Function cb = call->baton->callback.Value();
 
             if (prepared && !cb.IsEmpty() &&
-                cb->IsFunction()) {
-                TRY_CATCH_CALL(handle(), cb, 1, argv);
+                cb.IsFunction()) {
+                TRY_CATCH_CALL(Value(), cb, 1, argv);
                 called = true;
             }
 
@@ -894,7 +940,7 @@ void Statement::CleanQueue() {
         // Statement object.
         if (!called) {
             Napi::Value info[] = { Napi::String::New(env, "error"), exception };
-            EMIT_EVENT(handle(), 2, info);
+            EMIT_EVENT(Value(), 2, info);
         }
     }
     else while (!queue.empty()) {
