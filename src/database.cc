@@ -4,10 +4,6 @@
 #include "database.h"
 #include "statement.h"
 
-#ifndef SQLITE_DETERMINISTIC
-#define SQLITE_DETERMINISTIC 0x800
-#endif
-
 using namespace node_sqlite3;
 
 Nan::Persistent<FunctionTemplate> Database::constructor_template;
@@ -380,29 +376,35 @@ NAN_METHOD(Database::Interrupt) {
 }
 
 NAN_METHOD(Database::RegisterFunction) {
-    NanScope();
-    Database* db = ObjectWrap::Unwrap<Database>(args.This());
+    Nan::HandleScope scope;
+    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
 
     REQUIRE_ARGUMENTS(2);
     REQUIRE_ARGUMENT_STRING(0, functionName);
     REQUIRE_ARGUMENT_FUNCTION(1, callback);
 
+    int flags = SQLITE_UTF8;
+#if SQLITE_VERSION_NUMBER >= 3008003
+    flags |= SQLITE_DETERMINISTIC;
+#endif
+
     FunctionBaton *baton = new FunctionBaton(db, *functionName, callback);
-    sqlite3_create_function(
+    sqlite3_create_function_v2(
         db->_handle,
         *functionName,
         -1, // arbitrary number of args
-        SQLITE_UTF8 | SQLITE_DETERMINISTIC,
+        flags,
         baton,
         FunctionEnqueue,
         NULL,
-        NULL);
+        NULL,
+        FunctionCleanup);
 
-    uv_mutex_init(&baton->mutex);
-    uv_cond_init(&baton->condition);
+	uv_mutex_init(&baton->mutex);
+	uv_cond_init(&baton->condition);
     uv_async_init(uv_default_loop(), &baton->async, (uv_async_cb)Database::AsyncFunctionProcessQueue);
 
-    NanReturnValue(args.This());
+    info.GetReturnValue().Set(info.This());
 }
 
 void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv) {
@@ -417,13 +419,25 @@ void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value
     invocation.argc = argc;
     invocation.argv = argv;
 
-    uv_async_send(&baton->async);
     uv_mutex_lock(&baton->mutex);
     baton->queue.push(&invocation);
-    while (!invocation.complete) {
+
+	uv_async_send(&baton->async);
+	while (!invocation.complete) {
+	    // NOTE: uv_cond_wait will unlock the mutex and pause the thread waiting for a signal,
+	    //       but spurious wakeups can occur and must be dealt with. before any wakeup, the
+	    //       mutex gets locked to this thread again.
         uv_cond_wait(&baton->condition, &baton->mutex);
     }
-    uv_mutex_unlock(&baton->mutex);
+	uv_mutex_unlock(&baton->mutex);
+}
+
+void Database::FunctionCleanup(void *pApp) {
+    FunctionBaton *baton = (FunctionBaton *)pApp;
+
+	uv_mutex_destroy(&baton->mutex);
+	uv_cond_destroy(&baton->condition);
+    uv_close((uv_handle_t *)&baton->async, FunctionBaton::destroy);
 }
 
 void Database::AsyncFunctionProcessQueue(uv_async_t *async) {
@@ -442,19 +456,19 @@ void Database::AsyncFunctionProcessQueue(uv_async_t *async) {
         if (!invocation) { break; }
 
         Database::FunctionExecute(baton, invocation);
-
-        uv_mutex_lock(&baton->mutex);
-        invocation->complete = true;
-        uv_cond_signal(&baton->condition); // allow paused thread to complete
-        uv_mutex_unlock(&baton->mutex);
+		invocation->complete = true;
     }
+
+    uv_mutex_lock(&baton->mutex);
+    uv_cond_signal(&baton->condition); // allow paused thread to complete
+    uv_mutex_unlock(&baton->mutex);
 }
 
 void Database::FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocation) {
-    NanScope();
+    Nan::HandleScope scope;
 
     Database *db = baton->db;
-    Local<Function> cb = NanNew(baton->callback);
+    Local<Function> cb = Nan::New(baton->callback);
     sqlite3_context *context = invocation->context;
     sqlite3_value **values = invocation->argv;
     int argc = invocation->argc;
@@ -462,63 +476,63 @@ void Database::FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocat
     if (!cb.IsEmpty() && cb->IsFunction()) {
 
         // build the argument list for the function call
-        typedef Local<Value> LocalValue;
-        std::vector<LocalValue> argv;
+        std::vector<Local<Value>> argv;
         for (int i = 0; i < argc; i++) {
             sqlite3_value *value = values[i];
             int type = sqlite3_value_type(value);
             Local<Value> arg;
             switch(type) {
                 case SQLITE_INTEGER: {
-                    arg = NanNew<Number>(sqlite3_value_int64(value));
+                    arg = Nan::New<Number>(sqlite3_value_int64(value));
                 } break;
                 case SQLITE_FLOAT: {
-                    arg = NanNew<Number>(sqlite3_value_double(value));
+                    arg = Nan::New<Number>(sqlite3_value_double(value));
                 } break;
                 case SQLITE_TEXT: {
                     const char* text = (const char*)sqlite3_value_text(value);
                     int length = sqlite3_value_bytes(value);
-                    arg = NanNew<String>(text, length);
+                    arg = Nan::New<String>(text, length).ToLocalChecked();
                 } break;
                 case SQLITE_BLOB: {
                     const void *blob = sqlite3_value_blob(value);
                     int length = sqlite3_value_bytes(value);
-                    arg = NanNew(NanNewBufferHandle((char *)blob, length));
+                    arg = Nan::NewBuffer((char *)blob, length).ToLocalChecked();
                 } break;
                 case SQLITE_NULL: {
-                    arg = NanNew(NanNull());
+                    arg = Nan::Null();
                 } break;
             }
 
             argv.push_back(arg);
         }
 
-        TryCatch trycatch;
-        Local<Value> result = cb->Call(NanObjectWrapHandle(db), argc, argv.data());
+        Nan::TryCatch trycatch;
+        Nan::Callback *_cb = new Nan::Callback(cb);
+        Local<Value> result = _cb->Call(db->handle(), argc, argv.data());
 
         // process the result
         if (trycatch.HasCaught()) {
-            String::Utf8Value message(trycatch.Message()->Get());
+            Nan::Utf8String message(trycatch.Message()->Get());
             sqlite3_result_error(context, *message, message.length());
         }
         else if (result->IsString() || result->IsRegExp()) {
-            String::Utf8Value value(result->ToString());
+            Nan::Utf8String value(result);
             sqlite3_result_text(context, *value, value.length(), SQLITE_TRANSIENT);
         }
         else if (result->IsInt32()) {
-            sqlite3_result_int(context, result->Int32Value());
+            sqlite3_result_int(context, Nan::To<int32_t>(result).FromJust());
         }
         else if (result->IsNumber() || result->IsDate()) {
-            sqlite3_result_double(context, result->NumberValue());
+            sqlite3_result_double(context,Nan::To<double>(result).FromJust());
         }
         else if (result->IsBoolean()) {
-            sqlite3_result_int(context, result->BooleanValue());
+            sqlite3_result_int(context, Nan::To<bool>(result).FromJust());
         }
         else if (result->IsNull() || result->IsUndefined()) {
             sqlite3_result_null(context);
         }
         else if (Buffer::HasInstance(result)) {
-            Local<Object> buffer = result->ToObject();
+            Local<Object> buffer = result.As<Object>();
             sqlite3_result_blob(context,
                 Buffer::Data(buffer),
                 Buffer::Length(buffer),

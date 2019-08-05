@@ -78,19 +78,27 @@ public:
     struct FunctionBaton {
         Database* db;
         std::string name;
-        Persistent<Function> callback;
+        Nan::Persistent<Function> callback;
+		uv_mutex_t mutex;
         uv_async_t async;
-        uv_mutex_t mutex;
-        uv_cond_t condition;
-        std::queue<FunctionInvocation*> queue;
+		uv_cond_t condition;
+		std::queue<FunctionInvocation*> queue;
 
-        FunctionBaton(Database* db_, const char* name_, Handle<Function> cb_) :
+        FunctionBaton(Database* db_, const char* name_, Local<Function> cb_) :
                 db(db_), name(name_) {
+            db->Ref();
             async.data = this;
-            NanAssignPersistent(callback, cb_);
+            callback.Reset(cb_);
         }
         virtual ~FunctionBaton() {
-            NanDisposePersistent(callback);
+            db->Unref();
+            callback.Reset();
+        }
+        static void destroy(uv_handle_t* handle) {
+            assert(handle != NULL);
+            assert(handle->data != NULL);
+            FunctionBaton *baton = (FunctionBaton *)handle->data;
+            delete baton;
         }
     };
 
@@ -183,6 +191,7 @@ protected:
 
     static NAN_METHOD(RegisterFunction);
     static void FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value **argv);
+    static void FunctionCleanup(void *pApp);
     static void FunctionExecute(FunctionBaton *baton, FunctionInvocation *invocation);
     static void AsyncFunctionProcessQueue(uv_async_t *async);
 
