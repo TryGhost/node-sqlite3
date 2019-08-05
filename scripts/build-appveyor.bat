@@ -105,8 +105,8 @@ GOTO NPM_TEST_FINISHED
 ECHO installing electron
 CALL npm install -g "electron@%NODE_RUNTIME_VERSION%"
 ECHO installing electron-mocha
-IF "%nodejs_version%" LEQ 6 CALL npm install -g "electron-mocha@7"
-IF "%nodejs_version%" GTR 6 CALL npm install -g "electron-mocha"
+IF %nodejs_version% LEQ 6 CALL npm install -g "electron-mocha@7"
+IF %nodejs_version% GTR 6 CALL npm install -g "electron-mocha"
 ECHO preparing tests
 CALL electron "test/support/createdb-electron.js"
 DEL "test\support\createdb-electron.js"
