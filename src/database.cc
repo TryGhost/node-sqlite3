@@ -435,8 +435,12 @@ void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value
 void Database::FunctionCleanup(void *pApp) {
     FunctionBaton *baton = (FunctionBaton *)pApp;
 
-	uv_mutex_destroy(&baton->mutex);
+    uv_mutex_lock(&baton->mutex);
+    uv_cond_broadcast(&baton->condition);
+	uv_mutex_unlock(&baton->mutex);
+
 	uv_cond_destroy(&baton->condition);
+	uv_mutex_destroy(&baton->mutex);
     uv_close((uv_handle_t *)&baton->async, FunctionBaton::destroy);
 }
 
