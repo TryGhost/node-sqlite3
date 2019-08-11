@@ -400,8 +400,8 @@ NAN_METHOD(Database::RegisterFunction) {
         NULL,
         FunctionCleanup);
 
-	uv_mutex_init(&baton->mutex);
-	uv_cond_init(&baton->condition);
+    uv_mutex_init(&baton->mutex);
+    uv_cond_init(&baton->condition);
     uv_async_init(uv_default_loop(), &baton->async, (uv_async_cb)Database::AsyncFunctionProcessQueue);
 
     info.GetReturnValue().Set(info.This());
@@ -422,14 +422,14 @@ void Database::FunctionEnqueue(sqlite3_context *context, int argc, sqlite3_value
     uv_mutex_lock(&baton->mutex);
     baton->queue.push(&invocation);
 
-	uv_async_send(&baton->async);
-	while (!invocation.complete) {
-	    // NOTE: uv_cond_wait will unlock the mutex and pause the thread waiting for a signal,
-	    //       but spurious wakeups can occur and must be dealt with. before any wakeup, the
-	    //       mutex gets locked to this thread again.
+    uv_async_send(&baton->async);
+    while (!invocation.complete) {
+        // NOTE: uv_cond_wait will unlock the mutex and pause the thread waiting for a signal,
+        //       but spurious wakeups can occur and must be dealt with. before any wakeup, the
+        //       mutex gets locked to this thread again.
         uv_cond_wait(&baton->condition, &baton->mutex);
     }
-	uv_mutex_unlock(&baton->mutex);
+    uv_mutex_unlock(&baton->mutex);
 }
 
 void Database::FunctionCleanup(void *pApp) {
@@ -437,10 +437,10 @@ void Database::FunctionCleanup(void *pApp) {
 
     uv_mutex_lock(&baton->mutex);
     uv_cond_broadcast(&baton->condition);
-	uv_mutex_unlock(&baton->mutex);
+    uv_mutex_unlock(&baton->mutex);
 
-	uv_cond_destroy(&baton->condition);
-	uv_mutex_destroy(&baton->mutex);
+    uv_cond_destroy(&baton->condition);
+    uv_mutex_destroy(&baton->mutex);
     uv_close((uv_handle_t *)&baton->async, FunctionBaton::destroy);
 }
 
@@ -460,7 +460,7 @@ void Database::AsyncFunctionProcessQueue(uv_async_t *async) {
         if (!invocation) { break; }
 
         Database::FunctionExecute(baton, invocation);
-		invocation->complete = true;
+        invocation->complete = true;
     }
 
     uv_mutex_lock(&baton->mutex);

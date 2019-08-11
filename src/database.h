@@ -79,10 +79,10 @@ public:
         Database* db;
         std::string name;
         Nan::Persistent<Function> callback;
-		uv_mutex_t mutex;
+        uv_mutex_t mutex;
         uv_async_t async;
-		uv_cond_t condition;
-		std::queue<FunctionInvocation*> queue;
+        uv_cond_t condition;
+        std::queue<FunctionInvocation*> queue;
 
         FunctionBaton(Database* db_, const char* name_, Local<Function> cb_) :
                 db(db_), name(name_) {
