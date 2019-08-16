@@ -1,12 +1,19 @@
 # Changelog
 
+## 4.1.0
+
+- Electron v6 support [#1195](https://github.com/mapbox/node-sqlite3/pull/1195)
+- Electron v4.1 and v4.2 support [#1180](https://github.com/mapbox/node-sqlite3/pull/1180)
+- Custom file header with `--sqlite_magic` [#1144](https://github.com/mapbox/node-sqlite3/pull/1144)
+- https everywhere [#1177](https://github.com/mapbox/node-sqlite3/pull/1177)
+
 ## 4.0.7
 
 - Node v12 support
 - Electron v5 support
 - Fix backup API tests
 - HAVE_USLEEP=1 for all platforms
-- docker suport 
+- docker suport
 
 ## 4.0.6
 - Release of 4.0.5 (again due CI)
