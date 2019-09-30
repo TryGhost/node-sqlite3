@@ -3,6 +3,7 @@
 
 #include "threading.h"
 #include <node_version.h>
+#include <uv.h>
 
 #if defined(NODE_SQLITE3_BOOST_THREADING)
 #include <boost/thread/mutex.hpp>

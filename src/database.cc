@@ -135,13 +135,17 @@ Database::Database(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Database>(
 }
 
 void Database::Work_BeginOpen(Baton* baton) {
-    int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Open, (uv_after_work_cb)Work_AfterOpen);
+    Napi::Env env = baton->db->Env();
+    int status = napi_create_async_work(
+        env, NULL, Napi::String::New(env, "sqlite3.Database.Open"),
+        Work_Open, Work_AfterOpen, baton, &baton->request
+    );
     assert(status == 0);
+    napi_queue_async_work(env, baton->request);
 }
 
-void Database::Work_Open(uv_work_t* req) {
-    OpenBaton* baton = static_cast<OpenBaton*>(req->data);
+void Database::Work_Open(napi_env e, void* data) {
+    OpenBaton* baton = static_cast<OpenBaton*>(data);
     Database* db = baton->db;
 
     baton->status = sqlite3_open_v2(
@@ -162,8 +166,9 @@ void Database::Work_Open(uv_work_t* req) {
     }
 }
 
-void Database::Work_AfterOpen(uv_work_t* req) {
-    OpenBaton* baton = static_cast<OpenBaton*>(req->data);
+void Database::Work_AfterOpen(napi_env e, napi_status status, void* data) {
+    OpenBaton* baton = static_cast<OpenBaton*>(data);
+
     Database* db = baton->db;
 
     Napi::Env env = db->Env();
@@ -195,6 +200,7 @@ void Database::Work_AfterOpen(uv_work_t* req) {
         db->Process();
     }
 
+    napi_delete_async_work(e, baton->request);
     delete baton;
 }
 
@@ -224,13 +230,18 @@ void Database::Work_BeginClose(Baton* baton) {
     baton->db->RemoveCallbacks();
     baton->db->closing = true;
 
-    int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Close, (uv_after_work_cb)Work_AfterClose);
+    Napi::Env env = baton->db->Env();
+
+    int status = napi_create_async_work(
+        env, NULL, Napi::String::New(env, "sqlite3.Database.Close"),
+        Work_Close, Work_AfterClose, baton, &baton->request
+    );
     assert(status == 0);
+    napi_queue_async_work(env, baton->request);
 }
 
-void Database::Work_Close(uv_work_t* req) {
-    Baton* baton = static_cast<Baton*>(req->data);
+void Database::Work_Close(napi_env e, void* data) {
+    Baton* baton = static_cast<Baton*>(data);
     Database* db = baton->db;
 
     baton->status = sqlite3_close(db->_handle);
@@ -243,8 +254,9 @@ void Database::Work_Close(uv_work_t* req) {
     }
 }
 
-void Database::Work_AfterClose(uv_work_t* req) {
-    Baton* baton = static_cast<Baton*>(req->data);
+void Database::Work_AfterClose(napi_env e, napi_status status, void* data) {
+    Baton* baton = static_cast<Baton*>(data);
+
     Database* db = baton->db;
 
     Napi::Env env = db->Env();
@@ -281,6 +293,7 @@ void Database::Work_AfterClose(uv_work_t* req) {
         db->Process();
     }
 
+    napi_delete_async_work(e, baton->request);
     delete baton;
 }
 
@@ -535,13 +548,17 @@ void Database::Work_BeginExec(Baton* baton) {
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
-    int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Exec, (uv_after_work_cb)Work_AfterExec);
+    Napi::Env env = baton->db->Env();
+    int status = napi_create_async_work(
+        env, NULL, Napi::String::New(env, "sqlite3.Database.Exec"),
+        Work_Exec, Work_AfterExec, baton, &baton->request
+    );
     assert(status == 0);
+    napi_queue_async_work(env, baton->request);
 }
 
-void Database::Work_Exec(uv_work_t* req) {
-    ExecBaton* baton = static_cast<ExecBaton*>(req->data);
+void Database::Work_Exec(napi_env e, void* data) {
+    ExecBaton* baton = static_cast<ExecBaton*>(data);
 
     char* message = NULL;
     baton->status = sqlite3_exec(
@@ -558,8 +575,9 @@ void Database::Work_Exec(uv_work_t* req) {
     }
 }
 
-void Database::Work_AfterExec(uv_work_t* req) {
-    ExecBaton* baton = static_cast<ExecBaton*>(req->data);
+void Database::Work_AfterExec(napi_env e, napi_status status, void* data) {
+    ExecBaton* baton = static_cast<ExecBaton*>(data);
+
     Database* db = baton->db;
 
     Napi::Env env = db->Env();
@@ -586,6 +604,7 @@ void Database::Work_AfterExec(uv_work_t* req) {
 
     db->Process();
 
+    napi_delete_async_work(e, baton->request);
     delete baton;
 }
 
@@ -639,13 +658,17 @@ void Database::Work_BeginLoadExtension(Baton* baton) {
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
-    int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_LoadExtension, reinterpret_cast<uv_after_work_cb>(Work_AfterLoadExtension));
+    Napi::Env env = baton->db->Env();
+    int status = napi_create_async_work(
+        env, NULL, Napi::String::New(env, "sqlite3.Database.LoadExtension"),
+        Work_LoadExtension, Work_AfterLoadExtension, baton, &baton->request
+    );
     assert(status == 0);
+    napi_queue_async_work(env, baton->request);
 }
 
-void Database::Work_LoadExtension(uv_work_t* req) {
-    LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(req->data);
+void Database::Work_LoadExtension(napi_env e, void* data) {
+    LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(data);
 
     sqlite3_enable_load_extension(baton->db->_handle, 1);
 
@@ -665,8 +688,9 @@ void Database::Work_LoadExtension(uv_work_t* req) {
     }
 }
 
-void Database::Work_AfterLoadExtension(uv_work_t* req) {
-    LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(req->data);
+void Database::Work_AfterLoadExtension(napi_env e, napi_status status, void* data) {
+    LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(data);
+
     Database* db = baton->db;
 
     Napi::Env env = db->Env();
@@ -693,6 +717,7 @@ void Database::Work_AfterLoadExtension(uv_work_t* req) {
 
     db->Process();
 
+    napi_delete_async_work(e, baton->request);
     delete baton;
 }
 

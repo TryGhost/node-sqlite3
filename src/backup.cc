@@ -1,6 +1,5 @@
 #include <string.h>
 #include <napi.h>
-#include <uv.h>
 #include <node_buffer.h>
 #include <node_version.h>
 
@@ -190,12 +189,16 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
 void Backup::Work_BeginInitialize(Database::Baton* baton) {
     assert(baton->db->open);
     baton->db->pending++;
-    int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Initialize, (uv_after_work_cb)Work_AfterInitialize);
+    Napi::Env env = baton->db->Env();
+    int status = napi_create_async_work(
+        env, NULL, Napi::String::New(env, "sqlite3.Backup.Initialize"),
+        Work_Initialize, Work_AfterInitialize, baton, &baton->request
+    );
     assert(status == 0);
+    napi_queue_async_work(env, baton->request);
 }
 
-void Backup::Work_Initialize(uv_work_t* req) {
+void Backup::Work_Initialize(napi_env e, void* data) {
     BACKUP_INIT(InitializeBaton);
 
     // In case stepping fails, we use a mutex to make sure we get the associated
@@ -224,7 +227,7 @@ void Backup::Work_Initialize(uv_work_t* req) {
     sqlite3_mutex_leave(mtx);
 }
 
-void Backup::Work_AfterInitialize(uv_work_t* req) {
+void Backup::Work_AfterInitialize(napi_env e, napi_status status, void* data) {
     BACKUP_INIT(InitializeBaton);
 
     Napi::Env env = backup->Env();
@@ -262,7 +265,7 @@ void Backup::Work_BeginStep(Baton* baton) {
     BACKUP_BEGIN(Step);
 }
 
-void Backup::Work_Step(uv_work_t* req) {
+void Backup::Work_Step(napi_env e, void* data) {
     BACKUP_INIT(StepBaton);
     if (backup->_handle) {
         backup->status = sqlite3_backup_step(backup->_handle, baton->pages);
@@ -286,7 +289,7 @@ void Backup::Work_Step(uv_work_t* req) {
     }
 }
 
-void Backup::Work_AfterStep(uv_work_t* req) {
+void Backup::Work_AfterStep(napi_env e, napi_status status, void* data) {
     BACKUP_INIT(StepBaton);
 
     Napi::Env env = backup->Env();
@@ -328,12 +331,12 @@ void Backup::Work_BeginFinish(Baton* baton) {
     BACKUP_BEGIN(Finish);
 }
 
-void Backup::Work_Finish(uv_work_t* req) {
+void Backup::Work_Finish(napi_env e, void* data) {
     BACKUP_INIT(Baton);
     backup->FinishSqlite();
 }
 
-void Backup::Work_AfterFinish(uv_work_t* req) {
+void Backup::Work_AfterFinish(napi_env e, napi_status status, void* data) {
     BACKUP_INIT(Baton);
 
     Napi::Env env = backup->Env();

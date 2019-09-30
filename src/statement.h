@@ -79,14 +79,13 @@ public:
     static Napi::Value New(const Napi::CallbackInfo& info);
 
     struct Baton {
-        uv_work_t request;
+        napi_async_work request;
         Statement* stmt;
         Napi::FunctionReference callback;
         Parameters parameters;
 
         Baton(Statement* stmt_, Napi::Function cb_) : stmt(stmt_) {
             stmt->Ref();
-            request.data = this;
             callback.Reset(cb_);
         }
         virtual ~Baton() {
@@ -212,8 +211,8 @@ public:
 
 protected:
     static void Work_BeginPrepare(Database::Baton* baton);
-    static void Work_Prepare(uv_work_t* req);
-    static void Work_AfterPrepare(uv_work_t* req);
+    static void Work_Prepare(napi_env env, void* data);
+    static void Work_AfterPrepare(napi_env env, napi_status status, void* data);
 
     static void AsyncEach(uv_async_t* handle, int status);
     static void CloseCallback(uv_handle_t* handle);

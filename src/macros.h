@@ -124,8 +124,8 @@ inline bool OtherIsInt(Napi::Number source) {
 #define WORK_DEFINITION(name)                                                  \
     Napi::Value name(const Napi::CallbackInfo& info);                          \
     static void Work_Begin##name(Baton* baton);                                \
-    static void Work_##name(uv_work_t* req);                                   \
-    static void Work_After##name(uv_work_t* req);
+    static void Work_##name(napi_env env, void* data);                         \
+    static void Work_After##name(napi_env env, napi_status status, void* data);
 
 #define STATEMENT_BEGIN(type)                                                  \
     assert(baton);                                                             \
@@ -135,13 +135,16 @@ inline bool OtherIsInt(Napi::Number source) {
     assert(baton->stmt->prepared);                                             \
     baton->stmt->locked = true;                                                \
     baton->stmt->db->pending++;                                                \
-    int status = uv_queue_work(uv_default_loop(),                              \
-        &baton->request,                                                       \
-        Work_##type, reinterpret_cast<uv_after_work_cb>(Work_After##type));    \
-    assert(status == 0);
+    Napi::Env env = baton->stmt->Env();                                        \
+    int status = napi_create_async_work(                                       \
+        env, NULL, Napi::String::New(env, "sqlite3.Statement."#type),          \
+        Work_##type, Work_After##type, baton, &baton->request                  \
+    );                                                                         \
+    assert(status == 0);                                                       \
+    napi_queue_async_work(env, baton->request);
 
 #define STATEMENT_INIT(type)                                                   \
-    type* baton = static_cast<type*>(req->data);                               \
+    type* baton = static_cast<type*>(data);                                    \
     Statement* stmt = baton->stmt;
 
 #define STATEMENT_END()                                                        \
@@ -151,6 +154,7 @@ inline bool OtherIsInt(Napi::Number source) {
     stmt->db->pending--;                                                       \
     stmt->Process();                                                           \
     stmt->db->Process();                                                       \
+    napi_delete_async_work(e, baton->request);                                 \
     delete baton;
 
 #define BACKUP_BEGIN(type)                                                     \
@@ -161,13 +165,16 @@ inline bool OtherIsInt(Napi::Number source) {
     assert(baton->backup->inited);                                             \
     baton->backup->locked = true;                                              \
     baton->backup->db->pending++;                                              \
-    int status = uv_queue_work(uv_default_loop(),                              \
-        &baton->request,                                                       \
-        Work_##type, reinterpret_cast<uv_after_work_cb>(Work_After##type));    \
-    assert(status == 0);
+    Napi::Env env = baton->backup->Env();                                      \
+    int status = napi_create_async_work(                                       \
+        env, NULL, Napi::String::New(env, "sqlite3.Backup."#type),             \
+        Work_##type, Work_After##type, baton, &baton->request                  \
+    );                                                                         \
+    assert(status == 0);                                                       \
+    napi_queue_async_work(env, baton->request);
 
 #define BACKUP_INIT(type)                                                      \
-    type* baton = static_cast<type*>(req->data);                               \
+    type* baton = static_cast<type*>(data);                                    \
     Backup* backup = baton->backup;
 
 #define BACKUP_END()                                                           \
@@ -177,6 +184,7 @@ inline bool OtherIsInt(Napi::Number source) {
     backup->db->pending--;                                                     \
     backup->Process();                                                         \
     backup->db->Process();                                                     \
+    napi_delete_async_work(e, baton->request);                                 \
     delete baton;
 
 #define DELETE_FIELD(field)                                                    \

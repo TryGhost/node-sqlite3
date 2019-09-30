@@ -139,12 +139,16 @@ Statement::Statement(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Statemen
 void Statement::Work_BeginPrepare(Database::Baton* baton) {
     assert(baton->db->open);
     baton->db->pending++;
-    int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Prepare, (uv_after_work_cb)Work_AfterPrepare);
+    Napi::Env env = baton->db->Env();
+    int status = napi_create_async_work(
+        env, NULL, Napi::String::New(env, "sqlite3.Statement.Prepare"),
+        Work_Prepare, Work_AfterPrepare, baton, &baton->request
+    );
     assert(status == 0);
+    napi_queue_async_work(env, baton->request);
 }
 
-void Statement::Work_Prepare(uv_work_t* req) {
+void Statement::Work_Prepare(napi_env e, void* data) {
     STATEMENT_INIT(PrepareBaton);
 
     // In case preparing fails, we use a mutex to make sure we get the associated
@@ -168,7 +172,7 @@ void Statement::Work_Prepare(uv_work_t* req) {
     sqlite3_mutex_leave(mtx);
 }
 
-void Statement::Work_AfterPrepare(uv_work_t* req) {
+void Statement::Work_AfterPrepare(napi_env e, napi_status status, void* data) {
     STATEMENT_INIT(PrepareBaton);
 
     Napi::Env env = stmt->Env();
@@ -360,7 +364,7 @@ void Statement::Work_BeginBind(Baton* baton) {
     STATEMENT_BEGIN(Bind);
 }
 
-void Statement::Work_Bind(uv_work_t* req) {
+void Statement::Work_Bind(napi_env e, void* data) {
     STATEMENT_INIT(Baton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
@@ -369,7 +373,7 @@ void Statement::Work_Bind(uv_work_t* req) {
     sqlite3_mutex_leave(mtx);
 }
 
-void Statement::Work_AfterBind(uv_work_t* req) {
+void Statement::Work_AfterBind(napi_env e, napi_status status, void* data) {
     STATEMENT_INIT(Baton);
 
     Napi::Env env = stmt->Env();
@@ -411,7 +415,7 @@ void Statement::Work_BeginGet(Baton* baton) {
     STATEMENT_BEGIN(Get);
 }
 
-void Statement::Work_Get(uv_work_t* req) {
+void Statement::Work_Get(napi_env e, void* data) {
     STATEMENT_INIT(RowBaton);
 
     if (stmt->status != SQLITE_DONE || baton->parameters.size()) {
@@ -435,7 +439,7 @@ void Statement::Work_Get(uv_work_t* req) {
     }
 }
 
-void Statement::Work_AfterGet(uv_work_t* req) {
+void Statement::Work_AfterGet(napi_env e, napi_status status, void* data) {
     STATEMENT_INIT(RowBaton);
 
     Napi::Env env = stmt->Env();
@@ -482,7 +486,7 @@ void Statement::Work_BeginRun(Baton* baton) {
     STATEMENT_BEGIN(Run);
 }
 
-void Statement::Work_Run(uv_work_t* req) {
+void Statement::Work_Run(napi_env e, void* data) {
     STATEMENT_INIT(RunBaton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
@@ -508,7 +512,7 @@ void Statement::Work_Run(uv_work_t* req) {
     sqlite3_mutex_leave(mtx);
 }
 
-void Statement::Work_AfterRun(uv_work_t* req) {
+void Statement::Work_AfterRun(napi_env e, napi_status status, void* data) {
     STATEMENT_INIT(RunBaton);
 
     Napi::Env env = stmt->Env();
@@ -551,7 +555,7 @@ void Statement::Work_BeginAll(Baton* baton) {
     STATEMENT_BEGIN(All);
 }
 
-void Statement::Work_All(uv_work_t* req) {
+void Statement::Work_All(napi_env e, void* data) {
     STATEMENT_INIT(RowsBaton);
 
     sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
@@ -577,7 +581,7 @@ void Statement::Work_All(uv_work_t* req) {
     sqlite3_mutex_leave(mtx);
 }
 
-void Statement::Work_AfterAll(uv_work_t* req) {
+void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
     STATEMENT_INIT(RowsBaton);
 
     Napi::Env env = stmt->Env();
@@ -651,7 +655,7 @@ void Statement::Work_BeginEach(Baton* baton) {
     STATEMENT_BEGIN(Each);
 }
 
-void Statement::Work_Each(uv_work_t* req) {
+void Statement::Work_Each(napi_env e, void* data) {
     STATEMENT_INIT(EachBaton);
 
     Async* async = baton->async;
@@ -748,7 +752,7 @@ void Statement::AsyncEach(uv_async_t* handle, int status) {
     }
 }
 
-void Statement::Work_AfterEach(uv_work_t* req) {
+void Statement::Work_AfterEach(napi_env e, napi_status status, void* data) {
     STATEMENT_INIT(EachBaton);
 
     Napi::Env env = stmt->Env();
@@ -777,14 +781,14 @@ void Statement::Work_BeginReset(Baton* baton) {
     STATEMENT_BEGIN(Reset);
 }
 
-void Statement::Work_Reset(uv_work_t* req) {
+void Statement::Work_Reset(napi_env e, void* data) {
     STATEMENT_INIT(Baton);
 
     sqlite3_reset(stmt->_handle);
     stmt->status = SQLITE_OK;
 }
 
-void Statement::Work_AfterReset(uv_work_t* req) {
+void Statement::Work_AfterReset(napi_env e, napi_status status, void* data) {
     STATEMENT_INIT(Baton);
 
     Napi::Env env = stmt->Env();
@@ -908,7 +912,7 @@ void Statement::Finalize_() {
 }
 
 void Statement::CleanQueue() {
-    Napi::Env env = this->Env(); 
+    Napi::Env env = this->Env();
     Napi::HandleScope scope(env);
 
     if (prepared && !queue.empty()) {

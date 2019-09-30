@@ -8,7 +8,6 @@
 
 #include <sqlite3.h>
 #include <napi.h>
-#include <uv.h>
 
 #include "async.h"
 
@@ -33,7 +32,7 @@ public:
     }
 
     struct Baton {
-        uv_work_t request;
+        napi_async_work request;
         Database* db;
         Napi::FunctionReference callback;
         int status;
@@ -42,7 +41,6 @@ public:
         Baton(Database* db_, Napi::Function cb_) :
                 db(db_), status(SQLITE_OK) {
             db->Ref();
-            request.data = this;
             if (!cb_.IsUndefined() && cb_.IsFunction()) {
                 callback.Reset(cb_, 1);
             }
@@ -127,8 +125,8 @@ public:
 
 protected:
     static void Work_BeginOpen(Baton* baton);
-    static void Work_Open(uv_work_t* req);
-    static void Work_AfterOpen(uv_work_t* req);
+    static void Work_Open(napi_env env, void* data);
+    static void Work_AfterOpen(napi_env env, napi_status status, void* data);
 
     Napi::Value OpenGetter(const Napi::CallbackInfo& info);
 
@@ -137,21 +135,21 @@ protected:
 
     Napi::Value Exec(const Napi::CallbackInfo& info);
     static void Work_BeginExec(Baton* baton);
-    static void Work_Exec(uv_work_t* req);
-    static void Work_AfterExec(uv_work_t* req);
+    static void Work_Exec(napi_env env, void* data);
+    static void Work_AfterExec(napi_env env, napi_status status, void* data);
 
     Napi::Value Wait(const Napi::CallbackInfo& info);
     static void Work_Wait(Baton* baton);
 
     Napi::Value Close(const Napi::CallbackInfo& info);
     static void Work_BeginClose(Baton* baton);
-    static void Work_Close(uv_work_t* req);
-    static void Work_AfterClose(uv_work_t* req);
+    static void Work_Close(napi_env env, void* data);
+    static void Work_AfterClose(napi_env env, napi_status status, void* data);
 
     Napi::Value LoadExtension(const Napi::CallbackInfo& info);
     static void Work_BeginLoadExtension(Baton* baton);
-    static void Work_LoadExtension(uv_work_t* req);
-    static void Work_AfterLoadExtension(uv_work_t* req);
+    static void Work_LoadExtension(napi_env env, void* data);
+    static void Work_AfterLoadExtension(napi_env env, napi_status status, void* data);
 
     Napi::Value Serialize(const Napi::CallbackInfo& info);
     Napi::Value Parallelize(const Napi::CallbackInfo& info);

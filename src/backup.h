@@ -9,7 +9,6 @@
 
 #include <sqlite3.h>
 #include <napi.h>
-#include <uv.h>
 
 using namespace Napi;
 
@@ -99,13 +98,12 @@ public:
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
 
     struct Baton {
-        uv_work_t request;
+        napi_async_work request;
         Backup* backup;
         Napi::FunctionReference callback;
 
         Baton(Backup* backup_, Napi::Function cb_) : backup(backup_) {
             backup->Ref();
-            request.data = this;
             callback.Reset(cb_);
         }
         virtual ~Baton() {
@@ -187,8 +185,8 @@ public:
 
 protected:
     static void Work_BeginInitialize(Database::Baton* baton);
-    static void Work_Initialize(uv_work_t* req);
-    static void Work_AfterInitialize(uv_work_t* req);
+    static void Work_Initialize(napi_env env, void* data);
+    static void Work_AfterInitialize(napi_env env, napi_status status, void* data);
 
     void Schedule(Work_Callback callback, Baton* baton);
     void Process();
