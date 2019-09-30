@@ -13,12 +13,12 @@ using namespace node_sqlite3;
 
 namespace {
 
-NAN_MODULE_INIT(RegisterModule) {
-    Nan::HandleScope scope;
+Napi::Object RegisterModule(Napi::Env env, Napi::Object exports) {
+    Napi::HandleScope scope(env);
 
-    Database::Init(target);
-    Statement::Init(target);
-    Backup::Init(target);
+    Database::Init(env, target, module);
+    Statement::Init(env, target, module);
+    Backup::Init(env, target, module);
 
     DEFINE_CONSTANT_INTEGER(target, SQLITE_OPEN_READONLY, OPEN_READONLY);
     DEFINE_CONSTANT_INTEGER(target, SQLITE_OPEN_READWRITE, OPEN_READWRITE);
@@ -108,4 +108,4 @@ const char* sqlite_authorizer_string(int type) {
     }
 }
 
-NODE_MODULE(node_sqlite3, RegisterModule)
+NODE_API_MODULE(node_sqlite3, RegisterModule)

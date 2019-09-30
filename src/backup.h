@@ -8,10 +8,11 @@
 #include <set>
 
 #include <sqlite3.h>
-#include <nan.h>
+#include <napi.h>
+#include <uv.h>
 
-using namespace v8;
-using namespace node;
+using namespace Napi;
+using namespace Napi;
 
 namespace node_sqlite3 {
 
@@ -92,19 +93,19 @@ namespace node_sqlite3 {
  *   backup.finish();
  *
  */
-class Backup : public Nan::ObjectWrap {
+class Backup : public Napi::ObjectWrap<Backup> {
 public:
-    static Nan::Persistent<FunctionTemplate> constructor_template;
+    static Napi::FunctionReference constructor;
 
-    static NAN_MODULE_INIT(Init);
-    static NAN_METHOD(New);
+    static Napi::Object Init(Napi::Env env, Napi::Object exports);
+    static Napi::Value New(const Napi::CallbackInfo& info);
 
     struct Baton {
         uv_work_t request;
         Backup* backup;
-        Nan::Persistent<Function> callback;
+        Napi::FunctionReference callback;
 
-        Baton(Backup* backup_, Local<Function> cb_) : backup(backup_) {
+        Baton(Backup* backup_, Napi::Function cb_) : backup(backup_) {
             backup->Ref();
             request.data = this;
             callback.Reset(cb_);
@@ -121,7 +122,7 @@ public:
         std::string sourceName;
         std::string destName;
         bool filenameIsDest;
-        InitializeBaton(Database* db_, Local<Function> cb_, Backup* backup_) :
+        InitializeBaton(Database* db_, Napi::Function cb_, Backup* backup_) :
             Baton(db_, cb_), backup(backup_), filenameIsDest(true) {
             backup->Ref();
         }
@@ -137,7 +138,7 @@ public:
     struct StepBaton : Baton {
         int pages;
         std::set<int> retryErrorsSet;
-        StepBaton(Backup* backup_, Local<Function> cb_, int pages_) :
+        StepBaton(Backup* backup_, Napi::Function cb_, int pages_) :
             Baton(backup_, cb_), pages(pages_) {}
     };
 
@@ -149,7 +150,7 @@ public:
         Baton* baton;
     };
 
-    Backup(Database* db_) : Nan::ObjectWrap(),
+    Backup(Database* db_) : Napi::ObjectWrap<Backup>(),
            db(db_),
            _handle(NULL),
            _otherDb(NULL),
@@ -173,16 +174,16 @@ public:
 
     WORK_DEFINITION(Step);
     WORK_DEFINITION(Finish);
-    static NAN_GETTER(IdleGetter);
-    static NAN_GETTER(CompletedGetter);
-    static NAN_GETTER(FailedGetter);
-    static NAN_GETTER(PageCountGetter);
-    static NAN_GETTER(RemainingGetter);
-    static NAN_GETTER(FatalErrorGetter);
-    static NAN_GETTER(RetryErrorGetter);
+    Napi::Value IdleGetter(const Napi::CallbackInfo& info);
+    Napi::Value CompletedGetter(const Napi::CallbackInfo& info);
+    Napi::Value FailedGetter(const Napi::CallbackInfo& info);
+    Napi::Value PageCountGetter(const Napi::CallbackInfo& info);
+    Napi::Value RemainingGetter(const Napi::CallbackInfo& info);
+    Napi::Value FatalErrorGetter(const Napi::CallbackInfo& info);
+    Napi::Value RetryErrorGetter(const Napi::CallbackInfo& info);
 
-    static NAN_SETTER(FatalErrorSetter);
-    static NAN_SETTER(RetryErrorSetter);
+    void FatalErrorSetter(const Napi::CallbackInfo& info, const Napi::Value& value);
+    void RetryErrorSetter(const Napi::CallbackInfo& info, const Napi::Value& value);
 
 protected:
     static void Work_BeginInitialize(Database::Baton* baton);
@@ -215,7 +216,7 @@ protected:
     bool finished;
     std::queue<Call*> queue;
 
-    Nan::Persistent<Array> retryErrors;
+    Napi::Persistent<Array> retryErrors;
 };
 
 }
