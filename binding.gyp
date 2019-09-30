@@ -48,7 +48,8 @@
         "src/database.cc",
         "src/node_sqlite3.cc",
         "src/statement.cc"
-      ]
+      ],
+      "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS=1" ]
     },
     {
       "target_name": "action_after_build",
@@ -69,7 +70,8 @@
             "files": [ "<(PRODUCT_DIR)/<(module_name).node" ],
             "destination": "<(module_path)"
           }
-      ]
+      ],
+      "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS=1" ]
     }
   ]
 }
