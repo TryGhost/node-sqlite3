@@ -264,10 +264,11 @@ template <class T> T* Statement::Bind(const Napi::CallbackInfo& info, int start,
             int length = array.Length();
             for (int i = 0; i < length; i++) {
                 Napi::Value name = (array).Get(i);
+                Napi::Number num = name.ToNumber();
 
-                if (name.IsNumber()) {
+                if (num.Int32Value() == num.DoubleValue()) {
                     baton->parameters.push_back(
-                        BindParameter((object).Get(name), name.As<Napi::Number>().Int32Value()));
+                        BindParameter((object).Get(name), num.Int32Value()));
                 }
                 else {
                     baton->parameters.push_back(BindParameter((object).Get(name),
