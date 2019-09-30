@@ -17,7 +17,7 @@
         "VCCLCompilerTool": { "ExceptionHandling": 1 },
       },
       "include_dirs": [
-        "<!@(node -p \"require('node-addon-api').include\")","<!(node -e \"require('nan')\")"],
+        "<!@(node -p \"require('node-addon-api').include\")"],
       "conditions": [
         ["sqlite != 'internal'", {
             "include_dirs": [
