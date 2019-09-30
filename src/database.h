@@ -3,6 +3,7 @@
 #define NODE_SQLITE3_SRC_DATABASE_H
 
 
+#include <assert.h>
 #include <string>
 #include <queue>
 
