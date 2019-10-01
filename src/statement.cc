@@ -11,8 +11,6 @@
 using namespace node_sqlite3;
 
 Napi::FunctionReference Statement::constructor;
-static Napi::FunctionReference date;
-static Napi::FunctionReference regexp;
 
 Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
@@ -36,21 +34,10 @@ Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
 
 // A Napi InstanceOf for Javascript Objects "Date" and "RegExp"
 bool OtherInstanceOf(Napi::Object source, char* object_type) {
-    if (date.IsEmpty()) {
-        Napi::Function date_func = source.Env().Global().Get("Date").As<Function>();
-        Napi::Function regexp_func = source.Env().Global().Get("RegExp").As<Function>();
-
-        date = Napi::Persistent(date_func);
-        date.SuppressDestruct();
-
-        regexp = Napi::Persistent(regexp_func);
-        regexp.SuppressDestruct();
-    }
-
     if (object_type == "Date") {
-        return source.InstanceOf(date.Value());
+        return source.InstanceOf(source.Env().Global().Get("Date").As<Function>());
     } else if (object_type == "RegExp") {
-        return source.InstanceOf(regexp.Value());
+        return source.InstanceOf(source.Env().Global().Get("RegExp").As<Function>());
     }
 
     return false;
