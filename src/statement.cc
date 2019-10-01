@@ -705,7 +705,7 @@ void Statement::CloseCallback(uv_handle_t* handle) {
     delete async;
 }
 
-void Statement::AsyncEach(uv_async_t* handle, int status) {
+void Statement::AsyncEach(uv_async_t* handle) {
     Async* async = static_cast<Async*>(handle->data);
 
     Napi::Env env = async->stmt->Env();

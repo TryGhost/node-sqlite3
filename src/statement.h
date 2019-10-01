@@ -173,7 +173,9 @@ public:
             watcher.data = this;
             NODE_SQLITE3_MUTEX_INIT
             stmt->Ref();
-            uv_async_init(uv_default_loop(), &watcher, async_cb);
+            uv_loop_t *loop;
+            napi_get_uv_event_loop(stmt->Env(), &loop);
+            uv_async_init(loop, &watcher, async_cb);
         }
 
         ~Async() {
@@ -214,7 +216,7 @@ protected:
     static void Work_Prepare(napi_env env, void* data);
     static void Work_AfterPrepare(napi_env env, napi_status status, void* data);
 
-    static void AsyncEach(uv_async_t* handle, int status);
+    static void AsyncEach(uv_async_t* handle);
     static void CloseCallback(uv_handle_t* handle);
 
     static void Finalize_(Baton* baton);
