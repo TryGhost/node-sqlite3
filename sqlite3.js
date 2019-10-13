@@ -1,1 +1,1 @@
-module.exports = require('./lib/sqlite3');
+module.exports = require('./lib/index');
