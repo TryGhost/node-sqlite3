@@ -38,12 +38,27 @@ if (typeof util.promisify === 'function') {
                 });
         });
 
+        it('should also work with statement', function() {
+            var stmt = db.prepare("INSERT INTO foo VALUES($text, $id)");
+            var promisifyedStatementRun = util.promisify(stmt.run).bind(stmt);
+            return promisifyedStatementRun({
+                $id: 2,
+                $text: "Consectetur Adipiscing Elit"
+            })
+                .then(function(result) {
+                    assert.equal(result.changes, 1);
+                    assert.equal(result.lastID, 2);
+                });
+        });
+
         it('should retrieve values', function(done) {
             db.all("SELECT txt, num FROM foo", function(err, rows) {
                 if (err) throw err;
                 assert.equal(rows[0].txt, "Dolor Sit Amet");
                 assert.equal(rows[0].num, 1);
-                assert.equal(rows.length, 1);
+                assert.equal(rows[1].txt, "Consectetur Adipiscing Elit");
+                assert.equal(rows[1].num, 2);
+                assert.equal(rows.length, 2);
                 done();
             });
         });
