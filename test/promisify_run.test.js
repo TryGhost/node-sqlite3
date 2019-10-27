@@ -11,46 +11,31 @@ if (typeof util.promisify === 'function') {
             promisifyedDbRun = util.promisify(db.run).bind(db);
         });
 
-        it('should create the table', function(done) {
-            promisifyedDbRun("CREATE TABLE foo (txt TEXT, num INT)")
+        it('should create the table', function() {
+            return promisifyedDbRun("CREATE TABLE foo (txt TEXT, num INT)")
                 .then(function(result) {
-                    assert.deepEqual(result, {
-                        changes: 0,
-                        lastID: 0,
-                        sql: 'CREATE TABLE foo (txt TEXT, num INT)'
-                    });
-                    done();
-                })
-                .catch(done);
+                    assert.equal(result.changes, 0);
+                    assert.equal(result.lastID, 0);
+                });
         });
 
-        it('should insert a value without placeholders', function(done) {
-            promisifyedDbRun("INSERT INTO foo VALUES('Lorem Ipsum', 1)")
+        it('should insert a value without placeholders', function() {
+            return promisifyedDbRun("INSERT INTO foo VALUES('Lorem Ipsum', 1)")
                 .then(function(result) {
-                    assert.deepEqual(result, {
-                        changes: 1,
-                        lastID: 1,
-                        sql: "INSERT INTO foo VALUES('Lorem Ipsum', 1)"
-                    });
-                    done();
-                })
-                .catch(done);
+                    assert.equal(result.changes, 1);
+                    assert.equal(result.lastID, 1);
+                });
         });
 
-        it('should update a value with placeholders', function(done) {
-            promisifyedDbRun("UPDATE foo SET txt = $text WHERE num = $id", {
+        it('should update a value with placeholders', function() {
+            return promisifyedDbRun("UPDATE foo SET txt = $text WHERE num = $id", {
                 $id: 1,
                 $text: "Dolor Sit Amet"
             })
                 .then(function(result) {
-                    assert.deepEqual(result, {
-                        changes: 1,
-                        lastID: 1,
-                        sql: 'UPDATE foo SET txt = $text WHERE num = $id'
-                    });
-                    done();
-                })
-                .catch(done);
+                    assert.equal(result.changes, 1);
+                    assert.equal(result.lastID, 1);
+                });
         });
 
         it('should retrieve values', function(done) {
