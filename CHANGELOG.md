@@ -1,11 +1,20 @@
 # Changelog
 
 ## 4.1.0
+- Electron v6.1 and v7 support [#1237](https://github.com/mapbox/node-sqlite3/pull/1237)
+
+## 4.1.0
 
 - Electron v6 support [#1195](https://github.com/mapbox/node-sqlite3/pull/1195)
 - Electron v4.1 and v4.2 support [#1180](https://github.com/mapbox/node-sqlite3/pull/1180)
 - Custom file header with `--sqlite_magic` [#1144](https://github.com/mapbox/node-sqlite3/pull/1144)
 - https everywhere [#1177](https://github.com/mapbox/node-sqlite3/pull/1177)
+
+## 4.0.9
+- Use trusty as the base for prebuilts [#1167](https://github.com/mapbox/node-sqlite3/pull/1167)
+
+## 4.0.8
+- Rerelease of 4.0.7 but removed excess .vscode files [0df90c7](https://github.com/mapbox/node-sqlite3/commit/0df90c7811331169ad5f8fbad396422e72757af3)
 
 ## 4.0.7
 
