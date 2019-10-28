@@ -42,6 +42,26 @@ environment:
     - nodejs_version: 12
       platform: x64
       NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 7.0.0
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 12
+      platform: x86
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 7.0.0
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 12
+      platform: x64
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 6.1.0
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 12
+      platform: x86
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 6.1.0
+      TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
+    - nodejs_version: 12
+      platform: x64
+      NODE_RUNTIME: electron
       NODE_RUNTIME_VERSION: 6.0.0
       TOOLSET_ARGS: --dist-url=https://atom.io/download/electron
     - nodejs_version: 12
