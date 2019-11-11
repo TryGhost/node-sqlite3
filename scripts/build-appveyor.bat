@@ -72,6 +72,12 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 IF "%nodejs_version:~0,1%"=="5" CALL npm install node-gyp@3.x
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
+::Need to force update node-gyp to v6.* for electron v6 & v5
+IF "%NODE_RUNTIME_VERSION:~0,1%"=="5" CALL npm install node-gyp@6.x
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+IF "%NODE_RUNTIME_VERSION:~0,1%"=="6" CALL npm install node-gyp@6.x
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+
 CALL npm install --build-from-source --msvs_version=%msvs_version% %TOOLSET_ARGS% --loglevel=http
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
