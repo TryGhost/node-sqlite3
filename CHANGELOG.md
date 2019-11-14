@@ -2,7 +2,9 @@
 
 ## 4.1.1
 - Electron v6.1 and v7 support [#1237](https://github.com/mapbox/node-sqlite3/pull/1237)
+- Node v13 support [#1247](https://github.com/mapbox/node-sqlite3/pull/1247)
 - SQLite3 update to 3.30.1 [#1238](https://github.com/mapbox/node-sqlite3/pull/1238)
+- Upgrade CI to node-gyp 6.x for Windows Electron v5 & v6 builds [#1245](https://github.com/mapbox/node-sqlite3/pull/1245)
 
 ## 4.1.0
 
