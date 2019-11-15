@@ -75,9 +75,9 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 ::Need to force update node-gyp to v6+ for electron v6 and v5
 ECHO ===== conditional node-gyp upgrade START ============
 :: Find the folder to install the node-gyp in
-SET npm_in_nodejs_dir = "%ProgramFiles%\nodejs\node_modules\npm"
+SET npm_in_nodejs_dir="%ProgramFiles%\nodejs\node_modules\npm"
 ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
-IF /I "%platform%"=="x86" SET npm_in_nodejs_dir = "%ProgramFiles(x86)%\nodejs\node_modules\npm"
+IF /I "%platform%"=="x86" SET npm_in_nodejs_dir="%ProgramFiles(x86)%\nodejs\node_modules\npm"
 ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
 :: Check if electron and install
 IF /I "%NODE_RUNTIME%"=="electron" (
