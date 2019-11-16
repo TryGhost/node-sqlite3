@@ -81,12 +81,14 @@ IF /I "%platform%"=="x86" SET npm_in_nodejs_dir="%ProgramFiles(x86)%\nodejs\node
 ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
 :: Check if electron and install
 ECHO "Before the if"
-IF /I "%NODE_RUNTIME%"=="electron" (
-  ECHO "Inside the if"
+IF /I %NODE_RUNTIME%==electron (
+  ECHO "Electron environment, checking for version 5 or 6.."
   IF "%NODE_RUNTIME_VERSION:~0,1%"=="5" CALL npm install --prefix %npm_in_nodejs_dir% node-gyp@6.x
   ECHO "Point 2"
   IF "%NODE_RUNTIME_VERSION:~0,1%"=="6" CALL npm install --prefix %npm_in_nodejs_dir% node-gyp@6.x
   ECHO "Point 3"
+) ELSE (
+  ECHO "Not an electron environment."
 )
 ECHO "After the if"
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
