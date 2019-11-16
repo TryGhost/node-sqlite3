@@ -83,8 +83,8 @@ ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
 IF /I "%NODE_RUNTIME%"=="electron" (
   IF "%NODE_RUNTIME_VERSION:~0,1%"=="5" CALL npm install --prefix %npm_in_nodejs_dir% node-gyp@6.x
   IF "%NODE_RUNTIME_VERSION:~0,1%"=="6" CALL npm install --prefix %npm_in_nodejs_dir% node-gyp@6.x
-  IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 )
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 ECHO ===== conditional node-gyp upgrade END ============
 
 CALL npm install --build-from-source --msvs_version=%msvs_version% %TOOLSET_ARGS% --loglevel=http
