@@ -81,7 +81,7 @@ IF /I "%platform%"=="x86" SET npm_in_nodejs_dir="%ProgramFiles(x86)%\nodejs\node
 ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
 :: Set boolean whether the update has to happen
 SET "needs_patch="
-IF DEFINED %NODE_RUNTIME_VERSION% (
+IF DEFINED NODE_RUNTIME_VERSION (
   ECHO NODE_RUNTIME_VERSION_REDUCED^: %NODE_RUNTIME_VERSION:~0,1%
   IF "%NODE_RUNTIME_VERSION:~0,1%"=="5" SET "needs_patch=y"
   IF "%NODE_RUNTIME_VERSION:~0,1%"=="6" SET "needs_patch=y"
