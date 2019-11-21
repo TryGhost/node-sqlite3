@@ -79,12 +79,16 @@ SET npm_in_nodejs_dir="%ProgramFiles%\nodejs\node_modules\npm"
 ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
 IF /I "%platform%"=="x86" SET npm_in_nodejs_dir="%ProgramFiles(x86)%\nodejs\node_modules\npm"
 ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
+:: Set boolean whether the update has to happen
+SET "needs_patch="
+IF DEFINED %NODE_RUNTIME_VERSION% (
+  ECHO NODE_RUNTIME_VERSION_REDUCED^: %NODE_RUNTIME_VERSION:~0,1%
+  IF "%NODE_RUNTIME_VERSION:~0,1%"=="5" SET "needs_patch=y"
+  IF "%NODE_RUNTIME_VERSION:~0,1%"=="6" SET "needs_patch=y"
+)
 :: Check if electron and install
 ECHO NODE_RUNTIME^: %NODE_RUNTIME%
-ECHO NODE_RUNTIME_VERSION_REDUCED^: %NODE_RUNTIME_VERSION:~0,1%
-IF "%NODE_RUNTIME_VERSION:~0,1%"=="5" CALL npm install --prefix %npm_in_nodejs_dir% node-gyp@6.x
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-IF "%NODE_RUNTIME_VERSION:~0,1%"=="6" CALL npm install --prefix %npm_in_nodejs_dir% node-gyp@6.x
+IF DEFINED needs_patch CALL npm install --prefix %npm_in_nodejs_dir% node-gyp@6.x
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 ECHO ===== conditional node-gyp upgrade END ============
 
