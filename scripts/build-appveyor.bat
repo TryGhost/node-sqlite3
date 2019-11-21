@@ -81,6 +81,7 @@ IF /I "%platform%"=="x86" SET npm_in_nodejs_dir="%ProgramFiles(x86)%\nodejs\node
 ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
 :: Check if electron and install
 ECHO NODE_RUNTIME^: %NODE_RUNTIME%
+ECHO NODE_RUNTIME_VERSION_REDUCED^: %NODE_RUNTIME_VERSION:~0,1%
 IF "%NODE_RUNTIME_VERSION:~0,1%"=="5" CALL npm install --prefix %npm_in_nodejs_dir% node-gyp@6.x
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 IF "%NODE_RUNTIME_VERSION:~0,1%"=="6" CALL npm install --prefix %npm_in_nodejs_dir% node-gyp@6.x
