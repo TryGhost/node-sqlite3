@@ -72,6 +72,26 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 IF "%nodejs_version:~0,1%"=="5" CALL npm install node-gyp@3.x
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
+::Need to force update node-gyp to v6+ for electron v6 and v5
+ECHO ===== conditional node-gyp upgrade START ============
+:: Find the folder to install the node-gyp in
+SET npm_in_nodejs_dir="%ProgramFiles%\nodejs\node_modules\npm"
+ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
+IF /I "%platform%"=="x86" SET npm_in_nodejs_dir="%ProgramFiles(x86)%\nodejs\node_modules\npm"
+ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
+:: Set boolean whether the update has to happen
+SET "needs_patch="
+IF DEFINED NODE_RUNTIME_VERSION (
+  ECHO NODE_RUNTIME_VERSION_REDUCED^: %NODE_RUNTIME_VERSION:~0,1%
+  IF "%NODE_RUNTIME_VERSION:~0,1%"=="5" SET "needs_patch=y"
+  IF "%NODE_RUNTIME_VERSION:~0,1%"=="6" SET "needs_patch=y"
+)
+:: Check if electron and install
+ECHO NODE_RUNTIME^: %NODE_RUNTIME%
+IF DEFINED needs_patch CALL npm install --prefix %npm_in_nodejs_dir% node-gyp@6.x
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+ECHO ===== conditional node-gyp upgrade END ============
+
 CALL npm install --build-from-source --msvs_version=%msvs_version% %TOOLSET_ARGS% --loglevel=http
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
