@@ -132,7 +132,7 @@ matrix:
      # electron Linux
      - os: linux
        compiler: clang
-       env: NODE_VERSION="6" ELECTRON_VERSION="7.1.0"
+       env: NODE_VERSION="8" ELECTRON_VERSION="7.1.0"
        dist: trusty
        addons:
          apt:
@@ -241,7 +241,7 @@ matrix:
      # electron MacOs
      - os: osx
        compiler: clang
-       env: NODE_VERSION="6" ELECTRON_VERSION="7.1.0"
+       env: NODE_VERSION="8" ELECTRON_VERSION="7.1.0"
      - os: osx
        compiler: clang
        env: NODE_VERSION="6" ELECTRON_VERSION="7.0.0"     
