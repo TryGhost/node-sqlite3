@@ -140,7 +140,7 @@ matrix:
             packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="6" ELECTRON_VERSION="7.0.0"
+       env: NODE_VERSION="8" ELECTRON_VERSION="7.0.0"
        dist: trusty
        addons:
          apt:
@@ -244,7 +244,7 @@ matrix:
        env: NODE_VERSION="8" ELECTRON_VERSION="7.1.0"
      - os: osx
        compiler: clang
-       env: NODE_VERSION="6" ELECTRON_VERSION="7.0.0"     
+       env: NODE_VERSION="8" ELECTRON_VERSION="7.0.0"
      - os: osx
        compiler: clang
        env: NODE_VERSION="6" ELECTRON_VERSION="6.1.0"
