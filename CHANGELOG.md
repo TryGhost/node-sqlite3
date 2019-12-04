@@ -8,8 +8,6 @@
 - Upgrade CI to node-gyp 6.x for Windows Electron v5 & v6 builds [#1245](https://github.com/mapbox/node-sqlite3/pull/1245)
 - Node v13 support [#1247](https://github.com/mapbox/node-sqlite3/pull/1247)
 - Use minimum supported node version for Electron 7 [#1255](https://github.com/mapbox/node-sqlite3/pull/1255)
-- Add missing windows x86 versions for electron 4.1 & 4.2 [#1256](https://github.com/mapbox/node-sqlite3/pull/1256)
-
 
 ## 4.1.0
 
