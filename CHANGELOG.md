@@ -1,11 +1,26 @@
 # Changelog
 
+## 4.1.1
+- Electron v6.1 and v7 support [#1237](https://github.com/mapbox/node-sqlite3/pull/1237)
+- Electron v7.1 support [#1254](https://github.com/mapbox/node-sqlite3/pull/1254)
+- SQLite3 update to 3.30.1 [#1238](https://github.com/mapbox/node-sqlite3/pull/1238)
+- Overwrite 'msbuild_toolset' only if 'toolset' is defined [#1242](https://github.com/mapbox/node-sqlite3/pull/1242)
+- Upgrade CI to node-gyp 6.x for Windows Electron v5 & v6 builds [#1245](https://github.com/mapbox/node-sqlite3/pull/1245)
+- Node v13 support [#1247](https://github.com/mapbox/node-sqlite3/pull/1247)
+- Use minimum supported node version for Electron 7 [#1255](https://github.com/mapbox/node-sqlite3/pull/1255)
+
 ## 4.1.0
 
 - Electron v6 support [#1195](https://github.com/mapbox/node-sqlite3/pull/1195)
 - Electron v4.1 and v4.2 support [#1180](https://github.com/mapbox/node-sqlite3/pull/1180)
 - Custom file header with `--sqlite_magic` [#1144](https://github.com/mapbox/node-sqlite3/pull/1144)
 - https everywhere [#1177](https://github.com/mapbox/node-sqlite3/pull/1177)
+
+## 4.0.9
+- Use trusty as the base for prebuilts [#1167](https://github.com/mapbox/node-sqlite3/pull/1167)
+
+## 4.0.8
+- Rerelease of 4.0.7 but removed excess .vscode files [0df90c7](https://github.com/mapbox/node-sqlite3/commit/0df90c7811331169ad5f8fbad396422e72757af3)
 
 ## 4.0.7
 
