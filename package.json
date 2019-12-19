@@ -39,6 +39,7 @@
   "dependencies": {
     "nan": "^2.12.1",
     "node-pre-gyp": "^0.11.0",
+    "bindings": "^1.5.0",
     "request": "^2.87.0"
   },
   "devDependencies": {
