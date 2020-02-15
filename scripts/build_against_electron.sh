@@ -5,7 +5,7 @@ source ~/.nvm/nvm.sh
 set -e -u
 
 export DISPLAY=":99.0"
-GYP_ARGS="--runtime=electron --target=${ELECTRON_VERSION} --dist-url=https://atom.io/download/electron"
+GYP_ARGS="--runtime=electron --target=${ELECTRON_VERSION} --dist-url=https://electronjs.org/headers"
 NPM_BIN_DIR="$(npm bin -g 2>/dev/null)"
 
 function publish() {
