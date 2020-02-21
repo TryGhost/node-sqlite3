@@ -83,6 +83,10 @@ ECHO npm_in_nodejs_dir^: %npm_in_nodejs_dir%
 SET "needs_patch="
 IF DEFINED NODE_RUNTIME_VERSION (
   ECHO NODE_RUNTIME_VERSION_REDUCED^: %NODE_RUNTIME_VERSION:~0,1%
+  IF "%NODE_RUNTIME_VERSION:~0,1%"=="1" SET "needs_patch=y"
+  IF "%NODE_RUNTIME_VERSION:~0,1%"=="2" SET "needs_patch=y"
+  IF "%NODE_RUNTIME_VERSION:~0,1%"=="3" SET "needs_patch=y"
+  IF "%NODE_RUNTIME_VERSION:~0,1%"=="4" SET "needs_patch=y"
   IF "%NODE_RUNTIME_VERSION:~0,1%"=="5" SET "needs_patch=y"
   IF "%NODE_RUNTIME_VERSION:~0,1%"=="6" SET "needs_patch=y"
 )
