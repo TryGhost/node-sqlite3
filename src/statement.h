@@ -1,10 +1,6 @@
 #ifndef NODE_SQLITE3_SRC_STATEMENT_H
 #define NODE_SQLITE3_SRC_STATEMENT_H
 
-
-#include "database.h"
-#include "threading.h"
-
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -14,6 +10,9 @@
 #include <sqlite3.h>
 #include <napi.h>
 #include <uv.h>
+
+#include "database.h"
+#include "threading.h"
 
 using namespace Napi;
 

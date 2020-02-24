@@ -37,7 +37,7 @@
         },
         {
             "dependencies": [
-              "<!(node -p 'require(\"node-addon-api\").gyp')",
+              "<!(node -p \"require('node-addon-api').gyp\")",
               "deps/sqlite3.gyp:sqlite3"
             ]
         }
@@ -64,7 +64,7 @@
       },
       "type": "none",
       "dependencies": [
-        "<!(node -p 'require(\"node-addon-api\").gyp')", "<(module_name)" ],
+        "<!(node -p \"require('node-addon-api').gyp\")", "<(module_name)" ],
       "copies": [
           {
             "files": [ "<(PRODUCT_DIR)/<(module_name).node" ],

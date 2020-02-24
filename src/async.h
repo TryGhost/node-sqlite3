@@ -1,10 +1,11 @@
 #ifndef NODE_SQLITE3_SRC_ASYNC_H
 #define NODE_SQLITE3_SRC_ASYNC_H
 
-#include "threading.h"
 #include <node_version.h>
 #include <napi.h>
 #include <uv.h>
+
+#include "threading.h"
 
 #if defined(NODE_SQLITE3_BOOST_THREADING)
 #include <boost/thread/mutex.hpp>
