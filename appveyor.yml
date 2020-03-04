@@ -46,6 +46,16 @@ environment:
     - nodejs_version: 12
       platform: x64
       NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 8.0.0
+      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
+    - nodejs_version: 12
+      platform: x86
+      NODE_RUNTIME: electron
+      NODE_RUNTIME_VERSION: 8.0.0
+      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
+    - nodejs_version: 12
+      platform: x64
+      NODE_RUNTIME: electron
       NODE_RUNTIME_VERSION: 7.1.0
       TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
     - nodejs_version: 12
