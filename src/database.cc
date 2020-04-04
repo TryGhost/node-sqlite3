@@ -9,7 +9,8 @@ using namespace node_sqlite3;
 
 Nan::Persistent<FunctionTemplate> Database::constructor_template;
 
-NAN_MODULE_INIT(Database::Init) {
+NAN_MODULE_INIT(Database::Init)
+{
     Nan::HandleScope scope;
 
     Local<FunctionTemplate> t = Nan::New<FunctionTemplate>(New);
@@ -32,22 +33,26 @@ NAN_MODULE_INIT(Database::Init) {
     constructor_template.Reset(t);
 
     Nan::Set(target, Nan::New("Database").ToLocalChecked(),
-        Nan::GetFunction(t).ToLocalChecked());
+             Nan::GetFunction(t).ToLocalChecked());
 }
 
-void Database::Process() {
+void Database::Process()
+{
     Nan::HandleScope scope;
 
-    if (!open && locked && !queue.empty()) {
+    if (!open && locked && !queue.empty())
+    {
         EXCEPTION("Database handle is closed", SQLITE_MISUSE, exception);
-        Local<Value> argv[] = { exception };
+        Local<Value> argv[] = {exception};
         bool called = false;
 
         // Call all callbacks with the error object.
-        while (!queue.empty()) {
-            Call* call = queue.front();
+        while (!queue.empty())
+        {
+            Call *call = queue.front();
             Local<Function> cb = Nan::New(call->baton->callback);
-            if (!cb.IsEmpty() && cb->IsFunction()) {
+            if (!cb.IsEmpty() && cb->IsFunction())
+            {
                 TRY_CATCH_CALL(this->handle(), cb, 1, argv);
                 called = true;
             }
@@ -60,17 +65,20 @@ void Database::Process() {
 
         // When we couldn't call a callback function, emit an error on the
         // Database object.
-        if (!called) {
-            Local<Value> info[] = { Nan::New("error").ToLocalChecked(), exception };
+        if (!called)
+        {
+            Local<Value> info[] = {Nan::New("error").ToLocalChecked(), exception};
             EMIT_EVENT(handle(), 2, info);
         }
         return;
     }
 
-    while (open && (!locked || pending == 0) && !queue.empty()) {
-        Call* call = queue.front();
+    while (open && (!locked || pending == 0) && !queue.empty())
+    {
+        Call *call = queue.front();
 
-        if (call->exclusive && pending > 0) {
+        if (call->exclusive && pending > 0)
+        {
             break;
         }
 
@@ -79,38 +87,47 @@ void Database::Process() {
         call->callback(call->baton);
         delete call;
 
-        if (locked) break;
+        if (locked)
+            break;
     }
 }
 
-void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
+void Database::Schedule(Work_Callback callback, Baton *baton, bool exclusive)
+{
     Nan::HandleScope scope;
 
-    if (!open && locked) {
+    if (!open && locked)
+    {
         EXCEPTION("Database is closed", SQLITE_MISUSE, exception);
         Local<Function> cb = Nan::New(baton->callback);
-        if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[] = { exception };
+        if (!cb.IsEmpty() && cb->IsFunction())
+        {
+            Local<Value> argv[] = {exception};
             TRY_CATCH_CALL(handle(), cb, 1, argv);
         }
-        else {
-            Local<Value> argv[] = { Nan::New("error").ToLocalChecked(), exception };
+        else
+        {
+            Local<Value> argv[] = {Nan::New("error").ToLocalChecked(), exception};
             EMIT_EVENT(handle(), 2, argv);
         }
         return;
     }
 
-    if (!open || ((locked || exclusive || serialize) && pending > 0)) {
+    if (!open || ((locked || exclusive || serialize) && pending > 0))
+    {
         queue.push(new Call(callback, baton, exclusive || serialize));
     }
-    else {
+    else
+    {
         locked = exclusive;
         callback(baton);
     }
 }
 
-NAN_METHOD(Database::New) {
-    if (!info.IsConstructCall()) {
+NAN_METHOD(Database::New)
+{
+    if (!info.IsConstructCall())
+    {
         return Nan::ThrowTypeError("Use the new operator to create new Database objects");
     }
 
@@ -118,86 +135,99 @@ NAN_METHOD(Database::New) {
     int pos = 1;
 
     int mode;
-    if (info.Length() >= pos && info[pos]->IsInt32()) {
+    if (info.Length() >= pos && info[pos]->IsInt32())
+    {
         mode = Nan::To<int>(info[pos++]).FromJust();
-    } else {
+    }
+    else
+    {
         mode = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX;
     }
 
     Local<Function> callback;
-    if (info.Length() >= pos && info[pos]->IsFunction()) {
+    if (info.Length() >= pos && info[pos]->IsFunction())
+    {
         callback = Local<Function>::Cast(info[pos++]);
     }
 
-    Database* db = new Database();
+    Database *db = new Database();
     db->Wrap(info.This());
 
     Nan::ForceSet(info.This(), Nan::New("filename").ToLocalChecked(), info[0].As<String>(), ReadOnly);
     Nan::ForceSet(info.This(), Nan::New("mode").ToLocalChecked(), Nan::New(mode), ReadOnly);
 
     // Start opening the database.
-    OpenBaton* baton = new OpenBaton(db, callback, *filename, mode);
+    OpenBaton *baton = new OpenBaton(db, callback, *filename, mode);
     Work_BeginOpen(baton);
 
     info.GetReturnValue().Set(info.This());
 }
 
-void Database::Work_BeginOpen(Baton* baton) {
+void Database::Work_BeginOpen(Baton *baton)
+{
     int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Open, (uv_after_work_cb)Work_AfterOpen);
+                               &baton->request, Work_Open, (uv_after_work_cb)Work_AfterOpen);
     assert(status == 0);
 }
 
-void Database::Work_Open(uv_work_t* req) {
-    OpenBaton* baton = static_cast<OpenBaton*>(req->data);
-    Database* db = baton->db;
+void Database::Work_Open(uv_work_t *req)
+{
+    OpenBaton *baton = static_cast<OpenBaton *>(req->data);
+    Database *db = baton->db;
 
     baton->status = sqlite3_open_v2(
         baton->filename.c_str(),
         &db->_handle,
         baton->mode,
-        NULL
-    );
+        NULL);
 
-    if (baton->status != SQLITE_OK) {
+    if (baton->status != SQLITE_OK)
+    {
         baton->message = std::string(sqlite3_errmsg(db->_handle));
         sqlite3_close(db->_handle);
         db->_handle = NULL;
     }
-    else {
+    else
+    {
         // Set default database handle values.
         sqlite3_busy_timeout(db->_handle, 1000);
     }
 }
 
-void Database::Work_AfterOpen(uv_work_t* req) {
+void Database::Work_AfterOpen(uv_work_t *req)
+{
     Nan::HandleScope scope;
 
-    OpenBaton* baton = static_cast<OpenBaton*>(req->data);
-    Database* db = baton->db;
+    OpenBaton *baton = static_cast<OpenBaton *>(req->data);
+    Database *db = baton->db;
 
     Local<Value> argv[1];
-    if (baton->status != SQLITE_OK) {
+    if (baton->status != SQLITE_OK)
+    {
         EXCEPTION(baton->message, baton->status, exception);
         argv[0] = exception;
     }
-    else {
+    else
+    {
         db->open = true;
         argv[0] = Nan::Null();
     }
 
     Local<Function> cb = Nan::New(baton->callback);
 
-    if (!cb.IsEmpty() && cb->IsFunction()) {
+    if (!cb.IsEmpty() && cb->IsFunction())
+    {
         TRY_CATCH_CALL(db->handle(), cb, 1, argv);
     }
-    else if (!db->open) {
-        Local<Value> info[] = { Nan::New("error").ToLocalChecked(), argv[0] };
+    else if (!db->open)
+    {
+        Local<Value> info[] = {Nan::New("error").ToLocalChecked(), argv[0]};
         EMIT_EVENT(db->handle(), 2, info);
     }
 
-    if (db->open) {
-        Local<Value> info[] = { Nan::New("open").ToLocalChecked() };
+    if (db->open)
+    {
+        Local<Value> info[] = {Nan::New("open").ToLocalChecked()};
         EMIT_EVENT(db->handle(), 1, info);
         db->Process();
     }
@@ -205,22 +235,25 @@ void Database::Work_AfterOpen(uv_work_t* req) {
     delete baton;
 }
 
-NAN_GETTER(Database::OpenGetter) {
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+NAN_GETTER(Database::OpenGetter)
+{
+    Database *db = Nan::ObjectWrap::Unwrap<Database>(info.This());
     info.GetReturnValue().Set(db->open);
 }
 
-NAN_METHOD(Database::Close) {
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+NAN_METHOD(Database::Close)
+{
+    Database *db = Nan::ObjectWrap::Unwrap<Database>(info.This());
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
-    Baton* baton = new Baton(db, callback);
+    Baton *baton = new Baton(db, callback);
     db->Schedule(Work_BeginClose, baton, true);
 
     info.GetReturnValue().Set(info.This());
 }
 
-void Database::Work_BeginClose(Baton* baton) {
+void Database::Work_BeginClose(Baton *baton)
+{
     assert(baton->db->locked);
     assert(baton->db->open);
     assert(baton->db->_handle);
@@ -230,38 +263,44 @@ void Database::Work_BeginClose(Baton* baton) {
     baton->db->closing = true;
 
     int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Close, (uv_after_work_cb)Work_AfterClose);
+                               &baton->request, Work_Close, (uv_after_work_cb)Work_AfterClose);
     assert(status == 0);
 }
 
-void Database::Work_Close(uv_work_t* req) {
-    Baton* baton = static_cast<Baton*>(req->data);
-    Database* db = baton->db;
+void Database::Work_Close(uv_work_t *req)
+{
+    Baton *baton = static_cast<Baton *>(req->data);
+    Database *db = baton->db;
 
     baton->status = sqlite3_close(db->_handle);
 
-    if (baton->status != SQLITE_OK) {
+    if (baton->status != SQLITE_OK)
+    {
         baton->message = std::string(sqlite3_errmsg(db->_handle));
     }
-    else {
+    else
+    {
         db->_handle = NULL;
     }
 }
 
-void Database::Work_AfterClose(uv_work_t* req) {
+void Database::Work_AfterClose(uv_work_t *req)
+{
     Nan::HandleScope scope;
 
-    Baton* baton = static_cast<Baton*>(req->data);
-    Database* db = baton->db;
+    Baton *baton = static_cast<Baton *>(req->data);
+    Database *db = baton->db;
 
     db->closing = false;
 
     Local<Value> argv[1];
-    if (baton->status != SQLITE_OK) {
+    if (baton->status != SQLITE_OK)
+    {
         EXCEPTION(baton->message, baton->status, exception);
         argv[0] = exception;
     }
-    else {
+    else
+    {
         db->open = false;
         // Leave db->locked to indicate that this db object has reached
         // the end of its life.
@@ -271,16 +310,19 @@ void Database::Work_AfterClose(uv_work_t* req) {
     Local<Function> cb = Nan::New(baton->callback);
 
     // Fire callbacks.
-    if (!cb.IsEmpty() && cb->IsFunction()) {
+    if (!cb.IsEmpty() && cb->IsFunction())
+    {
         TRY_CATCH_CALL(db->handle(), cb, 1, argv);
     }
-    else if (db->open) {
-        Local<Value> info[] = { Nan::New("error").ToLocalChecked(), argv[0] };
+    else if (db->open)
+    {
+        Local<Value> info[] = {Nan::New("error").ToLocalChecked(), argv[0]};
         EMIT_EVENT(db->handle(), 2, info);
     }
 
-    if (!db->open) {
-        Local<Value> info[] = { Nan::New("close").ToLocalChecked(), argv[0] };
+    if (!db->open)
+    {
+        Local<Value> info[] = {Nan::New("close").ToLocalChecked(), argv[0]};
         EMIT_EVENT(db->handle(), 1, info);
         db->Process();
     }
@@ -288,14 +330,16 @@ void Database::Work_AfterClose(uv_work_t* req) {
     delete baton;
 }
 
-NAN_METHOD(Database::Serialize) {
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+NAN_METHOD(Database::Serialize)
+{
+    Database *db = Nan::ObjectWrap::Unwrap<Database>(info.This());
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     bool before = db->serialize;
     db->serialize = true;
 
-    if (!callback.IsEmpty() && callback->IsFunction()) {
+    if (!callback.IsEmpty() && callback->IsFunction())
+    {
         TRY_CATCH_CALL(info.This(), callback, 0, NULL);
         db->serialize = before;
     }
@@ -305,14 +349,16 @@ NAN_METHOD(Database::Serialize) {
     info.GetReturnValue().Set(info.This());
 }
 
-NAN_METHOD(Database::Parallelize) {
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+NAN_METHOD(Database::Parallelize)
+{
+    Database *db = Nan::ObjectWrap::Unwrap<Database>(info.This());
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     bool before = db->serialize;
     db->serialize = false;
 
-    if (!callback.IsEmpty() && callback->IsFunction()) {
+    if (!callback.IsEmpty() && callback->IsFunction())
+    {
         TRY_CATCH_CALL(info.This(), callback, 0, NULL);
         db->serialize = before;
     }
@@ -322,38 +368,43 @@ NAN_METHOD(Database::Parallelize) {
     info.GetReturnValue().Set(info.This());
 }
 
-NAN_METHOD(Database::Configure) {
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+NAN_METHOD(Database::Configure)
+{
+    Database *db = Nan::ObjectWrap::Unwrap<Database>(info.This());
 
     REQUIRE_ARGUMENTS(2);
 
-    if (Nan::Equals(info[0], Nan::New("trace").ToLocalChecked()).FromJust()) {
+    if (Nan::Equals(info[0], Nan::New("trace").ToLocalChecked()).FromJust())
+    {
         Local<Function> handle;
-        Baton* baton = new Baton(db, handle);
+        Baton *baton = new Baton(db, handle);
         db->Schedule(RegisterTraceCallback, baton);
     }
-    else if (Nan::Equals(info[0], Nan::New("profile").ToLocalChecked()).FromJust()) {
+    else if (Nan::Equals(info[0], Nan::New("profile").ToLocalChecked()).FromJust())
+    {
         Local<Function> handle;
-        Baton* baton = new Baton(db, handle);
+        Baton *baton = new Baton(db, handle);
         db->Schedule(RegisterProfileCallback, baton);
     }
-    else if (Nan::Equals(info[0], Nan::New("busyTimeout").ToLocalChecked()).FromJust()) {
-        if (!info[1]->IsInt32()) {
+    else if (Nan::Equals(info[0], Nan::New("busyTimeout").ToLocalChecked()).FromJust())
+    {
+        if (!info[1]->IsInt32())
+        {
             return Nan::ThrowTypeError("Value must be an integer");
         }
         Local<Function> handle;
-        Baton* baton = new Baton(db, handle);
+        Baton *baton = new Baton(db, handle);
         baton->status = Nan::To<int>(info[1]).FromJust();
         db->Schedule(SetBusyTimeout, baton);
     }
-    else {
+    else
+    {
         return Nan::ThrowError(Exception::Error(String::Concat(
 #if V8_MAJOR_VERSION > 6
             info.GetIsolate(),
 #endif
             Nan::To<String>(info[0]).ToLocalChecked(),
-            Nan::New(" is not a valid configuration option").ToLocalChecked()
-        )));
+            Nan::New(" is not a valid configuration option").ToLocalChecked())));
     }
 
     db->Process();
@@ -361,14 +412,17 @@ NAN_METHOD(Database::Configure) {
     info.GetReturnValue().Set(info.This());
 }
 
-NAN_METHOD(Database::Interrupt) {
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+NAN_METHOD(Database::Interrupt)
+{
+    Database *db = Nan::ObjectWrap::Unwrap<Database>(info.This());
 
-    if (!db->open) {
+    if (!db->open)
+    {
         return Nan::ThrowError("Database is not open");
     }
 
-    if (db->closing) {
+    if (db->closing)
+    {
         return Nan::ThrowError("Database is closing");
     }
 
@@ -376,7 +430,8 @@ NAN_METHOD(Database::Interrupt) {
     info.GetReturnValue().Set(info.This());
 }
 
-void Database::SetBusyTimeout(Baton* baton) {
+void Database::SetBusyTimeout(Baton *baton)
+{
     assert(baton->db->open);
     assert(baton->db->_handle);
 
@@ -386,17 +441,20 @@ void Database::SetBusyTimeout(Baton* baton) {
     delete baton;
 }
 
-void Database::RegisterTraceCallback(Baton* baton) {
+void Database::RegisterTraceCallback(Baton *baton)
+{
     assert(baton->db->open);
     assert(baton->db->_handle);
-    Database* db = baton->db;
+    Database *db = baton->db;
 
-    if (db->debug_trace == NULL) {
+    if (db->debug_trace == NULL)
+    {
         // Add it.
         db->debug_trace = new AsyncTrace(db, TraceCallback);
         sqlite3_trace(db->_handle, TraceCallback, db);
     }
-    else {
+    else
+    {
         // Remove it.
         sqlite3_trace(db->_handle, NULL, NULL);
         db->debug_trace->finish();
@@ -406,35 +464,39 @@ void Database::RegisterTraceCallback(Baton* baton) {
     delete baton;
 }
 
-void Database::TraceCallback(void* db, const char* sql) {
+void Database::TraceCallback(void *db, const char *sql)
+{
     // Note: This function is called in the thread pool.
     // Note: Some queries, such as "EXPLAIN" queries, are not sent through this.
-    static_cast<Database*>(db)->debug_trace->send(new std::string(sql));
+    static_cast<Database *>(db)->debug_trace->send(new std::string(sql));
 }
 
-void Database::TraceCallback(Database* db, std::string* sql) {
+void Database::TraceCallback(Database *db, std::string *sql)
+{
     // Note: This function is called in the main V8 thread.
     Nan::HandleScope scope;
 
     Local<Value> argv[] = {
         Nan::New("trace").ToLocalChecked(),
-        Nan::New(sql->c_str()).ToLocalChecked()
-    };
+        Nan::New(sql->c_str()).ToLocalChecked()};
     EMIT_EVENT(db->handle(), 2, argv);
     delete sql;
 }
 
-void Database::RegisterProfileCallback(Baton* baton) {
+void Database::RegisterProfileCallback(Baton *baton)
+{
     assert(baton->db->open);
     assert(baton->db->_handle);
-    Database* db = baton->db;
+    Database *db = baton->db;
 
-    if (db->debug_profile == NULL) {
+    if (db->debug_profile == NULL)
+    {
         // Add it.
         db->debug_profile = new AsyncProfile(db, ProfileCallback);
         sqlite3_profile(db->_handle, ProfileCallback, db);
     }
-    else {
+    else
+    {
         // Remove it.
         sqlite3_profile(db->_handle, NULL, NULL);
         db->debug_profile->finish();
@@ -444,38 +506,42 @@ void Database::RegisterProfileCallback(Baton* baton) {
     delete baton;
 }
 
-void Database::ProfileCallback(void* db, const char* sql, sqlite3_uint64 nsecs) {
+void Database::ProfileCallback(void *db, const char *sql, sqlite3_uint64 nsecs)
+{
     // Note: This function is called in the thread pool.
     // Note: Some queries, such as "EXPLAIN" queries, are not sent through this.
-    ProfileInfo* info = new ProfileInfo();
+    ProfileInfo *info = new ProfileInfo();
     info->sql = std::string(sql);
     info->nsecs = nsecs;
-    static_cast<Database*>(db)->debug_profile->send(info);
+    static_cast<Database *>(db)->debug_profile->send(info);
 }
 
-void Database::ProfileCallback(Database *db, ProfileInfo* info) {
+void Database::ProfileCallback(Database *db, ProfileInfo *info)
+{
     Nan::HandleScope scope;
 
     Local<Value> argv[] = {
         Nan::New("profile").ToLocalChecked(),
         Nan::New(info->sql.c_str()).ToLocalChecked(),
-        Nan::New<Number>((double)info->nsecs / 1000000.0)
-    };
+        Nan::New<Number>((double)info->nsecs / 1000000.0)};
     EMIT_EVENT(db->handle(), 3, argv);
     delete info;
 }
 
-void Database::RegisterUpdateCallback(Baton* baton) {
+void Database::RegisterUpdateCallback(Baton *baton)
+{
     assert(baton->db->open);
     assert(baton->db->_handle);
-    Database* db = baton->db;
+    Database *db = baton->db;
 
-    if (db->update_event == NULL) {
+    if (db->update_event == NULL)
+    {
         // Add it.
         db->update_event = new AsyncUpdate(db, UpdateCallback);
         sqlite3_update_hook(db->_handle, UpdateCallback, db);
     }
-    else {
+    else
+    {
         // Remove it.
         sqlite3_update_hook(db->_handle, NULL, NULL);
         db->update_event->finish();
@@ -485,19 +551,21 @@ void Database::RegisterUpdateCallback(Baton* baton) {
     delete baton;
 }
 
-void Database::UpdateCallback(void* db, int type, const char* database,
-        const char* table, sqlite3_int64 rowid) {
+void Database::UpdateCallback(void *db, int type, const char *database,
+                              const char *table, sqlite3_int64 rowid)
+{
     // Note: This function is called in the thread pool.
     // Note: Some queries, such as "EXPLAIN" queries, are not sent through this.
-    UpdateInfo* info = new UpdateInfo();
+    UpdateInfo *info = new UpdateInfo();
     info->type = type;
     info->database = std::string(database);
     info->table = std::string(table);
     info->rowid = rowid;
-    static_cast<Database*>(db)->update_event->send(info);
+    static_cast<Database *>(db)->update_event->send(info);
 }
 
-void Database::UpdateCallback(Database *db, UpdateInfo* info) {
+void Database::UpdateCallback(Database *db, UpdateInfo *info)
+{
     Nan::HandleScope scope;
 
     Local<Value> argv[] = {
@@ -510,68 +578,76 @@ void Database::UpdateCallback(Database *db, UpdateInfo* info) {
     delete info;
 }
 
-NAN_METHOD(Database::Exec) {
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+NAN_METHOD(Database::Exec)
+{
+    Database *db = Nan::ObjectWrap::Unwrap<Database>(info.This());
 
     REQUIRE_ARGUMENT_STRING(0, sql);
     OPTIONAL_ARGUMENT_FUNCTION(1, callback);
 
-    Baton* baton = new ExecBaton(db, callback, *sql);
+    Baton *baton = new ExecBaton(db, callback, *sql);
     db->Schedule(Work_BeginExec, baton, true);
 
     info.GetReturnValue().Set(info.This());
 }
 
-void Database::Work_BeginExec(Baton* baton) {
+void Database::Work_BeginExec(Baton *baton)
+{
     assert(baton->db->locked);
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
     int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Exec, (uv_after_work_cb)Work_AfterExec);
+                               &baton->request, Work_Exec, (uv_after_work_cb)Work_AfterExec);
     assert(status == 0);
 }
 
-void Database::Work_Exec(uv_work_t* req) {
-    ExecBaton* baton = static_cast<ExecBaton*>(req->data);
+void Database::Work_Exec(uv_work_t *req)
+{
+    ExecBaton *baton = static_cast<ExecBaton *>(req->data);
 
-    char* message = NULL;
+    char *message = NULL;
     baton->status = sqlite3_exec(
         baton->db->_handle,
         baton->sql.c_str(),
         NULL,
         NULL,
-        &message
-    );
+        &message);
 
-    if (baton->status != SQLITE_OK && message != NULL) {
+    if (baton->status != SQLITE_OK && message != NULL)
+    {
         baton->message = std::string(message);
         sqlite3_free(message);
     }
 }
 
-void Database::Work_AfterExec(uv_work_t* req) {
+void Database::Work_AfterExec(uv_work_t *req)
+{
     Nan::HandleScope scope;
 
-    ExecBaton* baton = static_cast<ExecBaton*>(req->data);
-    Database* db = baton->db;
+    ExecBaton *baton = static_cast<ExecBaton *>(req->data);
+    Database *db = baton->db;
 
     Local<Function> cb = Nan::New(baton->callback);
 
-    if (baton->status != SQLITE_OK) {
+    if (baton->status != SQLITE_OK)
+    {
         EXCEPTION(baton->message, baton->status, exception);
 
-        if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[] = { exception };
+        if (!cb.IsEmpty() && cb->IsFunction())
+        {
+            Local<Value> argv[] = {exception};
             TRY_CATCH_CALL(db->handle(), cb, 1, argv);
         }
-        else {
-            Local<Value> info[] = { Nan::New("error").ToLocalChecked(), exception };
+        else
+        {
+            Local<Value> info[] = {Nan::New("error").ToLocalChecked(), exception};
             EMIT_EVENT(db->handle(), 2, info);
         }
     }
-    else if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { Nan::Null() };
+    else if (!cb.IsEmpty() && cb->IsFunction())
+    {
+        Local<Value> argv[] = {Nan::Null()};
         TRY_CATCH_CALL(db->handle(), cb, 1, argv);
     }
 
@@ -580,18 +656,20 @@ void Database::Work_AfterExec(uv_work_t* req) {
     delete baton;
 }
 
-NAN_METHOD(Database::Wait) {
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+NAN_METHOD(Database::Wait)
+{
+    Database *db = Nan::ObjectWrap::Unwrap<Database>(info.This());
 
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
-    Baton* baton = new Baton(db, callback);
+    Baton *baton = new Baton(db, callback);
     db->Schedule(Work_Wait, baton, true);
 
     info.GetReturnValue().Set(info.This());
 }
 
-void Database::Work_Wait(Baton* baton) {
+void Database::Work_Wait(Baton *baton)
+{
     Nan::HandleScope scope;
 
     assert(baton->db->locked);
@@ -600,8 +678,9 @@ void Database::Work_Wait(Baton* baton) {
     assert(baton->db->pending == 0);
 
     Local<Function> cb = Nan::New(baton->callback);
-    if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { Nan::Null() };
+    if (!cb.IsEmpty() && cb->IsFunction())
+    {
+        Local<Value> argv[] = {Nan::Null()};
         TRY_CATCH_CALL(baton->db->handle(), cb, 1, argv);
     }
 
@@ -610,70 +689,78 @@ void Database::Work_Wait(Baton* baton) {
     delete baton;
 }
 
-NAN_METHOD(Database::LoadExtension) {
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+NAN_METHOD(Database::LoadExtension)
+{
+    Database *db = Nan::ObjectWrap::Unwrap<Database>(info.This());
 
     REQUIRE_ARGUMENT_STRING(0, filename);
     OPTIONAL_ARGUMENT_FUNCTION(1, callback);
 
-    Baton* baton = new LoadExtensionBaton(db, callback, *filename);
+    Baton *baton = new LoadExtensionBaton(db, callback, *filename);
     db->Schedule(Work_BeginLoadExtension, baton, true);
 
     info.GetReturnValue().Set(info.This());
 }
 
-void Database::Work_BeginLoadExtension(Baton* baton) {
+void Database::Work_BeginLoadExtension(Baton *baton)
+{
     assert(baton->db->locked);
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
     int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_LoadExtension, reinterpret_cast<uv_after_work_cb>(Work_AfterLoadExtension));
+                               &baton->request, Work_LoadExtension, reinterpret_cast<uv_after_work_cb>(Work_AfterLoadExtension));
     assert(status == 0);
 }
 
-void Database::Work_LoadExtension(uv_work_t* req) {
-    LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(req->data);
+void Database::Work_LoadExtension(uv_work_t *req)
+{
+    LoadExtensionBaton *baton = static_cast<LoadExtensionBaton *>(req->data);
 
     sqlite3_enable_load_extension(baton->db->_handle, 1);
 
-    char* message = NULL;
+    char *message = NULL;
     baton->status = sqlite3_load_extension(
         baton->db->_handle,
         baton->filename.c_str(),
         0,
-        &message
-    );
+        &message);
 
     sqlite3_enable_load_extension(baton->db->_handle, 0);
 
-    if (baton->status != SQLITE_OK && message != NULL) {
+    if (baton->status != SQLITE_OK && message != NULL)
+    {
         baton->message = std::string(message);
         sqlite3_free(message);
     }
 }
 
-void Database::Work_AfterLoadExtension(uv_work_t* req) {
+void Database::Work_AfterLoadExtension(uv_work_t *req)
+{
     Nan::HandleScope scope;
 
-    LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(req->data);
-    Database* db = baton->db;
+    LoadExtensionBaton *baton = static_cast<LoadExtensionBaton *>(req->data);
+    Database *db = baton->db;
     Local<Function> cb = Nan::New(baton->callback);
 
-    if (baton->status != SQLITE_OK) {
+    if (baton->status != SQLITE_OK)
+    {
         EXCEPTION(baton->message, baton->status, exception);
 
-        if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[] = { exception };
+        if (!cb.IsEmpty() && cb->IsFunction())
+        {
+            Local<Value> argv[] = {exception};
             TRY_CATCH_CALL(db->handle(), cb, 1, argv);
         }
-        else {
-            Local<Value> info[] = { Nan::New("error").ToLocalChecked(), exception };
+        else
+        {
+            Local<Value> info[] = {Nan::New("error").ToLocalChecked(), exception};
             EMIT_EVENT(db->handle(), 2, info);
         }
     }
-    else if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { Nan::Null() };
+    else if (!cb.IsEmpty() && cb->IsFunction())
+    {
+        Local<Value> argv[] = {Nan::Null()};
         TRY_CATCH_CALL(db->handle(), cb, 1, argv);
     }
 
@@ -682,128 +769,146 @@ void Database::Work_AfterLoadExtension(uv_work_t* req) {
     delete baton;
 }
 
-NAN_METHOD(Database::Import) {
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+NAN_METHOD(Database::Import)
+{
+    Database *db = Nan::ObjectWrap::Unwrap<Database>(info.This());
+    /* Unpack options here, because we have access to isolate via
+     * info and its non-obvious to me how to unpack a pure JS
+     * object with Nan
+     */
+    Isolate *isolate = info.GetIsolate();
+    Local<Context> context = isolate->GetCurrentContext();
 
     REQUIRE_ARGUMENT_STRING(0, filename);
     REQUIRE_ARGUMENT_STRING(1, tablename);
     REQUIRE_ARGUMENT_OBJECT(2, options);
     OPTIONAL_ARGUMENT_FUNCTION(3, callback);
 
-    /* Unpack options here, because we have access to isolate via
-     * info and its non-obvious to me how to unpack a pure JS
-     * object with Nan
-     */
-    Isolate *isolate = info.GetIsolate();
-    Handle<Array> colIdsJS = Handle<Array>::Cast(
-                               options->Get(String::NewFromUtf8(isolate,"columnIds")));
+    Local<Array> colIdsJS = Local<Array>::Cast(
+        options->Get(context, String::NewFromUtf8(isolate, "columnIds").ToLocalChecked()).ToLocalChecked());
 
     std::vector<std::string> colIds;
     int colCount = colIdsJS->Length();
-    for (int i = 0; i < colCount; i++) {
-      Nan::Utf8String nsColId(colIdsJS->Get(i));
-      std::string colId(*nsColId);
-      colIds.push_back(colId);
+    for (int i = 0; i < colCount; i++)
+    {
+        Nan::Utf8String nsColId(colIdsJS->Get(context, i).ToLocalChecked());
+        std::string colId(*nsColId);
+        colIds.push_back(colId);
     }
 
     char delimChar = ',';
 
-    if (options->Has(String::NewFromUtf8(isolate,"delimiter"))) {
-      Nan::Utf8String delimNanStr(options->Get(String::NewFromUtf8(isolate,"delimiter")));
-      if (delimNanStr.length() != 1) {
-        return Nan::ThrowError("options.delimeter must be a string of length 1");
-      }
-      delimChar = (*delimNanStr)[0];
+    if (options->Has(context, String::NewFromUtf8(isolate, "delimiter").ToLocalChecked()).FromJust())
+    {
+        Nan::Utf8String delimNanStr(options->Get(context, String::NewFromUtf8(isolate, "delimiter").ToLocalChecked()).ToLocalChecked());
+        if (delimNanStr.length() != 1)
+        {
+            return Nan::ThrowError("options.delimeter must be a string of length 1");
+        }
+        delimChar = (*delimNanStr)[0];
     }
 
     bool noHeaderRow = false;
-    if (options->Has(String::NewFromUtf8(isolate,"noHeaderRow"))) {
-      Handle<Value> noHeaderValue  =
-        options->Get(String::NewFromUtf8(isolate,"noHeaderRow"));
-      noHeaderRow = noHeaderValue->BooleanValue();
+    if (options->Has(context, String::NewFromUtf8(isolate, "noHeaderRow").ToLocalChecked()).FromJust())
+    {
+        Local<Value> noHeaderValue =
+            options->Get(context, String::NewFromUtf8(isolate, "noHeaderRow").ToLocalChecked()).ToLocalChecked();
+        noHeaderRow = noHeaderValue->BooleanValue(isolate);
     }
 
     ImportOptions importOptions(colIds, delimChar, noHeaderRow);
 
-    Baton* baton = new ImportBaton(db, callback, *filename, *tablename, importOptions);
+    Baton *baton = new ImportBaton(db, callback, *filename, *tablename, importOptions);
     db->Schedule(Work_BeginImport, baton, true);
 
     info.GetReturnValue().Set(info.This());
 }
 
-void Database::Work_BeginImport(Baton* baton) {
+void Database::Work_BeginImport(Baton *baton)
+{
     assert(baton->db->locked);
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
     int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Import, reinterpret_cast<uv_after_work_cb>(Work_AfterImport));
+                               &baton->request, Work_Import, reinterpret_cast<uv_after_work_cb>(Work_AfterImport));
     assert(status == 0);
 }
 
-void Database::Work_Import(uv_work_t* req) {
-    ImportBaton* baton = static_cast<ImportBaton*>(req->data);
+void Database::Work_Import(uv_work_t *req)
+{
+    ImportBaton *baton = static_cast<ImportBaton *>(req->data);
 
     ImportResult *ires = sqlite_import(baton->db->_handle,
-          baton->filename.c_str(),
-          baton->tablename.c_str(),
-          baton->options,
-          baton->message
-        );
+                                       baton->filename.c_str(),
+                                       baton->tablename.c_str(),
+                                       baton->options,
+                                       baton->message);
     baton->result = ires;
-    if (!ires) {
-      baton->status = SQLITE_ERROR;
-    } else {
-      baton->status = SQLITE_OK;
+    if (!ires)
+    {
+        baton->status = SQLITE_ERROR;
+    }
+    else
+    {
+        baton->status = SQLITE_OK;
     }
 }
 
-Local<Array> strVecToJS(std::vector<std::string> const &svec) {
-  Nan::EscapableHandleScope scope;
+Local<Array> strVecToJS(std::vector<std::string> const &svec)
+{
+    Nan::EscapableHandleScope scope;
 
-  Local<Array> result(Nan::New<Array>(svec.size()));
-  std::vector<std::string>::const_iterator it = svec.begin();
-  std::vector<std::string>::const_iterator end = svec.end();
-  for (int i = 0; it < end; ++it, ++i) {
-    Nan::Set(result, i, Nan::New(it->c_str()).ToLocalChecked());
-  }
+    Local<Array> result(Nan::New<Array>(svec.size()));
+    std::vector<std::string>::const_iterator it = svec.begin();
+    std::vector<std::string>::const_iterator end = svec.end();
+    for (int i = 0; it < end; ++it, ++i)
+    {
+        Nan::Set(result, i, Nan::New(it->c_str()).ToLocalChecked());
+    }
 
-  return scope.Escape(result);
+    return scope.Escape(result);
 }
 
-Local<Object> importResultToJS(ImportResult *ir) {
-  Nan::EscapableHandleScope scope;
-  Local<Object> result = Nan::New<Object>();
+Local<Object> importResultToJS(ImportResult *ir)
+{
+    Nan::EscapableHandleScope scope;
+    Local<Object> result = Nan::New<Object>();
 
-  Nan::Set(result, Nan::New("tableName").ToLocalChecked(), Nan::New(ir->tableName.c_str()).ToLocalChecked());
-  Nan::Set(result, Nan::New("columnIds").ToLocalChecked(), strVecToJS(ir->columnIds));
-  Nan::Set(result, Nan::New("columnTypes").ToLocalChecked(), strVecToJS(ir->columnTypes));
-  Nan::Set(result, Nan::New("rowCount").ToLocalChecked(), Nan::New(ir->rowCount));
-  return scope.Escape(result);
+    Nan::Set(result, Nan::New("tableName").ToLocalChecked(), Nan::New(ir->tableName.c_str()).ToLocalChecked());
+    Nan::Set(result, Nan::New("columnIds").ToLocalChecked(), strVecToJS(ir->columnIds));
+    Nan::Set(result, Nan::New("columnTypes").ToLocalChecked(), strVecToJS(ir->columnTypes));
+    Nan::Set(result, Nan::New("rowCount").ToLocalChecked(), Nan::New(ir->rowCount));
+    return scope.Escape(result);
 }
 
-void Database::Work_AfterImport(uv_work_t* req) {
+void Database::Work_AfterImport(uv_work_t *req)
+{
     Nan::HandleScope scope;
 
-    ImportBaton* baton = static_cast<ImportBaton*>(req->data);
-    Database* db = baton->db;
+    ImportBaton *baton = static_cast<ImportBaton *>(req->data);
+    Database *db = baton->db;
     Local<Function> cb = Nan::New(baton->callback);
 
-    if (baton->status != SQLITE_OK) {
-        EXCEPTION(Nan::New(baton->message.c_str()).ToLocalChecked(), baton->status, exception);
+    if (baton->status != SQLITE_OK)
+    {
+        EXCEPTION(baton->message.c_str(), baton->status, exception);
 
-        if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[] = { exception };
+        if (!cb.IsEmpty() && cb->IsFunction())
+        {
+            Local<Value> argv[] = {exception};
             TRY_CATCH_CALL(db->handle(), cb, 1, argv);
         }
-        else {
-            Local<Value> info[] = { Nan::New("error").ToLocalChecked(), exception };
+        else
+        {
+            Local<Value> info[] = {Nan::New("error").ToLocalChecked(), exception};
             EMIT_EVENT(db->handle(), 2, info);
         }
     }
-    else if (!cb.IsEmpty() && cb->IsFunction()) {
+    else if (!cb.IsEmpty() && cb->IsFunction())
+    {
         Local<Object> impResJS = importResultToJS(baton->result);
-        Local<Value> argv[] = { Nan::Null(), impResJS };
+        Local<Value> argv[] = {Nan::Null(), impResJS};
         TRY_CATCH_CALL(db->handle(), cb, 2, argv);
     }
 
@@ -812,14 +917,15 @@ void Database::Work_AfterImport(uv_work_t* req) {
     delete baton;
 }
 
-
-
-void Database::RemoveCallbacks() {
-    if (debug_trace) {
+void Database::RemoveCallbacks()
+{
+    if (debug_trace)
+    {
         debug_trace->finish();
         debug_trace = NULL;
     }
-    if (debug_profile) {
+    if (debug_profile)
+    {
         debug_profile->finish();
         debug_profile = NULL;
     }
