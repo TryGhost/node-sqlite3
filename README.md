@@ -49,7 +49,7 @@ db.close();
  - Full Buffer/Blob support
  - Extensive [debugging support](https://github.com/mapbox/node-sqlite3/wiki/Debugging)
  - [Query serialization](https://github.com/mapbox/node-sqlite3/wiki/Control-Flow) API
- - [Extension support](https://github.com/mapbox/node-sqlite3/wiki/Extensions)
+ - [Extension support](https://github.com/mapbox/node-sqlite3/wiki/Extensions), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html).
  - Big test suite
  - Written in modern C++ and tested for memory leaks
  - Bundles Sqlite3 3.26.0 as a fallback if the installing system doesn't include SQLite
