@@ -104,7 +104,7 @@ public:
 
         Baton(Backup* backup_, Napi::Function cb_) : backup(backup_) {
             backup->Ref();
-            callback.Reset(cb_);
+            callback.Reset(cb_, 1);
         }
         virtual ~Baton() {
             backup->Unref();

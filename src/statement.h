@@ -85,7 +85,7 @@ public:
 
         Baton(Statement* stmt_, Napi::Function cb_) : stmt(stmt_) {
             stmt->Ref();
-            callback.Reset(cb_);
+            callback.Reset(cb_, 1);
         }
         virtual ~Baton() {
             for (unsigned int i = 0; i < parameters.size(); i++) {

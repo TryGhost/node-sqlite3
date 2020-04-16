@@ -625,7 +625,7 @@ Napi::Value Statement::Each(const Napi::CallbackInfo& info) {
         return env.Null();
     }
     else {
-        baton->completed.Reset(completed);
+        baton->completed.Reset(completed, 1);
         stmt->Schedule(Work_BeginEach, baton);
         return info.This();
     }

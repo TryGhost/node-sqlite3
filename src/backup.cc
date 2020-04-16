@@ -415,7 +415,7 @@ void Backup::RetryErrorSetter(const Napi::CallbackInfo& info, const Napi::Value&
         return;
     }
     Napi::Array array = value.As<Napi::Array>();
-    backup->retryErrors.Reset(array);
+    backup->retryErrors.Reset(array, 1);
 }
 
 void Backup::GetRetryErrors(std::set<int>& retryErrorsSet) {
@@ -429,4 +429,3 @@ void Backup::GetRetryErrors(std::set<int>& retryErrorsSet) {
         }
     }
 }
-
