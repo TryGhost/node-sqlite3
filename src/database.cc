@@ -110,7 +110,12 @@ Database::Database(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Database>(
     init();
     Napi::Env env = info.Env();
 
-    REQUIRE_ARGUMENT_STRING(0, filename);
+    if (info.Length() <= 0 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "String expected").ThrowAsJavaScriptException();
+        return;
+    }
+    std::string filename = info[0].As<Napi::String>();
+
     unsigned int pos = 1;
 
     int mode;

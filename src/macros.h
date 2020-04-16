@@ -26,12 +26,14 @@ inline bool OtherIsInt(Napi::Number source) {
 #define REQUIRE_ARGUMENTS(n)                                                   \
     if (info.Length() < (n)) {                                                 \
         Napi::TypeError::New(env, "Expected " #n "arguments").ThrowAsJavaScriptException(); \
+        return env.Null(); \
     }
 
 
 #define REQUIRE_ARGUMENT_EXTERNAL(i, var)                                      \
     if (info.Length() <= (i) || !info[i].IsExternal()) {                       \
         Napi::TypeError::New(env, "Argument " #i " invalid").ThrowAsJavaScriptException(); \
+        return env.Null(); \
     }                                                                          \
     Napi::External var = info[i].As<Napi::External>();
 
@@ -39,6 +41,7 @@ inline bool OtherIsInt(Napi::Number source) {
 #define REQUIRE_ARGUMENT_FUNCTION(i, var)                                      \
     if (info.Length() <= (i) || !info[i].IsFunction()) {                        \
         Napi::TypeError::New(env, "Argument " #i " must be a function").ThrowAsJavaScriptException(); \
+        return env.Null(); \
     }                                                                          \
     Napi::Function var = info[i].As<Napi::Function>();
 
@@ -46,6 +49,7 @@ inline bool OtherIsInt(Napi::Number source) {
 #define REQUIRE_ARGUMENT_STRING(i, var)                                        \
     if (info.Length() <= (i) || !info[i].IsString()) {                         \
         Napi::TypeError::New(env, "Argument " #i " must be a string").ThrowAsJavaScriptException(); \
+        return env.Null(); \
     }                                                                          \
     std::string var = info[i].As<Napi::String>();
 
@@ -61,6 +65,7 @@ inline bool OtherIsInt(Napi::Number source) {
     if (info.Length() > i && !info[i].IsUndefined()) {                         \
         if (!info[i].IsFunction()) {                                           \
             Napi::TypeError::New(env, "Argument " #i " must be a function").ThrowAsJavaScriptException(); \
+            return env.Null(); \
         }                                                                      \
         var = info[i].As<Napi::Function>();                                    \
     }
@@ -78,6 +83,7 @@ inline bool OtherIsInt(Napi::Number source) {
     }                                                                          \
     else {                                                                     \
         Napi::TypeError::New(env, "Argument " #i " must be an integer").ThrowAsJavaScriptException(); \
+        return env.Null(); \
     }
 
 
