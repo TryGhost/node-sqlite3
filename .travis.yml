@@ -62,28 +62,7 @@ matrix:
             packages: [ 'clang-3.5']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="7"
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
-     - os: linux
-       compiler: clang
        env: NODE_VERSION="6"
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
-     - os: linux
-       compiler: clang
-       env: NODE_VERSION="5"
-       addons:
-         apt:
-            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
-            packages: [ 'clang-3.5']
-     - os: linux
-       compiler: clang
-       env: NODE_VERSION="4"
        addons:
          apt:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
@@ -117,16 +96,7 @@ matrix:
        env: NODE_VERSION="8" # node abi 57
      - os: osx
        compiler: clang
-       env: NODE_VERSION="7" # node abi 51
-     - os: osx
-       compiler: clang
        env: NODE_VERSION="6" # node abi 48
-     - os: osx
-       compiler: clang
-       env: NODE_VERSION="5" # node abi 47
-     - os: osx
-       compiler: clang
-       env: NODE_VERSION="4" # node abi 46
      # electron Linux
      - os: linux
        compiler: clang
