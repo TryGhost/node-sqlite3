@@ -1,7 +1,6 @@
 #ifndef NODE_SQLITE3_SRC_ASYNC_H
 #define NODE_SQLITE3_SRC_ASYNC_H
 
-#include <node_version.h>
 #include <napi.h>
 #include <uv.h>
 

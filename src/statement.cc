@@ -1,8 +1,6 @@
 #include <string.h>
 #include <napi.h>
 #include <uv.h>
-#include <node_buffer.h>
-#include <node_version.h>
 
 #include "macros.h"
 #include "database.h"
