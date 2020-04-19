@@ -4,6 +4,7 @@
 - electron: Electron v8, v8.1.x & v8.2.x [#1294](https://github.com/mapbox/node-sqlite3/pull/1294) [#1308](https://github.com/mapbox/node-sqlite3/pull/1308)
 - sqlite3: update to 3.31.1 (3310100) [#1289](https://github.com/mapbox/node-sqlite3/pull/1289)
 -  webpack: split sqlite3-binding.js out so that it could be override by webpack [#1268](https://github.com/mapbox/node-sqlite3/pull/1268)
+- sqlite3: enable 'SQLITE_ENABLE_DBSTAT_VTAB=1' [#1281](https://github.com/mapbox/node-sqlite3/pull/1281)
 - deps: remove request [#1287](https://github.com/mapbox/node-sqlite3/pull/1287)
 - deps: alternative update of node-gyp for electron (v1 - v4), windows [#1283](https://github.com/mapbox/node-sqlite3/pull/1283)
 - electron: fix dist url [#1282](https://github.com/mapbox/node-sqlite3/pull/1282)
