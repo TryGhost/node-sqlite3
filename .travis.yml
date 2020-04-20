@@ -64,7 +64,7 @@ matrix:
      # electron Linux
      - os: linux
        compiler: clang
-       env: NODE_VERSION="8" ELECTRON_VERSION="8.2.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="8.2.0"
        dist: trusty
        addons:
          apt:
@@ -72,7 +72,7 @@ matrix:
             packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="8" ELECTRON_VERSION="8.1.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="8.1.0"
        dist: trusty
        addons:
          apt:
@@ -80,7 +80,7 @@ matrix:
             packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="8" ELECTRON_VERSION="8.0.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="8.0.0"
        dist: trusty
        addons:
          apt:
@@ -88,7 +88,7 @@ matrix:
             packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="8" ELECTRON_VERSION="7.1.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="7.1.0"
        dist: trusty
        addons:
          apt:
@@ -96,7 +96,7 @@ matrix:
             packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="8" ELECTRON_VERSION="7.0.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="7.0.0"
        dist: trusty
        addons:
          apt:
@@ -104,7 +104,7 @@ matrix:
             packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="6" ELECTRON_VERSION="6.1.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="6.1.0"
        dist: trusty
        addons:
          apt:
@@ -112,7 +112,7 @@ matrix:
             packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
      - os: linux
        compiler: clang
-       env: NODE_VERSION="6" ELECTRON_VERSION="6.0.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="6.0.0"
        dist: trusty # needed for libc6 / 'version `GLIBC_2.17` not found' error on precise
        addons:
          apt:
@@ -121,25 +121,25 @@ matrix:
      # electron MacOs
      - os: osx
        compiler: clang
-       env: NODE_VERSION="8" ELECTRON_VERSION="8.2.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="8.2.0"
      - os: osx
        compiler: clang
-       env: NODE_VERSION="8" ELECTRON_VERSION="8.1.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="8.1.0"
      - os: osx
        compiler: clang
-       env: NODE_VERSION="8" ELECTRON_VERSION="8.0.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="8.0.0"
      - os: osx
        compiler: clang
-       env: NODE_VERSION="8" ELECTRON_VERSION="7.1.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="7.1.0"
      - os: osx
        compiler: clang
-       env: NODE_VERSION="8" ELECTRON_VERSION="7.0.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="7.0.0"
      - os: osx
        compiler: clang
-       env: NODE_VERSION="6" ELECTRON_VERSION="6.1.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="6.1.0"
      - os: osx
        compiler: clang
-       env: NODE_VERSION="6" ELECTRON_VERSION="6.0.0"
+       env: NODE_VERSION="12" ELECTRON_VERSION="6.0.0"
 
 env:
   global:
