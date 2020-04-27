@@ -88,7 +88,8 @@
           'SQLITE_ENABLE_FTS4',
           'SQLITE_ENABLE_FTS5',
           'SQLITE_ENABLE_JSON1',
-          'SQLITE_ENABLE_RTREE'
+          'SQLITE_ENABLE_RTREE',
+          'SQLITE_ENABLE_DBSTAT_VTAB=1'
         ],
       },
       'cflags_cc': [
@@ -102,7 +103,8 @@
         'SQLITE_ENABLE_FTS4',
         'SQLITE_ENABLE_FTS5',
         'SQLITE_ENABLE_JSON1',
-        'SQLITE_ENABLE_RTREE'
+        'SQLITE_ENABLE_RTREE',
+        'SQLITE_ENABLE_DBSTAT_VTAB=1'
       ],
       'export_dependent_settings': [
         'action_before_build',
