@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.0
+- prebuilt: Node 14 support, dropped support for all version of Node < 11 
+- napi: refactor codebase to use N-API instead of NAN (+ various improvements) [#1304](https://github.com/mapbox/node-sqlite3/pull/1304)
+
 ## 4.2.0
 - electron: Electron v8, v8.1.x & v8.2.x [#1294](https://github.com/mapbox/node-sqlite3/pull/1294) [#1308](https://github.com/mapbox/node-sqlite3/pull/1308)
 - sqlite3: update to 3.31.1 (3310100) [#1289](https://github.com/mapbox/node-sqlite3/pull/1289)
