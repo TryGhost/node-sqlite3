@@ -46,6 +46,17 @@
     "eslint": "3.5.0",
     "mocha": "^5.2.0"
   },
+  "peerDependencies": {
+    "node-gyp": "3.x"
+  },
+  "peerDependenciesMeta": {
+    "node-gyp": {
+      "optional": true 
+    }
+  },
+  "optionalDependencies": {
+    "node-gyp": "3.x"
+  },
   "scripts": {
     "install": "node-pre-gyp install --fallback-to-build",
     "pretest": "node test/support/createdb.js",
