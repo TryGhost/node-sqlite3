@@ -1,7 +1,5 @@
 #include <string.h>
-#include <node.h>
-#include <node_buffer.h>
-#include <node_version.h>
+#include <napi.h>
 
 #include "macros.h"
 #include "database.h"
@@ -9,31 +7,28 @@
 
 using namespace node_sqlite3;
 
-Nan::Persistent<FunctionTemplate> Backup::constructor_template;
+Napi::FunctionReference Backup::constructor;
 
 
-NAN_MODULE_INIT(Backup::Init) {
-    Nan::HandleScope scope;
+Napi::Object Backup::Init(Napi::Env env, Napi::Object exports) {
+    Napi::HandleScope scope(env);
 
-    Local<FunctionTemplate> t = Nan::New<FunctionTemplate>(New);
+    Napi::Function t = DefineClass(env, "Backup", {
+        InstanceMethod("step", &Backup::Step),
+        InstanceMethod("finish", &Backup::Finish),
+        InstanceAccessor("idle", &Backup::IdleGetter, nullptr),
+        InstanceAccessor("completed", &Backup::CompletedGetter, nullptr),
+        InstanceAccessor("failed", &Backup::FailedGetter, nullptr),
+        InstanceAccessor("remaining", &Backup::RemainingGetter, nullptr),
+        InstanceAccessor("pageCount", &Backup::PageCountGetter, nullptr),
+        InstanceAccessor("retryErrors", &Backup::RetryErrorGetter, &Backup::RetryErrorSetter),
+    });
 
-    t->InstanceTemplate()->SetInternalFieldCount(1);
-    t->SetClassName(Nan::New("Backup").ToLocalChecked());
+    constructor = Napi::Persistent(t);
+    constructor.SuppressDestruct();
 
-    Nan::SetPrototypeMethod(t, "step", Step);
-    Nan::SetPrototypeMethod(t, "finish", Finish);
-
-    NODE_SET_GETTER(t, "idle", IdleGetter);
-    NODE_SET_GETTER(t, "completed", CompletedGetter);
-    NODE_SET_GETTER(t, "failed", FailedGetter);
-    NODE_SET_GETTER(t, "remaining", RemainingGetter);
-    NODE_SET_GETTER(t, "pageCount", PageCountGetter);
-
-    NODE_SET_SETTER(t, "retryErrors", RetryErrorGetter, RetryErrorSetter);
-
-    constructor_template.Reset(t);
-    Nan::Set(target, Nan::New("Backup").ToLocalChecked(),
-        Nan::GetFunction(t).ToLocalChecked());
+    exports.Set("Backup", t);
+    return exports;
 }
 
 void Backup::Process() {
@@ -64,33 +59,35 @@ void Backup::Schedule(Work_Callback callback, Baton* baton) {
 }
 
 template <class T> void Backup::Error(T* baton) {
-    Nan::HandleScope scope;
+    Napi::Env env = baton->backup->Env();
+    Napi::HandleScope scope(env);
 
     Backup* backup = baton->backup;
     // Fail hard on logic errors.
     assert(backup->status != 0);
-    EXCEPTION(backup->message, backup->status, exception);
+    EXCEPTION(Napi::String::New(env, backup->message), backup->status, exception);
 
-    Local<Function> cb = Nan::New(baton->callback);
+    Napi::Function cb = baton->callback.Value();
 
-    if (!cb.IsEmpty() && cb->IsFunction()) {
-        Local<Value> argv[] = { exception };
-        TRY_CATCH_CALL(backup->handle(), cb, 1, argv);
+    if (!cb.IsEmpty() && cb.IsFunction()) {
+        Napi::Value argv[] = { exception };
+        TRY_CATCH_CALL(backup->Value(), cb, 1, argv);
     }
     else {
-        Local<Value> argv[] = { Nan::New("error").ToLocalChecked(), exception };
-        EMIT_EVENT(backup->handle(), 2, argv);
+        Napi::Value argv[] = { Napi::String::New(env, "error"), exception };
+        EMIT_EVENT(backup->Value(), 2, argv);
     }
 }
 
 void Backup::CleanQueue() {
-    Nan::HandleScope scope;
+    Napi::Env env = this->Env();
+    Napi::HandleScope scope(env);
 
     if (inited && !queue.empty()) {
         // This backup has already been initialized and is now finished.
         // Fire error for all remaining items in the queue.
-        EXCEPTION("Backup is already finished", SQLITE_MISUSE, exception);
-        Local<Value> argv[] = { exception };
+        EXCEPTION(Napi::String::New(env, "Backup is already finished"), SQLITE_MISUSE, exception);
+        Napi::Value argv[] = { exception };
         bool called = false;
 
         // Clear out the queue so that this object can get GC'ed.
@@ -98,11 +95,11 @@ void Backup::CleanQueue() {
             Call* call = queue.front();
             queue.pop();
 
-            Local<Function> cb = Nan::New(call->baton->callback);
+            Napi::Function cb = call->baton->callback.Value();
 
             if (inited && !cb.IsEmpty() &&
-                cb->IsFunction()) {
-                TRY_CATCH_CALL(handle(), cb, 1, argv);
+                cb.IsFunction()) {
+                TRY_CATCH_CALL(Value(), cb, 1, argv);
                 called = true;
             }
 
@@ -115,8 +112,8 @@ void Backup::CleanQueue() {
         // When we couldn't call a callback function, emit an error on the
         // Backup object.
         if (!called) {
-            Local<Value> info[] = { Nan::New("error").ToLocalChecked(), exception };
-            EMIT_EVENT(handle(), 2, info);
+            Napi::Value info[] = { Napi::String::New(env, "error"), exception };
+            EMIT_EVENT(Value(), 2, info);
         }
     }
     else while (!queue.empty()) {
@@ -132,65 +129,74 @@ void Backup::CleanQueue() {
     }
 }
 
-NAN_METHOD(Backup::New) {
+Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) {
+    Napi::Env env = info.Env();
     if (!info.IsConstructCall()) {
-        return Nan::ThrowTypeError("Use the new operator to create new Backup objects");
+        Napi::TypeError::New(env, "Use the new operator to create new Backup objects").ThrowAsJavaScriptException();
+        return;
     }
 
     int length = info.Length();
 
     if (length <= 0 || !Database::HasInstance(info[0])) {
-        return Nan::ThrowTypeError("Database object expected");
+        Napi::TypeError::New(env, "Database object expected").ThrowAsJavaScriptException();
+        return;
     }
-    else if (length <= 1 || !info[1]->IsString()) {
-        return Nan::ThrowTypeError("Filename expected");
+    else if (length <= 1 || !info[1].IsString()) {
+        Napi::TypeError::New(env, "Filename expected").ThrowAsJavaScriptException();
+        return;
     }
-    else if (length <= 2 || !info[2]->IsString()) {
-        return Nan::ThrowTypeError("Source database name expected");
+    else if (length <= 2 || !info[2].IsString()) {
+        Napi::TypeError::New(env, "Source database name expected").ThrowAsJavaScriptException();
+        return;
     }
-    else if (length <= 3 || !info[3]->IsString()) {
-        return Nan::ThrowTypeError("Destination database name expected");
+    else if (length <= 3 || !info[3].IsString()) {
+        Napi::TypeError::New(env, "Destination database name expected").ThrowAsJavaScriptException();
+        return;
     }
-    else if (length <= 4 || !info[4]->IsBoolean()) {
-        return Nan::ThrowTypeError("Direction flag expected");
+    else if (length <= 4 || !info[4].IsBoolean()) {
+        Napi::TypeError::New(env, "Direction flag expected").ThrowAsJavaScriptException();
+        return;
     }
-    else if (length > 5 && !info[5]->IsUndefined() && !info[5]->IsFunction()) {
-        return Nan::ThrowTypeError("Callback expected");
+    else if (length > 5 && !info[5].IsUndefined() && !info[5].IsFunction()) {
+        Napi::TypeError::New(env, "Callback expected").ThrowAsJavaScriptException();
+        return;
     }
 
-    Database* db = Nan::ObjectWrap::Unwrap<Database>(info[0].As<Object>());
-    Local<String> filename = Local<String>::Cast(info[1]);
-    Local<String> sourceName = Local<String>::Cast(info[2]);
-    Local<String> destName = Local<String>::Cast(info[3]);
-    Local<Boolean> filenameIsDest = Local<Boolean>::Cast(info[4]);
+    Database* db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    Napi::String filename = info[1].As<Napi::String>();
+    Napi::String sourceName = info[2].As<Napi::String>();
+    Napi::String destName = info[3].As<Napi::String>();
+    Napi::Boolean filenameIsDest = info[4].As<Napi::Boolean>();
 
-    Nan::ForceSet(info.This(), Nan::New("filename").ToLocalChecked(), filename, ReadOnly);
-    Nan::ForceSet(info.This(), Nan::New("sourceName").ToLocalChecked(), sourceName, ReadOnly);
-    Nan::ForceSet(info.This(), Nan::New("destName").ToLocalChecked(), destName, ReadOnly);
-    Nan::ForceSet(info.This(), Nan::New("filenameIsDest").ToLocalChecked(), filenameIsDest, ReadOnly);
+    info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filename", filename));
+    info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("sourceName", sourceName));
+    info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("destName", destName));
+    info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filenameIsDest", filenameIsDest));
 
-    Backup* backup = new Backup(db);
-    backup->Wrap(info.This());
+    init(db);
 
-    InitializeBaton* baton = new InitializeBaton(db, Local<Function>::Cast(info[5]), backup);
-    baton->filename = std::string(*Nan::Utf8String(filename));
-    baton->sourceName = std::string(*Nan::Utf8String(sourceName));
-    baton->destName = std::string(*Nan::Utf8String(destName));
-    baton->filenameIsDest = Nan::To<bool>(filenameIsDest).FromJust();
+    InitializeBaton* baton = new InitializeBaton(db, info[5].As<Napi::Function>(), this);
+    baton->filename = filename.Utf8Value();
+    baton->sourceName = sourceName.Utf8Value();
+    baton->destName = destName.Utf8Value();
+    baton->filenameIsDest = filenameIsDest.Value();
     db->Schedule(Work_BeginInitialize, baton);
-
-    info.GetReturnValue().Set(info.This());
 }
 
 void Backup::Work_BeginInitialize(Database::Baton* baton) {
     assert(baton->db->open);
     baton->db->pending++;
-    int status = uv_queue_work(uv_default_loop(),
-        &baton->request, Work_Initialize, (uv_after_work_cb)Work_AfterInitialize);
+    Napi::Env env = baton->db->Env();
+    int status = napi_create_async_work(
+        env, NULL, Napi::String::New(env, "sqlite3.Backup.Initialize"),
+        Work_Initialize, Work_AfterInitialize, baton, &baton->request
+    );
     assert(status == 0);
+    napi_queue_async_work(env, baton->request);
 }
 
-void Backup::Work_Initialize(uv_work_t* req) {
+void Backup::Work_Initialize(napi_env e, void* data) {
     BACKUP_INIT(InitializeBaton);
 
     // In case stepping fails, we use a mutex to make sure we get the associated
@@ -219,10 +225,11 @@ void Backup::Work_Initialize(uv_work_t* req) {
     sqlite3_mutex_leave(mtx);
 }
 
-void Backup::Work_AfterInitialize(uv_work_t* req) {
-    Nan::HandleScope scope;
-
+void Backup::Work_AfterInitialize(napi_env e, napi_status status, void* data) {
     BACKUP_INIT(InitializeBaton);
+
+    Napi::Env env = backup->Env();
+    Napi::HandleScope scope(env);
 
     if (backup->status != SQLITE_OK) {
         Error(baton);
@@ -230,17 +237,18 @@ void Backup::Work_AfterInitialize(uv_work_t* req) {
     }
     else {
         backup->inited = true;
-        Local<Function> cb = Nan::New(baton->callback);
-        if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[] = { Nan::Null() };
-            TRY_CATCH_CALL(backup->handle(), cb, 1, argv);
+        Napi::Function cb = baton->callback.Value();
+        if (!cb.IsEmpty() && cb.IsFunction()) {
+            Napi::Value argv[] = { env.Null() };
+            TRY_CATCH_CALL(backup->Value(), cb, 1, argv);
         }
     }
     BACKUP_END();
 }
 
-NAN_METHOD(Backup::Step) {
-    Backup* backup = Nan::ObjectWrap::Unwrap<Backup>(info.This());
+Napi::Value Backup::Step(const Napi::CallbackInfo& info) {
+    Backup* backup = this;
+    Napi::Env env = backup->Env();
 
     REQUIRE_ARGUMENT_INTEGER(0, pages);
     OPTIONAL_ARGUMENT_FUNCTION(1, callback);
@@ -248,14 +256,14 @@ NAN_METHOD(Backup::Step) {
     StepBaton* baton = new StepBaton(backup, callback, pages);
     backup->GetRetryErrors(baton->retryErrorsSet);
     backup->Schedule(Work_BeginStep, baton);
-    info.GetReturnValue().Set(info.This());
+    return info.This();
 }
 
 void Backup::Work_BeginStep(Baton* baton) {
     BACKUP_BEGIN(Step);
 }
 
-void Backup::Work_Step(uv_work_t* req) {
+void Backup::Work_Step(napi_env e, void* data) {
     BACKUP_INIT(StepBaton);
     if (backup->_handle) {
         backup->status = sqlite3_backup_step(backup->_handle, baton->pages);
@@ -279,10 +287,11 @@ void Backup::Work_Step(uv_work_t* req) {
     }
 }
 
-void Backup::Work_AfterStep(uv_work_t* req) {
-    Nan::HandleScope scope;
-
+void Backup::Work_AfterStep(napi_env e, napi_status status, void* data) {
     BACKUP_INIT(StepBaton);
+
+    Napi::Env env = backup->Env();
+    Napi::HandleScope scope(env);
 
     if (backup->status == SQLITE_DONE) {
         backup->completed = true;
@@ -295,45 +304,48 @@ void Backup::Work_AfterStep(uv_work_t* req) {
     }
     else {
         // Fire callbacks.
-        Local<Function> cb = Nan::New(baton->callback);
-        if (!cb.IsEmpty() && cb->IsFunction()) {
-            Local<Value> argv[] = { Nan::Null(), Nan::New(backup->status == SQLITE_DONE) };
-            TRY_CATCH_CALL(backup->handle(), cb, 2, argv);
+        Napi::Function cb = baton->callback.Value();
+        if (!cb.IsEmpty() && cb.IsFunction()) {
+            Napi::Value argv[] = { env.Null(), Napi::Boolean::New(env, backup->status == SQLITE_DONE) };
+            TRY_CATCH_CALL(backup->Value(), cb, 2, argv);
         }
     }
 
     BACKUP_END();
 }
 
-NAN_METHOD(Backup::Finish) {
-    Backup* backup = Nan::ObjectWrap::Unwrap<Backup>(info.This());
+Napi::Value Backup::Finish(const Napi::CallbackInfo& info) {
+    Backup* backup = this;
+    Napi::Env env = backup->Env();
 
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     Baton* baton = new Baton(backup, callback);
     backup->Schedule(Work_BeginFinish, baton);
-    info.GetReturnValue().Set(info.This());
+    return info.This();
 }
 
 void Backup::Work_BeginFinish(Baton* baton) {
     BACKUP_BEGIN(Finish);
 }
 
-void Backup::Work_Finish(uv_work_t* req) {
+void Backup::Work_Finish(napi_env e, void* data) {
     BACKUP_INIT(Baton);
     backup->FinishSqlite();
 }
 
-void Backup::Work_AfterFinish(uv_work_t* req) {
-    Nan::HandleScope scope;
-
+void Backup::Work_AfterFinish(napi_env e, napi_status status, void* data) {
     BACKUP_INIT(Baton);
+
+    Napi::Env env = backup->Env();
+    Napi::HandleScope scope(env);
+
     backup->FinishAll();
 
     // Fire callback in case there was one.
-    Local<Function> cb = Nan::New(baton->callback);
-    if (!cb.IsEmpty() && cb->IsFunction()) {
-        TRY_CATCH_CALL(backup->handle(), cb, 0, NULL);
+    Napi::Function cb = baton->callback.Value();
+    if (!cb.IsEmpty() && cb.IsFunction()) {
+        TRY_CATCH_CALL(backup->Value(), cb, 0, NULL);
     }
 
     BACKUP_END();
@@ -362,55 +374,56 @@ void Backup::FinishSqlite() {
     _destDb = NULL;
 }
 
-NAN_GETTER(Backup::IdleGetter) {
-    Backup* backup = Nan::ObjectWrap::Unwrap<Backup>(info.This());
+Napi::Value Backup::IdleGetter(const Napi::CallbackInfo& info) {
+    Backup* backup = this;
     bool idle = backup->inited && !backup->locked && backup->queue.empty();
-    info.GetReturnValue().Set(idle);
+    return Napi::Boolean::New(this->Env(), idle);
 }
 
-NAN_GETTER(Backup::CompletedGetter) {
-    Backup* backup = Nan::ObjectWrap::Unwrap<Backup>(info.This());
-    info.GetReturnValue().Set(backup->completed);
+Napi::Value Backup::CompletedGetter(const Napi::CallbackInfo& info) {
+    Backup* backup = this;
+    return Napi::Boolean::New(this->Env(), backup->completed);
 }
 
-NAN_GETTER(Backup::FailedGetter) {
-    Backup* backup = Nan::ObjectWrap::Unwrap<Backup>(info.This());
-    info.GetReturnValue().Set(backup->failed);
+Napi::Value Backup::FailedGetter(const Napi::CallbackInfo& info) {
+    Backup* backup = this;
+    return Napi::Boolean::New(this->Env(), backup->failed);
 }
 
-NAN_GETTER(Backup::RemainingGetter) {
-    Backup* backup = Nan::ObjectWrap::Unwrap<Backup>(info.This());
-    info.GetReturnValue().Set(backup->remaining);
+Napi::Value Backup::RemainingGetter(const Napi::CallbackInfo& info) {
+    Backup* backup = this;
+    return Napi::Number::New(this->Env(), backup->remaining);
 }
 
-NAN_GETTER(Backup::PageCountGetter) {
-    Backup* backup = Nan::ObjectWrap::Unwrap<Backup>(info.This());
-    info.GetReturnValue().Set(backup->pageCount);
+Napi::Value Backup::PageCountGetter(const Napi::CallbackInfo& info) {
+    Backup* backup = this;
+    return Napi::Number::New(this->Env(), backup->pageCount);
 }
 
-NAN_GETTER(Backup::RetryErrorGetter) {
-    Backup* backup = Nan::ObjectWrap::Unwrap<Backup>(info.This());
-    info.GetReturnValue().Set(Nan::New(backup->retryErrors));
+Napi::Value Backup::RetryErrorGetter(const Napi::CallbackInfo& info) {
+    Backup* backup = this;
+    return backup->retryErrors.Value();
 }
 
-NAN_SETTER(Backup::RetryErrorSetter) {
-    Backup* backup = Nan::ObjectWrap::Unwrap<Backup>(info.This());
-    if (!value->IsArray()) {
-        return Nan::ThrowError("retryErrors must be an array");
+void Backup::RetryErrorSetter(const Napi::CallbackInfo& info, const Napi::Value& value) {
+    Backup* backup = this;
+    Napi::Env env = backup->Env();
+    if (!value.IsArray()) {
+        Napi::Error::New(env, "retryErrors must be an array").ThrowAsJavaScriptException();
+        return;
     }
-    Local<Array> array = Local<Array>::Cast(value);
-    backup->retryErrors.Reset(array);
+    Napi::Array array = value.As<Napi::Array>();
+    backup->retryErrors.Reset(array, 1);
 }
 
 void Backup::GetRetryErrors(std::set<int>& retryErrorsSet) {
     retryErrorsSet.clear();
-    Local<Array> array = Nan::New(retryErrors);
-    int length = array->Length();
+    Napi::Array array = retryErrors.Value();
+    int length = array.Length();
     for (int i = 0; i < length; i++) {
-        Local<Value> code = Nan::Get(array, i).ToLocalChecked();
-        if (code->IsInt32()) {
-            retryErrorsSet.insert(Nan::To<int32_t>(code).FromJust());
+        Napi::Value code = (array).Get(i);
+        if (code.IsNumber()) {
+            retryErrorsSet.insert(code.As<Napi::Number>().Int32Value());
         }
     }
 }
-

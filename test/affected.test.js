@@ -11,7 +11,7 @@ describe('query properties', function() {
     it('should return the correct lastID', function(done) {
         var stmt = db.prepare("INSERT INTO foo VALUES(?, ?)");
         var j = 1;
-        for (var i = 0; i < 1000; i++) {
+        for (var i = 0; i < 5000; i++) {
             stmt.run(i, "demo", function(err) {
                 if (err) throw err;
                 // Relies on SQLite's row numbering to be gapless and starting
@@ -25,7 +25,7 @@ describe('query properties', function() {
     it('should return the correct changes count', function(done) {
         db.run("UPDATE foo SET id = id + 1 WHERE id % 2 = 0", function(err) {
             if (err) throw err;
-            assert.equal(500, this.changes);
+            assert.equal(2500, this.changes);
             done();
         });
     });

@@ -1,35 +1,5 @@
 environment:
   matrix:
-    - nodejs_version: 4
-      platform: x64
-      msvs_toolset: 12
-    - nodejs_version: 4
-      platform: x86
-      msvs_toolset: 12
-    - nodejs_version: 5
-      platform: x64
-    - nodejs_version: 5
-      platform: x86
-    - nodejs_version: 6
-      platform: x64
-    - nodejs_version: 6
-      platform: x86
-    - nodejs_version: 7
-      platform: x64
-    - nodejs_version: 7
-      platform: x86
-    - nodejs_version: 8
-      platform: x64
-    - nodejs_version: 8
-      platform: x86
-    - nodejs_version: 9
-      platform: x64
-    - nodejs_version: 9
-      platform: x86
-    - nodejs_version: 10
-      platform: x64
-    - nodejs_version: 10
-      platform: x86
     - nodejs_version: 11
       platform: x64
     - nodejs_version: 11
@@ -41,6 +11,10 @@ environment:
     - nodejs_version: 13
       platform: x64
     - nodejs_version: 13
+      platform: x86
+    - nodejs_version: 14
+      platform: x64
+    - nodejs_version: 14
       platform: x86
     # electron
     - nodejs_version: 12
@@ -112,100 +86,6 @@ environment:
       platform: x86
       NODE_RUNTIME: electron
       NODE_RUNTIME_VERSION: 6.0.0
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 12
-      platform: x64
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 5.0.0
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 12
-      platform: x86
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 5.0.0
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 10
-      platform: x64
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 4.2.0
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 10
-      platform: x64
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 4.1.0
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 10
-      platform: x64
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 4.0.0
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 10
-      platform: x86
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 4.0.0
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 10
-      platform: x64
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 3.0.6
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 10
-      platform: x86
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 3.0.6
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 8
-      platform: x64
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 2.0.1
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 8
-      platform: x86
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 2.0.1
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 8
-      platform: x64
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 1.8.4
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 8
-      platform: x86
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 1.8.4
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 7
-      platform: x64
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 1.7.12
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 7
-      platform: x86
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 1.7.12
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 6
-      platform: x64
-      msvs_toolset: 12
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 1.6.2
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 6
-      platform: x86
-      msvs_toolset: 12
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 1.6.2
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 6
-      platform: x64
-      msvs_toolset: 12
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 1.3.14
-      TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
-    - nodejs_version: 6
-      platform: x86
-      msvs_toolset: 12
-      NODE_RUNTIME: electron
-      NODE_RUNTIME_VERSION: 1.3.14
       TOOLSET_ARGS: --dist-url=https://electronjs.org/headers
 
 os: Visual Studio 2015
