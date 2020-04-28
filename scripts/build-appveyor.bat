@@ -50,19 +50,19 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 ECHO ===== where npm puts stuff START ============
 ECHO npm root && CALL npm root
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-ECHO npm root -g && CALL npm root -g
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+::ECHO npm root -g && CALL npm root -g
+::IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 ECHO npm bin && CALL npm bin
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-ECHO npm bin -g && CALL npm bin -g
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+::ECHO npm bin -g && CALL npm bin -g
+::IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
-SET NPM_BIN_DIR=
-FOR /F "tokens=*" %%i in ('CALL npm bin -g') DO SET NPM_BIN_DIR=%%i
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-IF /I "%NPM_BIN_DIR%"=="%CD%" ECHO ERROR npm bin -g equals local directory && SET ERRORLEVEL=1 && GOTO ERROR
-ECHO ===== where npm puts stuff END ============
+::SET NPM_BIN_DIR=
+::FOR /F "tokens=*" %%i in ('CALL npm bin -g') DO SET NPM_BIN_DIR=%%i
+::IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+::IF /I "%NPM_BIN_DIR%"=="%CD%" ECHO ERROR npm bin -g equals local directory && SET ERRORLEVEL=1 && GOTO ERROR
+::ECHO ===== where npm puts stuff END ============
 
 IF "%nodejs_version:~0,1%"=="4" CALL npm install node-gyp@3.x
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
