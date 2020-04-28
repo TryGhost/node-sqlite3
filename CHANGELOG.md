@@ -3,6 +3,7 @@
 ## 5.0.0
 - prebuilt: Node 14 support, dropped support for all version of Node < 11 
 - napi: refactor codebase to use N-API instead of NAN (+ various improvements) [#1304](https://github.com/mapbox/node-sqlite3/pull/1304)
+- trace: don't require throw to add trace info for verbose [#1317](https://github.com/mapbox/node-sqlite3/pull/1317)
 
 ## 4.2.0
 - electron: Electron v8, v8.1.x & v8.2.x [#1294](https://github.com/mapbox/node-sqlite3/pull/1294) [#1308](https://github.com/mapbox/node-sqlite3/pull/1308)
