@@ -35,8 +35,8 @@ ECHO downloading/installing node
 powershell Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version) $env:PLATFORM
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
-powershell Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+::powershell Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force
+::IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 ECHO available node.exe^:
 call where node
