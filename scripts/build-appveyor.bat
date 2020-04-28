@@ -58,11 +58,12 @@ SET "skip_npm_debug_output="
 IF DEFINED NODE_RUNTIME_VERSION (
   IF "%NODE_RUNTIME_VERSION:~0,1%"=="14" IF /I "%platform%"=="x86" SET "skip_npm_debug_output=y"
 )
-ECHO npm root && CALL npm root
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+
 IF DEFINED skip_npm_debug_output (
-  ECHO npm root -g will error - skipping.
+  ECHO npm root will error so skipping.
 ) ELSE (
+  ECHO npm root && CALL npm root
+  IF %ERRORLEVEL% NEQ 0 GOTO ERROR
   ECHO npm root -g && CALL npm root -g
   IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 )
