@@ -51,7 +51,7 @@ ECHO npm^: && CALL npm -v
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 ECHO ===== where npm puts stuff START ============
-TIMEOUT /T 10
+TIMEOUT /T 30
 :: Do not run "npm root -g" on Node v14.x & Win x86 (see issue #1318)
 :: This is likely an issue with either npm or the installation procedure.
 :: Works fine on x64 though.
