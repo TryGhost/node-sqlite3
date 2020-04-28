@@ -51,10 +51,21 @@ ECHO npm^: && CALL npm -v
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 ECHO ===== where npm puts stuff START ============
+:: Do not run "npm root -g" on Node v14.x & Win x86 (see issue #1318)
+:: This is likely an issue with either npm or the installation procedure.
+:: Works fine on x64 though.
+SET "skip_npm_debug_output="
+IF DEFINED NODE_RUNTIME_VERSION (
+  IF "%NODE_RUNTIME_VERSION:~0,1%"=="14" IF /I "%platform%"=="x86" SET "skip_npm_debug_output=y"
+)
 ECHO npm root && CALL npm root
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 ECHO npm root -g && CALL npm root -g
-IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+IF DEFINED skip_npm_debug_output (
+  ECHO npm root -g has likely errored but we're not stopping execution because of it.
+) ELSE (
+  IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+)
 
 ECHO npm bin && CALL npm bin
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
