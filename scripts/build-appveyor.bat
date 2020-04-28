@@ -60,10 +60,10 @@ IF DEFINED NODE_RUNTIME_VERSION (
 )
 ECHO npm root && CALL npm root
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
-ECHO npm root -g && CALL npm root -g
 IF DEFINED skip_npm_debug_output (
-  ECHO npm root -g has likely errored but we're not stopping execution because of it.
+  ECHO npm root -g will error - skipping.
 ) ELSE (
+  ECHO npm root -g && CALL npm root -g
   IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 )
 
