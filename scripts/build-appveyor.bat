@@ -54,6 +54,7 @@ ECHO ===== where npm puts stuff START ============
 :: Do not run "npm root -g" on Node v14.x & Win x86 (see issue #1318)
 :: This is likely an issue with either npm or the installation procedure.
 :: Works fine on x64 though.
+TIMEOUT /T 60
 IF DEFINED NODE_RUNTIME_VERSION (
   IF "%NODE_RUNTIME_VERSION:~0,1%"=="14" IF /I "%platform%"=="x86" TIMEOUT /T 60
 )
