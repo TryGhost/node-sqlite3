@@ -47,6 +47,11 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 ECHO npm^: && CALL npm -v
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
+for /l %x in (1, 1, 1000) do (
+  CALL npm -v
+  IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+)
+
 ECHO ===== where npm puts stuff START ============
 ECHO npm root && CALL npm root
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
