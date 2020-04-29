@@ -10,7 +10,7 @@ ECHO downloading/installing node
 powershell Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version) $env:PLATFORM
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
-set iterations=10000
+set iterations=500
 :loop
 set /a iterations -= 1
 CALL node -v
