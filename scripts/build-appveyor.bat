@@ -15,6 +15,8 @@ for /l %x in (1, 1, 1000) do (
   IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 )
 
+GOTO DONE
+
 :ERROR
 ECHO ~~~~~~~~~~~~~~~~~~~~~~ ERROR %~f0 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ECHO ERRORLEVEL^: %ERRORLEVEL%
