@@ -13,7 +13,7 @@ IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 set iterations=10000
 :loop
 set /a iterations -= 1
-CALL npm -v
+CALL node -v
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 if %iterations% GTR 0 GOTO loop
 
