@@ -7,7 +7,7 @@ ECHO nodejs_version^: %nodejs_version%
 ECHO platform^: %platform%
 
 ECHO downloading/installing node
-powershell Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version) $env:PLATFORM
+powershell Install-Product node $env:nodejs_version $env:platform
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 set iterations=500
