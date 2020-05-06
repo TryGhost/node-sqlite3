@@ -1,8 +1,10 @@
 #ifndef NODE_SQLITE3_SRC_ASYNC_H
 #define NODE_SQLITE3_SRC_ASYNC_H
 
+#include <napi.h>
+#include <uv.h>
+
 #include "threading.h"
-#include <node_version.h>
 
 #if defined(NODE_SQLITE3_BOOST_THREADING)
 #include <boost/thread/mutex.hpp>
@@ -26,10 +28,12 @@ public:
         : callback(cb_), parent(parent_) {
         watcher.data = this;
         NODE_SQLITE3_MUTEX_INIT
-        uv_async_init(uv_default_loop(), &watcher, reinterpret_cast<uv_async_cb>(listener));
+        uv_loop_t *loop;
+        napi_get_uv_event_loop(parent_->Env(), &loop);
+        uv_async_init(loop, &watcher, reinterpret_cast<uv_async_cb>(listener));
     }
 
-    static void listener(uv_async_t* handle, int status) {
+    static void listener(uv_async_t* handle) {
         Async* async = static_cast<Async*>(handle->data);
         std::vector<Item*> rows;
         NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
@@ -51,7 +55,7 @@ public:
         // Need to call the listener again to ensure all items have been
         // processed. Is this a bug in uv_async? Feels like uv_close
         // should handle that.
-        listener(&watcher, 0);
+        listener(&watcher);
         uv_close((uv_handle_t*)&watcher, close);
     }
 

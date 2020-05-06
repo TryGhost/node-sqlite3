@@ -7,10 +7,13 @@ Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js]
 [![Coverage Status](https://coveralls.io/repos/mapbox/node-sqlite3/badge.svg?branch=master&service=github)](https://coveralls.io/github/mapbox/node-sqlite3?branch=master)
 [![Dependencies](https://david-dm.org/mapbox/node-sqlite3.svg)](https://david-dm.org/mapbox/node-sqlite3)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_shield)
+[![N-API v3 Badge](https://img.shields.io/badge/N--API-v3-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
 
 ## Supported platforms
 
-The `sqlite3` module works with Node.js v4.x, v6.x, v8.x, v10.x, v11.x and v12.x.
+The `sqlite3` module works with:
+* Node.js v11.x, v12.x, v13.x and v14.x.
+* Electron v6.0.x, v6.1.x, v7.0.x, v7.1.x, v8.0.x, v8.1.x and v8.2.x
 
 Binaries for most Node versions and platforms are provided by default via [node-pre-gyp](https://github.com/mapbox/node-pre-gyp).
 
@@ -49,7 +52,7 @@ db.close();
  - Full Buffer/Blob support
  - Extensive [debugging support](https://github.com/mapbox/node-sqlite3/wiki/Debugging)
  - [Query serialization](https://github.com/mapbox/node-sqlite3/wiki/Control-Flow) API
- - [Extension support](https://github.com/mapbox/node-sqlite3/wiki/Extensions)
+ - [Extension support](https://github.com/mapbox/node-sqlite3/wiki/Extensions), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html).
  - Big test suite
  - Written in modern C++ and tested for memory leaks
  - Bundles Sqlite3 3.26.0 as a fallback if the installing system doesn't include SQLite
@@ -181,11 +184,11 @@ Set the location where `make` installed it:
 
 Running sqlite3 through [electron-rebuild](https://github.com/electron/electron-rebuild) does not preserve the sqlcipher extension, so some additional flags are needed to make this build Electron compatible. Your `npm install sqlite3 --build-from-source` command needs these additional flags (be sure to replace the target version with the current Electron version you are working with):
 
-    --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
+    --runtime=electron --target=1.7.6 --dist-url=https://electronjs.org/headers
 
 In the case of MacOS with Homebrew, the command should look like the following:
 
-    npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix` --runtime=electron --target=1.7.6 --dist-url=https://atom.io/download/electron
+    npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix` --runtime=electron --target=1.7.6 --dist-url=https://electronjs.org/headers
 
 # Testing
 
