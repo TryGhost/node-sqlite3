@@ -89,6 +89,14 @@ matrix:
             packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
      - os: linux
        compiler: clang
+       env: NODE_VERSION="12" ELECTRON_VERSION="7.2.0"
+       dist: trusty
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
+     - os: linux
+       compiler: clang
        env: NODE_VERSION="12" ELECTRON_VERSION="7.1.0"
        dist: trusty
        addons:
@@ -129,6 +137,9 @@ matrix:
      - os: osx
        compiler: clang
        env: NODE_VERSION="12" ELECTRON_VERSION="8.0.0"
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="12" ELECTRON_VERSION="7.2.0"
      - os: osx
        compiler: clang
        env: NODE_VERSION="12" ELECTRON_VERSION="7.1.0"
