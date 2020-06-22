@@ -54,7 +54,7 @@
   },
   "peerDependenciesMeta": {
     "node-gyp": {
-      "optional": true 
+      "optional": true
     }
   },
   "optionalDependencies": {

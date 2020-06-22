@@ -31,10 +31,10 @@ Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
 }
 
 // A Napi InstanceOf for Javascript Objects "Date" and "RegExp"
-bool OtherInstanceOf(Napi::Object source, char* object_type) {
-    if (object_type == "Date") {
+bool OtherInstanceOf(Napi::Object source, const char* object_type) {
+    if (strncmp(object_type, "Date", 4) == 0) {
         return source.InstanceOf(source.Env().Global().Get("Date").As<Function>());
-    } else if (object_type == "RegExp") {
+    } else if (strncmp(object_type, "RegExp", 6) == 0) {
         return source.InstanceOf(source.Env().Global().Get("RegExp").As<Function>());
     }
 
