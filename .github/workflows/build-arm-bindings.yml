@@ -2,6 +2,8 @@ name: Build ARM bindings
 
 on:
   push:
+    tags:
+      - "v*"
 
 jobs:
   build:
