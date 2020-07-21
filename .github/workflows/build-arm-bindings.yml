@@ -1,0 +1,55 @@
+name: Build ARM bindings
+
+on:
+  push:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        nodeVersion: [11, 12, 13, 14]
+        platform: ["linux", "alpine"]
+        arch: [linux/arm/v7, linux/arm64]
+        include:
+          - platform: "linux"
+            variant: "stretch"
+          - platform: "alpine"
+            variant: "alpine"
+
+          - arch: linux/arm/v7
+            archShort: armv7
+          - arch: linux/arm64
+            archShort: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Docker Buildx
+        uses: crazy-max/ghaction-docker-buildx@v1
+        with:
+          buildx-version: latest
+          qemu-version: latest
+      - name: Build and Push
+        run: |
+          docker buildx build \
+            --file BinaryBuilder.Dockerfile \
+            --load \
+            --tag sqlite-builder \
+            --platform ${{ matrix.arch }} \
+            --no-cache \
+            --build-arg NODE_VERSION=${{ matrix.nodeVersion }} \
+            --build-arg VARIANT=${{ matrix.variant }} \
+            --build-arg AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
+            --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
+            .
+          CONTAINER_ID=$(docker create -it sqlite-builder)
+          docker cp $CONTAINER_ID:/usr/src/build/build/ ./build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: node${{ matrix.nodeVersion }}-${{ matrix.platform }}-${{ matrix.archShort }}
+          path: "./build/"
