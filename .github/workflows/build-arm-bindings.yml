@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        nodeVersion: [11, 12, 13, 14]
+        nodeVersion: [10, 11, 12, 13, 14]
         platform: ["linux", "alpine"]
         arch: [linux/arm/v7, linux/arm64]
         include:
