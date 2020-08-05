@@ -83,6 +83,9 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
     if (!open && locked) {
         EXCEPTION(Napi::String::New(env, "Database is closed"), SQLITE_MISUSE, exception);
         Napi::Function cb = baton->callback.Value();
+        // We don't call the actual callback, so we have to make sure that
+        // the baton gets destroyed.
+        delete baton;
         if (!cb.IsUndefined() && cb.IsFunction()) {
             Napi::Value argv[] = { exception };
             TRY_CATCH_CALL(Value(), cb, 1, argv);
