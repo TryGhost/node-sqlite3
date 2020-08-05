@@ -47,11 +47,10 @@ void Statement::Process() {
     }
 
     while (prepared && !locked && !queue.empty()) {
-        Call* call = queue.front();
+        std::unique_ptr<Call> call(queue.front());
         queue.pop();
 
         call->callback(call->baton);
-        delete call;
     }
 }
 
@@ -158,13 +157,14 @@ void Statement::Work_Prepare(napi_env e, void* data) {
 }
 
 void Statement::Work_AfterPrepare(napi_env e, napi_status status, void* data) {
-    STATEMENT_INIT(PrepareBaton);
+    std::unique_ptr<PrepareBaton> baton(static_cast<PrepareBaton*>(data));
+    Statement* stmt = baton->stmt;
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_OK) {
-        Error(baton);
+        Error(baton.get());
         stmt->Finalize_();
     }
     else {
@@ -359,13 +359,14 @@ void Statement::Work_Bind(napi_env e, void* data) {
 }
 
 void Statement::Work_AfterBind(napi_env e, napi_status status, void* data) {
-    STATEMENT_INIT(Baton);
+    std::unique_ptr<Baton> baton(static_cast<Baton*>(data));
+    Statement* stmt = baton->stmt;
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_OK) {
-        Error(baton);
+        Error(baton.get());
     }
     else {
         // Fire callbacks.
@@ -425,13 +426,14 @@ void Statement::Work_Get(napi_env e, void* data) {
 }
 
 void Statement::Work_AfterGet(napi_env e, napi_status status, void* data) {
-    STATEMENT_INIT(RowBaton);
+    std::unique_ptr<RowBaton> baton(static_cast<RowBaton*>(data));
+    Statement* stmt = baton->stmt;
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
-        Error(baton);
+        Error(baton.get());
     }
     else {
         // Fire callbacks.
@@ -498,13 +500,14 @@ void Statement::Work_Run(napi_env e, void* data) {
 }
 
 void Statement::Work_AfterRun(napi_env e, napi_status status, void* data) {
-    STATEMENT_INIT(RunBaton);
+    std::unique_ptr<RunBaton> baton(static_cast<RunBaton*>(data));
+    Statement* stmt = baton->stmt;
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
-        Error(baton);
+        Error(baton.get());
     }
     else {
         // Fire callbacks.
@@ -567,13 +570,14 @@ void Statement::Work_All(napi_env e, void* data) {
 }
 
 void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
-    STATEMENT_INIT(RowsBaton);
+    std::unique_ptr<RowsBaton> baton(static_cast<RowsBaton*>(data));
+    Statement* stmt = baton->stmt;
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_DONE) {
-        Error(baton);
+        Error(baton.get());
     }
     else {
         // Fire callbacks.
@@ -585,8 +589,8 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
                 Rows::const_iterator it = baton->rows.begin();
                 Rows::const_iterator end = baton->rows.end();
                 for (int i = 0; it < end; ++it, i++) {
-                    (result).Set(i, RowToJS(env,*it));
-                    delete *it;
+                    std::unique_ptr<Row> row(*it);
+                    (result).Set(i, RowToJS(env,row.get()));
                 }
 
                 Napi::Value argv[] = { env.Null(), result };
@@ -715,10 +719,10 @@ void Statement::AsyncEach(uv_async_t* handle) {
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
             for (int i = 0; it < end; ++it, i++) {
-                argv[1] = RowToJS(env,*it);
+                std::unique_ptr<Row> row(*it);
+                argv[1] = RowToJS(env,row.get());
                 async->retrieved++;
                 TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
-                delete *it;
             }
         }
     }
@@ -738,13 +742,14 @@ void Statement::AsyncEach(uv_async_t* handle) {
 }
 
 void Statement::Work_AfterEach(napi_env e, napi_status status, void* data) {
-    STATEMENT_INIT(EachBaton);
+    std::unique_ptr<EachBaton> baton(static_cast<EachBaton*>(data));
+    Statement* stmt = baton->stmt;
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
     if (stmt->status != SQLITE_DONE) {
-        Error(baton);
+        Error(baton.get());
     }
 
     STATEMENT_END();
@@ -774,7 +779,8 @@ void Statement::Work_Reset(napi_env e, void* data) {
 }
 
 void Statement::Work_AfterReset(napi_env e, napi_status status, void* data) {
-    STATEMENT_INIT(Baton);
+    std::unique_ptr<Baton> baton(static_cast<Baton*>(data));
+    Statement* stmt = baton->stmt;
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
@@ -870,7 +876,8 @@ Napi::Value Statement::Finalize_(const Napi::CallbackInfo& info) {
     return stmt->db->Value();
 }
 
-void Statement::Finalize_(Baton* baton) {
+void Statement::Finalize_(Baton* b) {
+    std::unique_ptr<Baton> baton(b);
     Napi::Env env = baton->stmt->Env();
     Napi::HandleScope scope(env);
 
@@ -881,8 +888,6 @@ void Statement::Finalize_(Baton* baton) {
     if (!cb.IsUndefined() && cb.IsFunction()) {
         TRY_CATCH_CALL(baton->stmt->Value(), cb, 0, NULL);
     }
-
-    delete baton;
 }
 
 void Statement::Finalize_() {
@@ -909,21 +914,17 @@ void Statement::CleanQueue() {
 
         // Clear out the queue so that this object can get GC'ed.
         while (!queue.empty()) {
-            Call* call = queue.front();
+            std::unique_ptr<Call> call(queue.front());
             queue.pop();
 
-            Napi::Function cb = call->baton->callback.Value();
+            std::unique_ptr<Baton> baton(call->baton);
+            Napi::Function cb = baton->callback.Value();
 
             if (prepared && !cb.IsEmpty() &&
                 cb.IsFunction()) {
                 TRY_CATCH_CALL(Value(), cb, 1, argv);
                 called = true;
             }
-
-            // We don't call the actual callback, so we have to make sure that
-            // the baton gets destroyed.
-            delete call->baton;
-            delete call;
         }
 
         // When we couldn't call a callback function, emit an error on the
@@ -936,12 +937,10 @@ void Statement::CleanQueue() {
     else while (!queue.empty()) {
         // Just delete all items in the queue; we already fired an event when
         // preparing the statement failed.
-        Call* call = queue.front();
+        std::unique_ptr<Call> call(queue.front());
         queue.pop();
-
         // We don't call the actual callback, so we have to make sure that
         // the baton gets destroyed.
         delete call->baton;
-        delete call;
     }
 }

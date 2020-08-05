@@ -98,7 +98,7 @@ public:
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
 
     struct Baton {
-        napi_async_work request;
+        napi_async_work request = NULL;
         Backup* backup;
         Napi::FunctionReference callback;
 
@@ -107,6 +107,7 @@ public:
             callback.Reset(cb_, 1);
         }
         virtual ~Baton() {
+            if (request) napi_delete_async_work(backup->Env(), request);
             backup->Unref();
             callback.Reset();
         }
