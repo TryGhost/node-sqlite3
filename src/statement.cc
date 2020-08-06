@@ -137,7 +137,7 @@ void Statement::Work_Prepare(napi_env e, void* data) {
 
     // In case preparing fails, we use a mutex to make sure we get the associated
     // error message.
-    sqlite3_mutex* mtx = sqlite3_db_mutex(baton->db->_handle);
+    STATEMENT_MUTEX(mtx);
     sqlite3_mutex_enter(mtx);
 
     stmt->status = sqlite3_prepare_v2(
@@ -352,7 +352,7 @@ void Statement::Work_BeginBind(Baton* baton) {
 void Statement::Work_Bind(napi_env e, void* data) {
     STATEMENT_INIT(Baton);
 
-    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
+    STATEMENT_MUTEX(mtx);
     sqlite3_mutex_enter(mtx);
     stmt->Bind(baton->parameters);
     sqlite3_mutex_leave(mtx);
@@ -405,7 +405,7 @@ void Statement::Work_Get(napi_env e, void* data) {
     STATEMENT_INIT(RowBaton);
 
     if (stmt->status != SQLITE_DONE || baton->parameters.size()) {
-        sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
+        STATEMENT_MUTEX(mtx);
         sqlite3_mutex_enter(mtx);
 
         if (stmt->Bind(baton->parameters)) {
@@ -476,7 +476,7 @@ void Statement::Work_BeginRun(Baton* baton) {
 void Statement::Work_Run(napi_env e, void* data) {
     STATEMENT_INIT(RunBaton);
 
-    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
+    STATEMENT_MUTEX(mtx);
     sqlite3_mutex_enter(mtx);
 
     // Make sure that we also reset when there are no parameters.
@@ -546,7 +546,7 @@ void Statement::Work_BeginAll(Baton* baton) {
 void Statement::Work_All(napi_env e, void* data) {
     STATEMENT_INIT(RowsBaton);
 
-    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
+    STATEMENT_MUTEX(mtx);
     sqlite3_mutex_enter(mtx);
 
     // Make sure that we also reset when there are no parameters.
@@ -649,7 +649,7 @@ void Statement::Work_Each(napi_env e, void* data) {
 
     Async* async = baton->async;
 
-    sqlite3_mutex* mtx = sqlite3_db_mutex(stmt->db->_handle);
+    STATEMENT_MUTEX(mtx);
 
     int retrieved = 0;
 

@@ -154,6 +154,14 @@ inline bool OtherIsInt(Napi::Number source) {
     type* baton = static_cast<type*>(data);                                    \
     Statement* stmt = baton->stmt;
 
+#define STATEMENT_MUTEX(name) \
+    if (!stmt->db->_handle) { \
+        stmt->status = SQLITE_MISUSE; \
+        stmt->message = "Database handle is closed"; \
+        return; \
+    } \
+    sqlite3_mutex* name = sqlite3_db_mutex(stmt->db->_handle);
+
 #define STATEMENT_END()                                                        \
     assert(stmt->locked);                                                      \
     assert(stmt->db->pending);                                                 \
