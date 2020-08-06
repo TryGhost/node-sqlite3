@@ -8,8 +8,6 @@
 
 using namespace node_sqlite3;
 
-Napi::FunctionReference Statement::constructor;
-
 Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
@@ -22,9 +20,6 @@ Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
       InstanceMethod("reset", &Statement::Reset),
       InstanceMethod("finalize", &Statement::Finalize_),
     });
-
-    constructor = Napi::Persistent(t);
-    constructor.SuppressDestruct();
 
     exports.Set("Statement", t);
     return exports;

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <napi.h>
 
 #include "macros.h"
 #include "database.h"
@@ -6,7 +7,9 @@
 
 using namespace node_sqlite3;
 
+#if NAPI_VERSION < 6
 Napi::FunctionReference Database::constructor;
+#endif
 
 Napi::Object Database::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
@@ -23,8 +26,14 @@ Napi::Object Database::Init(Napi::Env env, Napi::Object exports) {
         InstanceAccessor("open", &Database::OpenGetter, nullptr)
     });
 
+#if NAPI_VERSION < 6
     constructor = Napi::Persistent(t);
     constructor.SuppressDestruct();
+#else
+    Napi::FunctionReference* constructor = new Napi::FunctionReference();
+    *constructor = Napi::Persistent(t);
+    env.SetInstanceData<Napi::FunctionReference>(constructor);
+#endif
 
     exports.Set("Database", t);
     return exports;
