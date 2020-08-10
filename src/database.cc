@@ -229,6 +229,7 @@ void Database::Work_BeginClose(Baton* baton) {
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
 
+    baton->db->pending++;
     baton->db->RemoveCallbacks();
     baton->db->closing = true;
 
@@ -264,6 +265,7 @@ void Database::Work_AfterClose(napi_env e, napi_status status, void* data) {
     Napi::Env env = db->Env();
     Napi::HandleScope scope(env);
 
+    db->pending--;
     db->closing = false;
 
     Napi::Value argv[1];
@@ -544,6 +546,7 @@ void Database::Work_BeginExec(Baton* baton) {
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
+    baton->db->pending++;
     Napi::Env env = baton->db->Env();
     int status = napi_create_async_work(
         env, NULL, Napi::String::New(env, "sqlite3.Database.Exec"),
@@ -575,6 +578,7 @@ void Database::Work_AfterExec(napi_env e, napi_status status, void* data) {
     std::unique_ptr<ExecBaton> baton(static_cast<ExecBaton*>(data));
 
     Database* db = baton->db;
+    db->pending--;
 
     Napi::Env env = db->Env();
     Napi::HandleScope scope(env);
@@ -651,6 +655,7 @@ void Database::Work_BeginLoadExtension(Baton* baton) {
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
+    baton->db->pending++;
     Napi::Env env = baton->db->Env();
     int status = napi_create_async_work(
         env, NULL, Napi::String::New(env, "sqlite3.Database.LoadExtension"),
@@ -685,6 +690,7 @@ void Database::Work_AfterLoadExtension(napi_env e, napi_status status, void* dat
     std::unique_ptr<LoadExtensionBaton> baton(static_cast<LoadExtensionBaton*>(data));
 
     Database* db = baton->db;
+    db->pending--;
 
     Napi::Env env = db->Env();
     Napi::HandleScope scope(env);
