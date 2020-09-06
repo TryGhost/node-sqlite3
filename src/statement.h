@@ -76,7 +76,7 @@ public:
     static Napi::Value New(const Napi::CallbackInfo& info);
 
     struct Baton {
-        napi_async_work request;
+        napi_async_work request = NULL;
         Statement* stmt;
         Napi::FunctionReference callback;
         Parameters parameters;
@@ -90,6 +90,7 @@ public:
                 Values::Field* field = parameters[i];
                 DELETE_FIELD(field);
             }
+            if (request) napi_delete_async_work(stmt->Env(), request);
             stmt->Unref();
             callback.Reset();
         }

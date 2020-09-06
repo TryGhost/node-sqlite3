@@ -41,7 +41,7 @@ public:
     }
 
     struct Baton {
-        napi_async_work request;
+        napi_async_work request = NULL;
         Database* db;
         Napi::FunctionReference callback;
         int status;
@@ -55,6 +55,7 @@ public:
             }
         }
         virtual ~Baton() {
+            if (request) napi_delete_async_work(db->Env(), request);
             db->Unref();
             callback.Reset();
         }
