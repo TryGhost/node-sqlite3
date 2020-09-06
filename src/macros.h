@@ -119,13 +119,14 @@ inline bool OtherIsInt(Napi::Number source) {
 
 // The Mac OS compiler complains when argv is NULL unless we
 // first assign it to a locally defined variable.
-#define TRY_CATCH_CALL(context, callback, argc, argv)                          \
+#define TRY_CATCH_CALL(context, callback, argc, argv, ...)                     \
     Napi::Value* passed_argv = argv;\
     std::vector<napi_value> args;\
     if ((argc != 0) && (passed_argv != NULL)) {\
       args.assign(passed_argv, passed_argv + argc);\
     }\
-    (callback).MakeCallback(Napi::Value(context), args);
+    Napi::Value res = (callback).MakeCallback(Napi::Value(context), args);     \
+    if (res.IsEmpty()) return __VA_ARGS__;
 
 #define WORK_DEFINITION(name)                                                  \
     Napi::Value name(const Napi::CallbackInfo& info);                          \
@@ -153,15 +154,21 @@ inline bool OtherIsInt(Napi::Number source) {
     type* baton = static_cast<type*>(data);                                    \
     Statement* stmt = baton->stmt;
 
+#define STATEMENT_MUTEX(name) \
+    if (!stmt->db->_handle) { \
+        stmt->status = SQLITE_MISUSE; \
+        stmt->message = "Database handle is closed"; \
+        return; \
+    } \
+    sqlite3_mutex* name = sqlite3_db_mutex(stmt->db->_handle);
+
 #define STATEMENT_END()                                                        \
     assert(stmt->locked);                                                      \
     assert(stmt->db->pending);                                                 \
     stmt->locked = false;                                                      \
     stmt->db->pending--;                                                       \
     stmt->Process();                                                           \
-    stmt->db->Process();                                                       \
-    napi_delete_async_work(e, baton->request);                                 \
-    delete baton;
+    stmt->db->Process();
 
 #define BACKUP_BEGIN(type)                                                     \
     assert(baton);                                                             \
@@ -189,9 +196,7 @@ inline bool OtherIsInt(Napi::Number source) {
     backup->locked = false;                                                    \
     backup->db->pending--;                                                     \
     backup->Process();                                                         \
-    backup->db->Process();                                                     \
-    napi_delete_async_work(e, baton->request);                                 \
-    delete baton;
+    backup->db->Process();
 
 #define DELETE_FIELD(field)                                                    \
     if (field != NULL) {                                                       \

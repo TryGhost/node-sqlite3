@@ -14,7 +14,8 @@
     "remote_path": "./{name}/v{version}/{toolset}/",
     "package_name": "napi-v{napi_build_version}-{platform}-{arch}.tar.gz",
     "napi_versions": [
-      3
+      3,
+      6
     ]
   },
   "contributors": [
@@ -40,7 +41,7 @@
     "url": "git://github.com/mapbox/node-sqlite3.git"
   },
   "dependencies": {
-    "node-addon-api": "2.0.1",
+    "node-addon-api": "^3.0.0",
     "node-pre-gyp": "^0.11.0"
   },
   "devDependencies": {

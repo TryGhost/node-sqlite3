@@ -21,7 +21,9 @@ class Database;
 
 class Database : public Napi::ObjectWrap<Database> {
 public:
+#if NAPI_VERSION < 6
     static Napi::FunctionReference constructor;
+#endif
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
 
     static inline bool HasInstance(Napi::Value val) {
@@ -29,11 +31,17 @@ public:
         Napi::HandleScope scope(env);
         if (!val.IsObject()) return false;
         Napi::Object obj = val.As<Napi::Object>();
+#if NAPI_VERSION < 6
         return obj.InstanceOf(constructor.Value());
+#else
+        Napi::FunctionReference* constructor =
+            env.GetInstanceData<Napi::FunctionReference>();
+        return obj.InstanceOf(constructor->Value());
+#endif
     }
 
     struct Baton {
-        napi_async_work request;
+        napi_async_work request = NULL;
         Database* db;
         Napi::FunctionReference callback;
         int status;
@@ -47,6 +55,7 @@ public:
             }
         }
         virtual ~Baton() {
+            if (request) napi_delete_async_work(db->Env(), request);
             db->Unref();
             callback.Reset();
         }

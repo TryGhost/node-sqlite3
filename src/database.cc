@@ -1,4 +1,5 @@
 #include <string.h>
+#include <napi.h>
 
 #include "macros.h"
 #include "database.h"
@@ -6,7 +7,9 @@
 
 using namespace node_sqlite3;
 
+#if NAPI_VERSION < 6
 Napi::FunctionReference Database::constructor;
+#endif
 
 Napi::Object Database::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
@@ -23,8 +26,14 @@ Napi::Object Database::Init(Napi::Env env, Napi::Object exports) {
         InstanceAccessor("open", &Database::OpenGetter, nullptr)
     });
 
+#if NAPI_VERSION < 6
     constructor = Napi::Persistent(t);
     constructor.SuppressDestruct();
+#else
+    Napi::FunctionReference* constructor = new Napi::FunctionReference();
+    *constructor = Napi::Persistent(t);
+    env.SetInstanceData<Napi::FunctionReference>(constructor);
+#endif
 
     exports.Set("Database", t);
     return exports;
@@ -41,17 +50,14 @@ void Database::Process() {
 
         // Call all callbacks with the error object.
         while (!queue.empty()) {
-            Call* call = queue.front();
-            Napi::Function cb = call->baton->callback.Value();
+            std::unique_ptr<Call> call(queue.front());
+            queue.pop();
+            std::unique_ptr<Baton> baton(call->baton);
+            Napi::Function cb = baton->callback.Value();
             if (!cb.IsUndefined() && cb.IsFunction()) {
                 TRY_CATCH_CALL(this->Value(), cb, 1, argv);
                 called = true;
             }
-            queue.pop();
-            // We don't call the actual callback, so we have to make sure that
-            // the baton gets destroyed.
-            delete call->baton;
-            delete call;
         }
 
         // When we couldn't call a callback function, emit an error on the
@@ -64,16 +70,16 @@ void Database::Process() {
     }
 
     while (open && (!locked || pending == 0) && !queue.empty()) {
-        Call* call = queue.front();
+        Call *c = queue.front();
 
-        if (call->exclusive && pending > 0) {
+        if (c->exclusive && pending > 0) {
             break;
         }
 
         queue.pop();
+        std::unique_ptr<Call> call(c);
         locked = call->exclusive;
         call->callback(call->baton);
-        delete call;
 
         if (locked) break;
     }
@@ -86,6 +92,9 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
     if (!open && locked) {
         EXCEPTION(Napi::String::New(env, "Database is closed"), SQLITE_MISUSE, exception);
         Napi::Function cb = baton->callback.Value();
+        // We don't call the actual callback, so we have to make sure that
+        // the baton gets destroyed.
+        delete baton;
         if (!cb.IsUndefined() && cb.IsFunction()) {
             Napi::Value argv[] = { exception };
             TRY_CATCH_CALL(Value(), cb, 1, argv);
@@ -172,7 +181,7 @@ void Database::Work_Open(napi_env e, void* data) {
 }
 
 void Database::Work_AfterOpen(napi_env e, napi_status status, void* data) {
-    OpenBaton* baton = static_cast<OpenBaton*>(data);
+    std::unique_ptr<OpenBaton> baton(static_cast<OpenBaton*>(data));
 
     Database* db = baton->db;
 
@@ -204,9 +213,6 @@ void Database::Work_AfterOpen(napi_env e, napi_status status, void* data) {
         EMIT_EVENT(db->Value(), 1, info);
         db->Process();
     }
-
-    napi_delete_async_work(e, baton->request);
-    delete baton;
 }
 
 Napi::Value Database::OpenGetter(const Napi::CallbackInfo& info) {
@@ -232,6 +238,7 @@ void Database::Work_BeginClose(Baton* baton) {
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
 
+    baton->db->pending++;
     baton->db->RemoveCallbacks();
     baton->db->closing = true;
 
@@ -260,13 +267,14 @@ void Database::Work_Close(napi_env e, void* data) {
 }
 
 void Database::Work_AfterClose(napi_env e, napi_status status, void* data) {
-    Baton* baton = static_cast<Baton*>(data);
+    std::unique_ptr<Baton> baton(static_cast<Baton*>(data));
 
     Database* db = baton->db;
 
     Napi::Env env = db->Env();
     Napi::HandleScope scope(env);
 
+    db->pending--;
     db->closing = false;
 
     Napi::Value argv[1];
@@ -297,9 +305,6 @@ void Database::Work_AfterClose(napi_env e, napi_status status, void* data) {
         EMIT_EVENT(db->Value(), 1, info);
         db->Process();
     }
-
-    napi_delete_async_work(e, baton->request);
-    delete baton;
 }
 
 Napi::Value Database::Serialize(const Napi::CallbackInfo& info) {
@@ -311,7 +316,7 @@ Napi::Value Database::Serialize(const Napi::CallbackInfo& info) {
     db->serialize = true;
 
     if (!callback.IsEmpty() && callback.IsFunction()) {
-        TRY_CATCH_CALL(info.This(), callback, 0, NULL);
+        TRY_CATCH_CALL(info.This(), callback, 0, NULL, info.This());
         db->serialize = before;
     }
 
@@ -329,7 +334,7 @@ Napi::Value Database::Parallelize(const Napi::CallbackInfo& info) {
     db->serialize = false;
 
     if (!callback.IsEmpty() && callback.IsFunction()) {
-        TRY_CATCH_CALL(info.This(), callback, 0, NULL);
+        TRY_CATCH_CALL(info.This(), callback, 0, NULL, info.This());
         db->serialize = before;
     }
 
@@ -398,17 +403,18 @@ Napi::Value Database::Interrupt(const Napi::CallbackInfo& info) {
     return info.This();
 }
 
-void Database::SetBusyTimeout(Baton* baton) {
+void Database::SetBusyTimeout(Baton* b) {
+    std::unique_ptr<Baton> baton(b);
+
     assert(baton->db->open);
     assert(baton->db->_handle);
 
     // Abuse the status field for passing the timeout.
     sqlite3_busy_timeout(baton->db->_handle, baton->status);
-
-    delete baton;
 }
 
-void Database::RegisterTraceCallback(Baton* baton) {
+void Database::RegisterTraceCallback(Baton* b) {
+    std::unique_ptr<Baton> baton(b);
     assert(baton->db->open);
     assert(baton->db->_handle);
     Database* db = baton->db;
@@ -424,8 +430,6 @@ void Database::RegisterTraceCallback(Baton* baton) {
         db->debug_trace->finish();
         db->debug_trace = NULL;
     }
-
-    delete baton;
 }
 
 void Database::TraceCallback(void* db, const char* sql) {
@@ -434,7 +438,8 @@ void Database::TraceCallback(void* db, const char* sql) {
     static_cast<Database*>(db)->debug_trace->send(new std::string(sql));
 }
 
-void Database::TraceCallback(Database* db, std::string* sql) {
+void Database::TraceCallback(Database* db, std::string* s) {
+    std::unique_ptr<std::string> sql(s);
     // Note: This function is called in the main V8 thread.
     Napi::Env env = db->Env();
     Napi::HandleScope scope(env);
@@ -444,10 +449,10 @@ void Database::TraceCallback(Database* db, std::string* sql) {
         Napi::String::New(env, sql->c_str())
     };
     EMIT_EVENT(db->Value(), 2, argv);
-    delete sql;
 }
 
-void Database::RegisterProfileCallback(Baton* baton) {
+void Database::RegisterProfileCallback(Baton* b) {
+    std::unique_ptr<Baton> baton(b);
     assert(baton->db->open);
     assert(baton->db->_handle);
     Database* db = baton->db;
@@ -463,8 +468,6 @@ void Database::RegisterProfileCallback(Baton* baton) {
         db->debug_profile->finish();
         db->debug_profile = NULL;
     }
-
-    delete baton;
 }
 
 void Database::ProfileCallback(void* db, const char* sql, sqlite3_uint64 nsecs) {
@@ -476,7 +479,8 @@ void Database::ProfileCallback(void* db, const char* sql, sqlite3_uint64 nsecs) 
     static_cast<Database*>(db)->debug_profile->send(info);
 }
 
-void Database::ProfileCallback(Database *db, ProfileInfo* info) {
+void Database::ProfileCallback(Database *db, ProfileInfo* i) {
+    std::unique_ptr<ProfileInfo> info(i);
     Napi::Env env = db->Env();
     Napi::HandleScope scope(env);
 
@@ -486,10 +490,10 @@ void Database::ProfileCallback(Database *db, ProfileInfo* info) {
         Napi::Number::New(env, (double)info->nsecs / 1000000.0)
     };
     EMIT_EVENT(db->Value(), 3, argv);
-    delete info;
 }
 
-void Database::RegisterUpdateCallback(Baton* baton) {
+void Database::RegisterUpdateCallback(Baton* b) {
+    std::unique_ptr<Baton> baton(b);
     assert(baton->db->open);
     assert(baton->db->_handle);
     Database* db = baton->db;
@@ -505,8 +509,6 @@ void Database::RegisterUpdateCallback(Baton* baton) {
         db->update_event->finish();
         db->update_event = NULL;
     }
-
-    delete baton;
 }
 
 void Database::UpdateCallback(void* db, int type, const char* database,
@@ -521,7 +523,8 @@ void Database::UpdateCallback(void* db, int type, const char* database,
     static_cast<Database*>(db)->update_event->send(info);
 }
 
-void Database::UpdateCallback(Database *db, UpdateInfo* info) {
+void Database::UpdateCallback(Database *db, UpdateInfo* i) {
+    std::unique_ptr<UpdateInfo> info(i);
     Napi::Env env = db->Env();
     Napi::HandleScope scope(env);
 
@@ -532,7 +535,6 @@ void Database::UpdateCallback(Database *db, UpdateInfo* info) {
         Napi::Number::New(env, info->rowid),
     };
     EMIT_EVENT(db->Value(), 4, argv);
-    delete info;
 }
 
 Napi::Value Database::Exec(const Napi::CallbackInfo& info) {
@@ -553,6 +555,7 @@ void Database::Work_BeginExec(Baton* baton) {
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
+    baton->db->pending++;
     Napi::Env env = baton->db->Env();
     int status = napi_create_async_work(
         env, NULL, Napi::String::New(env, "sqlite3.Database.Exec"),
@@ -581,9 +584,10 @@ void Database::Work_Exec(napi_env e, void* data) {
 }
 
 void Database::Work_AfterExec(napi_env e, napi_status status, void* data) {
-    ExecBaton* baton = static_cast<ExecBaton*>(data);
+    std::unique_ptr<ExecBaton> baton(static_cast<ExecBaton*>(data));
 
     Database* db = baton->db;
+    db->pending--;
 
     Napi::Env env = db->Env();
     Napi::HandleScope scope(env);
@@ -608,9 +612,6 @@ void Database::Work_AfterExec(napi_env e, napi_status status, void* data) {
     }
 
     db->Process();
-
-    napi_delete_async_work(e, baton->request);
-    delete baton;
 }
 
 Napi::Value Database::Wait(const Napi::CallbackInfo& info) {
@@ -625,7 +626,9 @@ Napi::Value Database::Wait(const Napi::CallbackInfo& info) {
     return info.This();
 }
 
-void Database::Work_Wait(Baton* baton) {
+void Database::Work_Wait(Baton* b) {
+    std::unique_ptr<Baton> baton(b);
+
     Napi::Env env = baton->db->Env();
     Napi::HandleScope scope(env);
 
@@ -641,8 +644,6 @@ void Database::Work_Wait(Baton* baton) {
     }
 
     baton->db->Process();
-
-    delete baton;
 }
 
 Napi::Value Database::LoadExtension(const Napi::CallbackInfo& info) {
@@ -663,6 +664,7 @@ void Database::Work_BeginLoadExtension(Baton* baton) {
     assert(baton->db->open);
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
+    baton->db->pending++;
     Napi::Env env = baton->db->Env();
     int status = napi_create_async_work(
         env, NULL, Napi::String::New(env, "sqlite3.Database.LoadExtension"),
@@ -694,9 +696,10 @@ void Database::Work_LoadExtension(napi_env e, void* data) {
 }
 
 void Database::Work_AfterLoadExtension(napi_env e, napi_status status, void* data) {
-    LoadExtensionBaton* baton = static_cast<LoadExtensionBaton*>(data);
+    std::unique_ptr<LoadExtensionBaton> baton(static_cast<LoadExtensionBaton*>(data));
 
     Database* db = baton->db;
+    db->pending--;
 
     Napi::Env env = db->Env();
     Napi::HandleScope scope(env);
@@ -721,9 +724,6 @@ void Database::Work_AfterLoadExtension(napi_env e, napi_status status, void* dat
     }
 
     db->Process();
-
-    napi_delete_async_work(e, baton->request);
-    delete baton;
 }
 
 void Database::RemoveCallbacks() {
