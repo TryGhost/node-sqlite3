@@ -72,8 +72,6 @@ typedef Row Parameters;
 
 class Statement : public Napi::ObjectWrap<Statement> {
 public:
-    static Napi::FunctionReference constructor;
-
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
     static Napi::Value New(const Napi::CallbackInfo& info);
 

@@ -93,8 +93,6 @@ namespace node_sqlite3 {
  */
 class Backup : public Napi::ObjectWrap<Backup> {
 public:
-    static Napi::FunctionReference constructor;
-
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
 
     struct Baton {

@@ -7,9 +7,6 @@
 
 using namespace node_sqlite3;
 
-Napi::FunctionReference Backup::constructor;
-
-
 Napi::Object Backup::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
@@ -23,9 +20,6 @@ Napi::Object Backup::Init(Napi::Env env, Napi::Object exports) {
         InstanceAccessor("pageCount", &Backup::PageCountGetter, nullptr),
         InstanceAccessor("retryErrors", &Backup::RetryErrorGetter, &Backup::RetryErrorSetter),
     });
-
-    constructor = Napi::Persistent(t);
-    constructor.SuppressDestruct();
 
     exports.Set("Backup", t);
     return exports;
