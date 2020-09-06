@@ -1,10 +1,13 @@
 # Changelog
 
 ## 5.0.1
-- dep: node-addon-api to 2.0.1
-- bug: bad comparison of c string (#1347)
-- build: Install files to be deployed (#1352)
-- sqlite3: upgrade to 3.32.3 (#1351)
+- dep: node-addon-api to ^3.0.0 [#1367](https://github.com/mapbox/node-sqlite3/pull/1367)
+- bug: bad comparison of c string [#1347](https://github.com/mapbox/node-sqlite3/pull/1347)
+- build: Install files to be deployed [#1352](https://github.com/mapbox/node-sqlite3/pull/1352)
+- sqlite3: upgrade to 3.32.3 [#1351](https://github.com/mapbox/node-sqlite3/pull/1351)
+- bug: worker threads crash [#1367](https://github.com/mapbox/node-sqlite3/pull/1367)
+- bug: segfaults [#1368](https://github.com/mapbox/node-sqlite3/pull/1368)
+- typo: broken link to MapBox site [#1369](https://github.com/mapbox/node-sqlite3/pull/1369)
 
 ## 5.0.0
 - prebuilt: Node 14 support, dropped support for all version of Node < 10 [#1304](https://github.com/mapbox/node-sqlite3/pull/1304)
