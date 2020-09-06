@@ -221,7 +221,7 @@ Thanks to [Orlando Vazquez](https://github.com/orlandov),
 [Eric Fredricksen](https://github.com/grumdrig) and
 [Ryan Dahl](https://github.com/ry) for their SQLite bindings for node, and to mraleph on Freenode's #v8 for answering questions.
 
-Development of this module is sponsored by [MapBox](https://mapbox.org/).
+Development of this module is sponsored by [MapBox](https://mapbox.com/).
 
 # License
 
