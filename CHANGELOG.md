@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.0.1
+- dep: node-addon-api to ^3.0.0 [#1367](https://github.com/mapbox/node-sqlite3/pull/1367)
+- bug: bad comparison of c string [#1347](https://github.com/mapbox/node-sqlite3/pull/1347)
+- build: Install files to be deployed [#1352](https://github.com/mapbox/node-sqlite3/pull/1352)
+- sqlite3: upgrade to 3.32.3 [#1351](https://github.com/mapbox/node-sqlite3/pull/1351)
+- bug: worker threads crash [#1367](https://github.com/mapbox/node-sqlite3/pull/1367)
+- bug: segfaults [#1368](https://github.com/mapbox/node-sqlite3/pull/1368)
+- typo: broken link to MapBox site [#1369](https://github.com/mapbox/node-sqlite3/pull/1369)
+
 ## 5.0.0
 - prebuilt: Node 14 support, dropped support for all version of Node < 10 [#1304](https://github.com/mapbox/node-sqlite3/pull/1304)
 - prebuilt: add electron 7.2 [#1324](https://github.com/mapbox/node-sqlite3/pull/1324) 
@@ -10,7 +19,7 @@
 ## 4.2.0
 - electron: Electron v8, v8.1.x & v8.2.x [#1294](https://github.com/mapbox/node-sqlite3/pull/1294) [#1308](https://github.com/mapbox/node-sqlite3/pull/1308)
 - sqlite3: update to 3.31.1 (3310100) [#1289](https://github.com/mapbox/node-sqlite3/pull/1289)
--  webpack: split sqlite3-binding.js out so that it could be override by webpack [#1268](https://github.com/mapbox/node-sqlite3/pull/1268)
+- webpack: split sqlite3-binding.js out so that it could be override by webpack [#1268](https://github.com/mapbox/node-sqlite3/pull/1268)
 - sqlite3: enable 'SQLITE_ENABLE_DBSTAT_VTAB=1' [#1281](https://github.com/mapbox/node-sqlite3/pull/1281)
 - deps: remove request [#1287](https://github.com/mapbox/node-sqlite3/pull/1287)
 - deps: alternative update of node-gyp for electron (v1 - v4), windows [#1283](https://github.com/mapbox/node-sqlite3/pull/1283)
