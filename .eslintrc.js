@@ -1,6 +1,7 @@
 module.exports = {
     "extends": "eslint:recommended",
     "env": {
+        "es2017": true,
         "node": true
     },
     "rules": {
@@ -9,4 +10,4 @@ module.exports = {
         "semi": ["error", "always"],
         "no-cond-assign": ["error", "always"]
     }
-}
+};
