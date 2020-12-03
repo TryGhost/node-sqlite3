@@ -46,7 +46,7 @@
   "devDependencies": {
     "@mapbox/cloudfriend": "^1.9.0",
     "aws-sdk": "2.x",
-    "eslint": "3.5.0",
+    "eslint": "^7.32.0",
     "mocha": "^5.2.0"
   },
   "peerDependencies": {
