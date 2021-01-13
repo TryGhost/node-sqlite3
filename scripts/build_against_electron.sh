@@ -10,6 +10,7 @@ NPM_BIN_DIR="$(npm bin -g 2>/dev/null)"
 
 function publish() {
     if [[ ${PUBLISHABLE:-false} == true ]] && [[ ${COMMIT_MESSAGE} =~ "[publish binary]" ]]; then
+        node-pre-gyp rebuild  --clang=1 $GYP_ARGS
         node-pre-gyp package $GYP_ARGS
         node-pre-gyp publish $GYP_ARGS
         node-pre-gyp info $GYP_ARGS
