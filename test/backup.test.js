@@ -1,6 +1,5 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
-var fs = require('fs');
 var helper = require('./support/helper');
 
 // Check that the number of rows in two tables matches.
@@ -26,7 +25,7 @@ function assertRowsMatchFile(db, backupName, done) {
 }
 
 describe('backup', function() {
-    before(function() {
+    beforeAll(function() {
         helper.ensureExists('test/tmp');
     });
 
@@ -38,7 +37,7 @@ describe('backup', function() {
     });
 
     afterEach(function(done) {
-        if (!db) { done(); }
+        if (!db) { return done(); }
         db.close(done);
     });
 
@@ -47,7 +46,7 @@ describe('backup', function() {
             if (err) throw err;
             backup.step(1, function(err) {
                 if (err) throw err;
-                assert.fileExists('test/tmp/backup.db');
+                helper.fileExists('test/tmp/backup.db');
                 backup.finish(done);
             });
         });
@@ -57,7 +56,7 @@ describe('backup', function() {
         var backup = db.backup('test/tmp/backup.db');
         backup.step(-1, function(err) {
             if (err) throw err;
-            assert.fileExists('test/tmp/backup.db');
+            helper.fileExists('test/tmp/backup.db');
             backup.finish(function(err) {
                 if (err) throw err;
                 assertRowsMatchFile(db, 'test/tmp/backup.db', done);
@@ -69,7 +68,7 @@ describe('backup', function() {
         var backup = db.backup('test/tmp/backup.db');
         backup.finish(function(err) {
             if (err) throw err;
-            assert.fileDoesNotExist('test/tmp/backup.db');
+            helper.fileDoesNotExist('test/tmp/backup.db');
             done();
         });
     });

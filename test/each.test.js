@@ -1,9 +1,9 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
 describe('each', function() {
     var db;
-    before(function(done) {
+    beforeAll(function(done) {
         db = new sqlite3.Database('test/support/big.db', sqlite3.OPEN_READONLY, done);
     });
 

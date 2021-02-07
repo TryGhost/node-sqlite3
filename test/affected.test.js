@@ -1,9 +1,9 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
 describe('query properties', function() {
     var db;
-    before(function(done) {
+    beforeAll(function(done) {
         db = new sqlite3.Database(':memory:');
         db.run("CREATE TABLE foo (id INT, txt TEXT)", done);
     });

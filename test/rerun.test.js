@@ -1,9 +1,9 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
 describe('rerunning statements', function() {
     var db;
-    before(function(done) { db = new sqlite3.Database(':memory:', done); });
+    beforeAll(function(done) { db = new sqlite3.Database(':memory:', done); });
 
     var count = 10;
     var inserted = 0;
@@ -46,5 +46,5 @@ describe('rerunning statements', function() {
         assert.equal(retrieved, 5);
     });
 
-    after(function(done) { db.close(done); });
+    afterAll(function(done) { db.close(done); });
 });

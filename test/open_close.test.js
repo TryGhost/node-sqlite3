@@ -1,15 +1,15 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 var fs = require('fs');
 var helper = require('./support/helper');
 
 describe('open/close', function() {
-    before(function() {
+    beforeAll(function() {
         helper.ensureExists('test/tmp');
     });
 
     describe('open and close non-existant database', function() {
-        before(function() {
+        beforeAll(function() {
             helper.deleteFile('test/tmp/test_create.db');
         });
 
@@ -23,16 +23,16 @@ describe('open/close', function() {
         });
 
         it('should have created the file', function() {
-            assert.fileExists('test/tmp/test_create.db');
+            helper.fileExists('test/tmp/test_create.db');
         });
 
-        after(function() {
+        afterAll(function() {
             helper.deleteFile('test/tmp/test_create.db');
         });
     });
     
     describe('open and close non-existant shared database', function() {
-        before(function() {
+        beforeAll(function() {
             helper.deleteFile('test/tmp/test_create_shared.db');
         });
 
@@ -46,10 +46,10 @@ describe('open/close', function() {
         });
 
         it('should have created the file', function() {
-            assert.fileExists('test/tmp/test_create_shared.db');
+            helper.fileExists('test/tmp/test_create_shared.db');
         });
 
-        after(function() {
+        afterAll(function() {
             helper.deleteFile('test/tmp/test_create_shared.db');
         });
     });
@@ -105,7 +105,7 @@ describe('open/close', function() {
 
 
     describe('creating database without create flag', function() {
-        before(function() {
+        beforeAll(function() {
             helper.deleteFile('test/tmp/test_readonly.db');
         });
 
@@ -122,10 +122,10 @@ describe('open/close', function() {
         });
 
         it('should not have created the file', function() {
-            assert.fileDoesNotExist('test/tmp/test_readonly.db');
+            helper.fileDoesNotExist('test/tmp/test_readonly.db');
         });
 
-        after(function() {
+        afterAll(function() {
             helper.deleteFile('test/tmp/test_readonly.db');
         });
     });
@@ -149,13 +149,13 @@ describe('open/close', function() {
         });
     });
 
-    describe('closing with unfinalized statements', function(done) {
+    describe('closing with unfinalized statements', function() {
         var completed = false;
         var completedSecond = false;
         var closed = false;
 
         var db;
-        before(function() {
+        beforeAll(function(done) {
             db = new sqlite3.Database(':memory:', done);
         });
 

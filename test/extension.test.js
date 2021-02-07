@@ -1,26 +1,24 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
-var exists = require('fs').existsSync || require('path').existsSync;
+var exists = require('fs').existsSync;
 
-/*
 
 // disabled because this is not a generically safe test to run on all systems
 
 var spatialite_ext = '/usr/local/lib/libspatialite.dylib';
 
-describe('loadExtension', function(done) {
+describe('loadExtension', function() {
     var db;
-    before(function(done) {
+    beforeAll(function(done) {
         db = new sqlite3.Database(':memory:', done);
     });
 
     if (exists(spatialite_ext)) {
-        it('libspatialite', function(done) {
+        it.skip('libspatialite', function(done) {
             db.loadExtension(spatialite_ext, done);
         });
     } else {
-        it('libspatialite');
+        it('libspatialite', function() {
+        });
     }
 });
-
-*/

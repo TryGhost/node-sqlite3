@@ -1,5 +1,6 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
+var helper = require('./support/helper')
 
 var invalid_sql = 'update non_existent_table set id=1';
 
@@ -31,7 +32,7 @@ describe('verbose', function() {
         sqlite3.verbose();
 
         db.run(invalid_sql, function(err) {
-            assert(err instanceof Error);
+            assert(helper.isError(err));
 
             assert(
                 err.stack.indexOf(`Database#run('${invalid_sql}'`) > -1,
@@ -47,7 +48,7 @@ describe('verbose', function() {
         var db = new sqlite3.Database(':memory:');
 
         db.run(invalid_sql, function(err) {
-            assert(err instanceof Error);
+            assert(helper.isError(err));
 
             assert(
                 err.stack.indexOf(invalid_sql) === -1,

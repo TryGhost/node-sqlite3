@@ -1,4 +1,4 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
 describe('profiling', function() {
@@ -6,7 +6,7 @@ describe('profiling', function() {
     var select = false;
 
     var db;
-    before(function(done) {
+    beforeAll(function(done) {
         db = new sqlite3.Database(':memory:', done);
 
         db.on('profile', function(sql, nsecs) {
@@ -51,7 +51,7 @@ describe('profiling', function() {
         });
     });
 
-    after(function(done) {
+    afterAll(function(done) {
         db.close(done);
     });
 });

@@ -1,10 +1,10 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 var helper = require('./support/helper');
 
 describe('parallel', function() {
     var db;
-    before(function(done) {
+    beforeAll(function(done) {
         helper.deleteFile('test/tmp/test_parallel_inserts.db');
         helper.ensureExists('test/tmp');
         db = new sqlite3.Database('test/tmp/test_parallel_inserts.db', done);
@@ -28,17 +28,17 @@ describe('parallel', function() {
         }
 
         db.wait(done);
-    });
+    }, 480000);
 
     it('should close the database', function(done) {
         db.close(done);
     });
 
     it('should verify that the database exists', function() {
-        assert.fileExists('test/tmp/test_parallel_inserts.db');
+        helper.fileExists('test/tmp/test_parallel_inserts.db');
     });
 
-    after(function() {
+    afterAll(function() {
         helper.deleteFile('test/tmp/test_parallel_inserts.db');
     });
 });

@@ -8,7 +8,7 @@ var elmo = fs.readFileSync(__dirname + '/support/elmo.png');
 
 describe('blob', function() {
     var db;
-    before(function(done) {
+    beforeAll(function(done) {
         db = new sqlite3.Database(':memory:');
         db.run("CREATE TABLE elmos (id INT, image BLOB)", done);
     });

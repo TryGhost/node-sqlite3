@@ -18,7 +18,7 @@ exports.ensureExists = function(name,cb) {
     };
 }
 
-assert.fileDoesNotExist = function(name) {
+exports.fileDoesNotExist = function(name) {
     try {
         fs.statSync(name);
     } catch(err) {
@@ -28,10 +28,14 @@ assert.fileDoesNotExist = function(name) {
     }
 };
 
-assert.fileExists = function(name) {
+exports.fileExists = function(name) {
     try {
         fs.statSync(name);
     } catch(err) {
         throw err;
     }
+};
+
+exports.isError = function(obj){
+    return Object.prototype.toString.call(obj) === "[object Error]";
 };

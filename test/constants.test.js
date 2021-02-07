@@ -1,4 +1,4 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
 describe('constants', function() {

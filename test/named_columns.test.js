@@ -1,9 +1,9 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
 describe('named columns', function() {
     var db;
-    before(function(done) {
+    beforeAll(function(done) {
         db = new sqlite3.Database(':memory:', done);
     });
 

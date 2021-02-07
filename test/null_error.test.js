@@ -1,4 +1,4 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 var helper = require('./support/helper');
 
@@ -6,7 +6,7 @@ describe('null error', function() {
     var filename = 'test/tmp/test_sqlite_ok_error.db';
     var db;
 
-    before(function(done) {
+    beforeAll(function(done) {
         helper.ensureExists('test/tmp');
         helper.deleteFile(filename);
         db = new sqlite3.Database(filename, done);
@@ -32,10 +32,10 @@ describe('null error', function() {
     });
 
     it('should have created the database', function() {
-        assert.fileExists(filename);
+        helper.fileExists(filename);
     });
 
-    after(function() {
+    afterAll(function() {
         helper.deleteFile(filename);
     });
 });

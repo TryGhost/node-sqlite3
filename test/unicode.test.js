@@ -1,4 +1,4 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
 describe('unicode', function() {
@@ -10,7 +10,7 @@ describe('unicode', function() {
         db,
         i;
 
-    before(function(done) { db = new sqlite3.Database(':memory:', done); });
+    beforeAll(function(done) { db = new sqlite3.Database(':memory:', done); });
 
     for (i = 0x20; i < 0x80; i++) {
         first_values.push(i);
@@ -110,5 +110,5 @@ describe('unicode', function() {
         assert.equal(retrieved, length);
     });
 
-    after(function(done) { db.close(done); });
+    afterAll(function(done) { db.close(done); });
 });

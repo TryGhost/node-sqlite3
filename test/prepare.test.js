@@ -1,10 +1,10 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
 describe('prepare', function() {
     describe('invalid SQL', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+        beforeAll(function(done) { db = new sqlite3.Database(':memory:', done); });
 
         var stmt;
         it('should fail preparing a statement with invalid SQL', function(done) {
@@ -17,12 +17,12 @@ describe('prepare', function() {
             });
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
     describe('simple prepared statement', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+        beforeAll(function(done) { db = new sqlite3.Database(':memory:', done); });
 
         it('should prepare, run and finalize the statement', function(done) {
             db.prepare("CREATE TABLE foo (text bar)")
@@ -30,12 +30,12 @@ describe('prepare', function() {
                 .finalize(done);
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
     describe('inserting and retrieving rows', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+        beforeAll(function(done) { db = new sqlite3.Database(':memory:', done); });
 
         var inserted = 0;
         var retrieved = 0;
@@ -96,12 +96,12 @@ describe('prepare', function() {
         });
 
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
     describe('inserting with accidental undefined', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+        beforeAll(function(done) { db = new sqlite3.Database(':memory:', done); });
 
         var inserted = 0;
         var retrieved = 0;
@@ -147,12 +147,14 @@ describe('prepare', function() {
             assert.equal(2, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
     describe('retrieving reset() function', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
+        beforeAll(
+            function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); }
+        );
 
         var retrieved = 0;
 
@@ -176,12 +178,14 @@ describe('prepare', function() {
             assert.equal(10, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
     describe('multiple get() parameter binding', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
+        beforeAll(
+            function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); }
+        );
 
         var retrieved = 0;
 
@@ -207,12 +211,14 @@ describe('prepare', function() {
             assert.equal(10, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
     describe('prepare() parameter binding', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
+        beforeAll(
+            function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); }
+        );
 
         var retrieved = 0;
 
@@ -233,12 +239,14 @@ describe('prepare', function() {
             assert.equal(1, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
     describe('all()', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
+        beforeAll(
+            function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); }
+        );
 
         var retrieved = 0;
         var count = 1000;
@@ -262,12 +270,14 @@ describe('prepare', function() {
             assert.equal(count, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
     describe('all()', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
+        beforeAll(
+            function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); }
+        );
 
         it('should retrieve particular rows', function(done) {
            db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num > 5000")
@@ -278,12 +288,12 @@ describe('prepare', function() {
                 .finalize(done);
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
     describe('high concurrency', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+        beforeAll(function(done) { db = new sqlite3.Database(':memory:', done); });
 
         function randomString() {
             var str = '';
@@ -345,13 +355,15 @@ describe('prepare', function() {
                 .finalize(done);
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
 
     describe('test Database#get()', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
+        beforeAll(
+            function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); }
+        );
 
         var retrieved = 0;
 
@@ -371,12 +383,12 @@ describe('prepare', function() {
             assert.equal(1, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 
     describe('Database#run() and Database#all()', function() {
         var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+        beforeAll(function(done) { db = new sqlite3.Database(':memory:', done); });
 
         var inserted = 0;
         var retrieved = 0;
@@ -422,6 +434,6 @@ describe('prepare', function() {
             });
         });
 
-        after(function(done) { db.close(done); });
+        afterAll(function(done) { db.close(done); });
     });
 });

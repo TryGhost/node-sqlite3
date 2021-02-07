@@ -1,4 +1,4 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 
 if( process.env.NODE_SQLITE3_JSON1 === 'no' ){
     describe('json', function() {
@@ -11,7 +11,7 @@ if( process.env.NODE_SQLITE3_JSON1 === 'no' ){
     describe('json', function() {
         var db;
 
-        before(function(done) {
+        beforeAll(function(done) {
             db = new sqlite3.Database(':memory:', done);
         });
 

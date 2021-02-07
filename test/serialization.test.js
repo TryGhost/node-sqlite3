@@ -1,10 +1,10 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 
 
 describe('serialize() and parallelize()', function() {
     var db;
-    before(function(done) { db = new sqlite3.Database(':memory:', done); });
+    beforeAll(function(done) { db = new sqlite3.Database(':memory:', done); });
 
     var inserted1 = 0;
     var inserted2 = 0;
@@ -55,12 +55,12 @@ describe('serialize() and parallelize()', function() {
         });
     });
 
-    after(function(done) { db.close(done); });
+    afterAll(function(done) { db.close(done); });
 });
 
 describe('serialize(fn)', function() {
     var db;
-    before(function(done) { db = new sqlite3.Database(':memory:', done); });
+    beforeAll(function(done) { db = new sqlite3.Database(':memory:', done); });
 
     var inserted = 0;
     var retrieved = 0;
@@ -100,5 +100,5 @@ describe('serialize(fn)', function() {
         assert.equal(count, retrieved, "Didn't retrieve all rows");
     });
 
-    after(function(done) { db.close(done); });
+    afterAll(function(done) { db.close(done); });
 });

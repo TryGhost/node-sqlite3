@@ -1,9 +1,9 @@
-var sqlite3 = require('..');
+var sqlite3 = require('sqlite3');
 var assert = require('assert');
 var helper = require('./support/helper');
 
 describe('cache', function() {
-    before(function() {
+    beforeAll(function() {
         helper.ensureExists('test/tmp');
     });
 

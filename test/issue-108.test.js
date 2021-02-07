@@ -1,5 +1,4 @@
-var sqlite3 = require('..'),
-    assert = require('assert');
+var sqlite3 = require('sqlite3');
 
 describe('buffer', function() {
     var db;
@@ -17,7 +16,7 @@ describe('buffer', function() {
                 throw err;
             });
 
-            var buff = new Buffer(2);
+            var buff = Buffer.alloc(2);
             stmt.run(buff);
             stmt.finalize();
         });
