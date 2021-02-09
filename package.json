@@ -51,7 +51,7 @@
     "mocha": "^5.2.0"
   },
   "peerDependencies": {
-    "node-gyp": "3.x"
+    "node-gyp": "7.x"
   },
   "peerDependenciesMeta": {
     "node-gyp": {
@@ -59,7 +59,7 @@
     }
   },
   "optionalDependencies": {
-    "node-gyp": "3.x"
+    "node-gyp": "7.x"
   },
   "scripts": {
     "install": "node-pre-gyp install --fallback-to-build",
