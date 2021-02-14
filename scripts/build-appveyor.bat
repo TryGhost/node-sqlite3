@@ -140,6 +140,8 @@ CALL npm test
 IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 :NPM_TEST_FINISHED
+CALL node_modules\.bin\node-pre-gyp rebuild --msvs_version=%msvs_version% %TOOLSET_ARGS%
+IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 ECHO packaging for node-gyp
 CALL node_modules\.bin\node-pre-gyp package %TOOLSET_ARGS%
 ::make commit message env var shorter
