@@ -1,4 +1,6 @@
 # Changelog
+## 5.0.2
+- build: rebuild binaries before publishing [#1426](https://github.com/mapbox/node-sqlite3/pull/1426)
 
 ## 5.0.1
 - dep: node-addon-api to ^3.0.0 [#1367](https://github.com/mapbox/node-sqlite3/pull/1367)
@@ -8,7 +10,6 @@
 - bug: worker threads crash [#1367](https://github.com/mapbox/node-sqlite3/pull/1367)
 - bug: segfaults [#1368](https://github.com/mapbox/node-sqlite3/pull/1368)
 - typo: broken link to MapBox site [#1369](https://github.com/mapbox/node-sqlite3/pull/1369)
-- build: rebuild binaries before publishing [#1426](https://github.com/mapbox/node-sqlite3/pull/1426)
 
 ## 5.0.0
 - prebuilt: Node 14 support, dropped support for all version of Node < 10 [#1304](https://github.com/mapbox/node-sqlite3/pull/1304)
