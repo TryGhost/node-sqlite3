@@ -65,7 +65,7 @@
             './extract.py',
             './sqlite-autoconf-<@(sqlite_version).tar.gz',
             '<(SHARED_INTERMEDIATE_DIR)',
-            './',
+            '.',
             '<(SHARED_INTERMEDIATE_DIR)/sqlite-autoconf-<@(sqlite_version)'
           ]
         }

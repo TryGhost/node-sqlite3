@@ -8,12 +8,7 @@ tfile = tarfile.open(tarball,'r:gz');
 tfile.extractall(dirname)
 
 # amalgamate extension-functions.c under flag SQLITE_ENABLE_JSON1
-import shutil
-shutil.copyfile(
-  os.path.join(sys.argv[3], 'extension-functions.c'),
-  os.path.join(sys.argv[4], 'extension-functions.c')
-)
-with open(os.path.join(sys.argv[4], 'extension-functions.c')) as file:
+with open(os.path.join(sys.argv[3], 'extension-functions.c')) as file:
   src_extension_functions = file.read()
   src_extension_functions = src_extension_functions.replace(
     'typedef uint8_t',
