@@ -11,6 +11,11 @@ tfile.extractall(dirname)
 with open(os.path.join(sys.argv[3], 'extension-functions.c')) as file:
   src_extension_functions = file.read()
   src_extension_functions = src_extension_functions.replace(
+    '#include "sqlite3ext.h"',
+    '//#include "sqlite3ext.h"',
+    1
+  )
+  src_extension_functions = src_extension_functions.replace(
     'typedef uint8_t',
     '//typedef uint8_t',
     1
