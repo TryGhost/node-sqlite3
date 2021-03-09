@@ -86,4 +86,13 @@ describe('data types', function() {
             });
         });
     });
+
+    it('should ignore faulty toString', function(done) {
+        const faulty = { toString: 23 };
+        db.run("INSERT INTO txt_table VALUES(?)", faulty, function (err) {
+            assert.notEqual(err, undefined);
+            done();
+        });
+    });
+
 });
