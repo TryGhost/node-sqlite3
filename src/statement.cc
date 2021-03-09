@@ -205,7 +205,13 @@ template <class T> Values::Field*
         return new Values::Float(pos, source.ToNumber().DoubleValue());
     }
     else if (source.IsObject()) {
-        std::string val = source.ToString().Utf8Value();
+        Napi::String napiVal = source.ToString();
+        // Check whether toString returned a value that is not undefined.
+        if(napiVal.Type() == 0) {
+            return NULL;
+        }
+
+        std::string val = napiVal.Utf8Value();
         return new Values::Text(pos, val.length(), val.c_str());
     }
     else {
