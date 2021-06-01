@@ -28,6 +28,7 @@ export NODE_SQLITE3_JSON1=no
 if [[ $(uname -s) == 'Darwin' ]]; then
     brew update
     brew install sqlite
+    brew install zeromq
     npm install --build-from-source --sqlite=$(brew --prefix) --clang=1
 else
     npm install --build-from-source --sqlite=/usr --clang=1
