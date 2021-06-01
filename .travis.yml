@@ -21,6 +21,14 @@ matrix:
      - os: linux
        dist: trusty
        compiler: clang
+       env: NODE_VERSION="16"
+       addons:
+         apt:
+            sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
+            packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
+     - os: linux
+       dist: trusty
+       compiler: clang
        env: NODE_VERSION="14"
        addons:
          apt:
@@ -57,6 +65,9 @@ matrix:
             sources: [ 'ubuntu-toolchain-r-test','llvm-toolchain-precise-3.5', 'gcc-multilib', 'g++-multilib', 'libsqlite3-dev:i386' ]
             packages: [ 'clang-3.5', 'libstdc++-4.9-dev']
      # OS X
+     - os: osx
+       compiler: clang
+       env: NODE_VERSION="16" # node abi 93
      - os: osx
        compiler: clang
        env: NODE_VERSION="14" # node abi 83
