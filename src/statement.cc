@@ -442,7 +442,13 @@ void Statement::Work_AfterGet(napi_env e, napi_status status, void* data) {
         if (!cb.IsUndefined() && cb.IsFunction()) {
             if (stmt->status == SQLITE_ROW) {
                 // Create the result array from the data we acquired.
-                Napi::Value argv[] = { env.Null(), RowToJS(env, &baton->row) };
+                std::vector<Napi::String> names;
+                int cols = sqlite3_column_count(stmt->_handle);
+                for (int i = 0; i < cols; i++) {
+                  const char* name = sqlite3_column_name(stmt->_handle, i);
+                  names.push_back(Napi::String::New(env, name));
+                }
+                Napi::Value argv[] = { env.Null(), RowToJS(env, &baton->row, names) };
                 TRY_CATCH_CALL(stmt->Value(), cb, 2, argv);
             }
             else {
@@ -587,11 +593,19 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
             if (baton->rows.size()) {
                 // Create the result array from the data we acquired.
                 Napi::Array result(Napi::Array::New(env, baton->rows.size()));
+
+                std::vector<Napi::String> names;
+                int cols = sqlite3_column_count(stmt->_handle);
+                for (int i = 0; i < cols; i++) {
+                  const char* name = sqlite3_column_name(stmt->_handle, i);
+                  names.push_back(Napi::String::New(env, name));
+                }
+
                 Rows::const_iterator it = baton->rows.begin();
                 Rows::const_iterator end = baton->rows.end();
                 for (int i = 0; it < end; ++it, i++) {
                     std::unique_ptr<Row> row(*it);
-                    (result).Set(i, RowToJS(env,row.get()));
+                    result.Set(i, RowToJS(env, row.get(), names));
                 }
 
                 Napi::Value argv[] = { env.Null(), result };
@@ -701,42 +715,60 @@ void Statement::AsyncEach(uv_async_t* handle) {
     Napi::Env env = async->stmt->Env();
     Napi::HandleScope scope(env);
 
-    while (true) {
-        // Get the contents out of the data cache for us to process in the JS callback.
-        Rows rows;
-        NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
-        rows.swap(async->data);
-        NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
+    Napi::Function each_cb = async->item_cb.Value();
+    if (!each_cb.IsUndefined() && each_cb.IsFunction()) {
+        Napi::Value argv[2];
+        argv[0] = env.Null();
+        while (true) {
+            // Get the contents out of the data cache for us to process in the JS callback.
+            Rows rows;
+            NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
+            rows.swap(async->data);
+            NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
 
-        if (rows.empty()) {
-            break;
-        }
+            if (rows.empty()) {
+                break;
+            }
 
-        Napi::Function cb = async->item_cb.Value();
-        if (!cb.IsUndefined() && cb.IsFunction()) {
-            Napi::Value argv[2];
-            argv[0] = env.Null();
+            if (async->stmt->columns.size() == 0) {
+              int cols = sqlite3_column_count(async->stmt->_handle);
+              for (int i = 0; i < cols; i++) {
+                const char* name = sqlite3_column_name(async->stmt->_handle, i);
+                async->stmt->columns.push_back(Napi::String::New(env, name));
+              }
+            }
 
             Rows::const_iterator it = rows.begin();
             Rows::const_iterator end = rows.end();
-            for (int i = 0; it < end; ++it, i++) {
+            for (; it < end; ++it) {
                 std::unique_ptr<Row> row(*it);
-                argv[1] = RowToJS(env,row.get());
+                argv[1] = RowToJS(env, row.get(), async->stmt->columns);
                 async->retrieved++;
-                TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
+                TRY_CATCH_CALL(async->stmt->Value(), each_cb, 2, argv);
+            }
+        }
+    } else {
+        while (true) {
+            Rows rows;
+            NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
+            rows.swap(async->data);
+            NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
+
+            if (rows.empty()) {
+                break;
             }
         }
     }
 
-    Napi::Function cb = async->completed_cb.Value();
     if (async->completed) {
-        if (!cb.IsEmpty() &&
-                cb.IsFunction()) {
+        async->stmt->columns.clear();
+        Napi::Function final_cb = async->completed_cb.Value();
+        if (!final_cb.IsEmpty() && final_cb.IsFunction()) {
             Napi::Value argv[] = {
                 env.Null(),
                 Napi::Number::New(env, async->retrieved)
             };
-            TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
+            TRY_CATCH_CALL(async->stmt->Value(), final_cb, 2, argv);
         }
         uv_close(reinterpret_cast<uv_handle_t*>(handle), CloseCallback);
     }
@@ -796,7 +828,7 @@ void Statement::Work_AfterReset(napi_env e, napi_status status, void* data) {
     STATEMENT_END();
 }
 
-Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
+Napi::Value Statement::RowToJS(Napi::Env env, Row* row, std::vector<Napi::String> names) {
     Napi::EscapableHandleScope scope(env);
 
     Napi::Object result = Napi::Object::New(env);
@@ -826,7 +858,7 @@ Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
             } break;
         }
 
-        (result).Set(Napi::String::New(env, field->name.c_str()), value);
+        result.Set(names[i], value);
 
         DELETE_FIELD(field);
     }
@@ -835,30 +867,29 @@ Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
 }
 
 void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
-    int rows = sqlite3_column_count(stmt);
+    int cols = sqlite3_column_count(stmt);
 
-    for (int i = 0; i < rows; i++) {
+    for (int i = 0; i < cols; i++) {
         int type = sqlite3_column_type(stmt, i);
-        const char* name = sqlite3_column_name(stmt, i);
         switch (type) {
             case SQLITE_INTEGER: {
-                row->push_back(new Values::Integer(name, sqlite3_column_int64(stmt, i)));
+                row->push_back(new Values::Integer(i, sqlite3_column_int64(stmt, i)));
             }   break;
             case SQLITE_FLOAT: {
-                row->push_back(new Values::Float(name, sqlite3_column_double(stmt, i)));
+                row->push_back(new Values::Float(i, sqlite3_column_double(stmt, i)));
             }   break;
             case SQLITE_TEXT: {
                 const char* text = (const char*)sqlite3_column_text(stmt, i);
                 int length = sqlite3_column_bytes(stmt, i);
-                row->push_back(new Values::Text(name, length, text));
+                row->push_back(new Values::Text(i, length, text));
             } break;
             case SQLITE_BLOB: {
                 const void* blob = sqlite3_column_blob(stmt, i);
                 int length = sqlite3_column_bytes(stmt, i);
-                row->push_back(new Values::Blob(name, length, blob));
+                row->push_back(new Values::Blob(i, length, blob));
             }   break;
             case SQLITE_NULL: {
-                row->push_back(new Values::Null(name));
+                row->push_back(new Values::Null(i));
             }   break;
             default:
                 assert(false);

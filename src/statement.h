@@ -20,13 +20,13 @@ namespace node_sqlite3 {
 
 namespace Values {
     struct Field {
-        inline Field(unsigned short _index, unsigned short _type = SQLITE_NULL) :
+        inline Field(int _index, unsigned short _type = SQLITE_NULL) :
             type(_type), index(_index) {}
         inline Field(const char* _name, unsigned short _type = SQLITE_NULL) :
             type(_type), index(0), name(_name) {}
 
         unsigned short type;
-        unsigned short index;
+        int index;
         std::string name;
     };
 
@@ -225,7 +225,7 @@ protected:
     bool Bind(const Parameters &parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
-    static Napi::Value RowToJS(Napi::Env env, Row* row);
+    static Napi::Value RowToJS(Napi::Env env, Row* row, std::vector<Napi::String> names);
     void Schedule(Work_Callback callback, Baton* baton);
     void Process();
     void CleanQueue();
@@ -242,6 +242,7 @@ protected:
     bool locked;
     bool finalized;
     std::queue<Call*> queue;
+    std::vector<Napi::String> columns;
 };
 
 }
