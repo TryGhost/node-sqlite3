@@ -238,7 +238,7 @@ template <class T> T* Statement::Bind(const Napi::CallbackInfo& info, int start,
             int length = array.Length();
             // Note: bind parameters start with 1.
             for (int i = 0, pos = 1; i < length; i++, pos++) {
-                baton->parameters.push_back(BindParameter((array).Get(i), pos));
+                baton->parameters.push_back(BindParameter(array.Get(i), pos));
             }
         }
         else if (!info[start].IsObject() || OtherInstanceOf(info[start].As<Object>(), "RegExp") || OtherInstanceOf(info[start].As<Object>(), "Date") || info[start].IsBuffer()) {
@@ -253,15 +253,15 @@ template <class T> T* Statement::Bind(const Napi::CallbackInfo& info, int start,
             Napi::Array array = object.GetPropertyNames();
             int length = array.Length();
             for (int i = 0; i < length; i++) {
-                Napi::Value name = (array).Get(i);
+                Napi::Value name = array.Get(i);
                 Napi::Number num = name.ToNumber();
 
                 if (num.Int32Value() == num.DoubleValue()) {
                     baton->parameters.push_back(
-                        BindParameter((object).Get(name), num.Int32Value()));
+                        BindParameter(object.Get(name), num.Int32Value()));
                 }
                 else {
-                    baton->parameters.push_back(BindParameter((object).Get(name),
+                    baton->parameters.push_back(BindParameter(object.Get(name),
                         name.As<Napi::String>().Utf8Value().c_str()));
                 }
             }
