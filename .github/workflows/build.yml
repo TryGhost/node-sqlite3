@@ -1,0 +1,31 @@
+name: build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version:
+        # - 12.x
+        - 14.x
+        # - 16.x
+        os:
+        - macos-latest
+        - ubuntu-latest
+        - windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: build
+      run: npm install --build-from-source
+    - uses: actions/upload-artifact@v2
+      with:
+        name: lib
+        path: lib
+    - name: test
+      run: npm test
