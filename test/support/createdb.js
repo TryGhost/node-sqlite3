@@ -16,7 +16,7 @@ function createdb(callback) {
             str += chars[Math.floor(Math.random() * chars.length)];
         }
         return str;
-    };
+    }
 
 
     if (existsSync(db_path)) {
@@ -38,7 +38,7 @@ function createdb(callback) {
             });
         });
     }
-};
+}
 
 if (require.main === module) {
     createdb();

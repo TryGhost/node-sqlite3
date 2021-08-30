@@ -20,7 +20,7 @@ describe('query properties', function() {
                     if (err) throw err;
                     assert.equal(row.count, 3); // equals 3
                 });
-            })
+            });
         });
         db.wait(done);
     });
