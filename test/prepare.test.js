@@ -270,7 +270,7 @@ describe('prepare', function() {
         before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
 
         it('should retrieve particular rows', function(done) {
-           db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num > 5000")
+            db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num > 5000")
                 .all(function(err, rows) {
                     if (err) throw err;
                     assert.ok(rows.length === 0);

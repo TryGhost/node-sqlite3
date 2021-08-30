@@ -48,7 +48,7 @@ describe('unicode', function() {
         } else if (first < 0xe0) {
             return String.fromCharCode((first & 0x1f) << 0x6 | random_choice(trailing_values) & 0x3f);
         } else if (first == 0xe0) {
-             return String.fromCharCode(((first & 0xf) << 0xc) | ((random_choice(subranges[0]) & 0x3f) << 6) | random_choice(trailing_values) & 0x3f);
+            return String.fromCharCode(((first & 0xf) << 0xc) | ((random_choice(subranges[0]) & 0x3f) << 6) | random_choice(trailing_values) & 0x3f);
         } else if (first == 0xed) {
             return String.fromCharCode(((first & 0xf) << 0xc) | ((random_choice(subranges[1]) & 0x3f) << 6) | random_choice(trailing_values) & 0x3f);
         } else if (first < 0xf0) {
@@ -58,7 +58,7 @@ describe('unicode', function() {
 
     function randomString() {
         var str = '',
-        i;
+            i;
 
         for (i = Math.random() * 300; i > 0; i--) {
             str += random_utf8();
@@ -68,7 +68,7 @@ describe('unicode', function() {
     }
 
 
-        // Generate random data.
+    // Generate random data.
     var data = [];
     var length = Math.floor(Math.random() * 1000) + 200;
     for (var i = 0; i < length; i++) {
