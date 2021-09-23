@@ -8,11 +8,12 @@ describe('data types', function() {
         db.run("CREATE TABLE txt_table (txt TEXT)");
         db.run("CREATE TABLE int_table (int INTEGER)");
         db.run("CREATE TABLE flt_table (flt FLOAT)");
+        db.run("CREATE TABLE bigint_table (big BIGINT)");
         db.wait(done);
     });
 
     beforeEach(function(done) {
-        db.exec('DELETE FROM txt_table; DELETE FROM int_table; DELETE FROM flt_table;', done);
+        db.exec('DELETE FROM txt_table; DELETE FROM int_table; DELETE FROM flt_table; DELETE FROM bigint_table;', done);
     });
 
     it('should serialize Date()', function(done) {
@@ -92,6 +93,24 @@ describe('data types', function() {
         db.run("INSERT INTO txt_table VALUES(?)", faulty, function (err) {
             assert.notEqual(err, undefined);
             done();
+        });
+    });
+
+    [
+        1n,
+        1337n,
+        8876343627091516928n,
+        -8876343627091516928n,
+    ].forEach(function (bigint) {
+        it('should serialize BigInt ' + bigint, function (done) {
+            db.run("INSERT INTO bigint_table VALUES(?)", bigint, function(err) {
+                if (err) throw err;
+                db.get("SELECT big AS bigint FROM bigint_table", function (err, row) {
+                    if (err) throw err
+                    assert.equal(row.bigint, bigint);
+                    done();
+                });
+            });
         });
     });
 

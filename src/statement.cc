@@ -204,6 +204,20 @@ template <class T> Values::Field*
     else if (OtherInstanceOf(source.As<Object>(), "Date")) {
         return new Values::Float(pos, source.ToNumber().DoubleValue());
     }
+    else if (source.IsBigInt()) {
+        bool hadLoss;
+        auto ret = new Values::Integer(pos, source.As<Napi::BigInt>().Int64Value(&hadLoss));
+
+        if (!hadLoss) {
+            Napi::TypeError::New(
+                source.Env(),
+                "Converting BigInt to internal representation results is not lossless.")
+            .ThrowAsJavaScriptException();
+            return NULL;
+        }
+
+        return ret;
+    }
     else if (source.IsObject()) {
         Napi::String napiVal = source.ToString();
         // Check whether toString returned a value that is not undefined.
@@ -299,7 +313,7 @@ bool Statement::Bind(const Parameters & parameters) {
 
             switch (field->type) {
                 case SQLITE_INTEGER: {
-                    status = sqlite3_bind_int(_handle, pos,
+                    status = sqlite3_bind_int64(_handle, pos,
                         ((Values::Integer*)field)->value);
                 } break;
                 case SQLITE_FLOAT: {
@@ -810,7 +824,14 @@ Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
 
         switch (field->type) {
             case SQLITE_INTEGER: {
-                value = Napi::Number::New(env, ((Values::Integer*)field)->value);
+                auto field_value = ((Values::Integer*)field)->value;
+
+                if (field_value > JS_MAX_SAFE_INTEGER || field_value < JS_MIN_SAFE_INTEGER) {
+                    value = Napi::BigInt::New(env, field_value);
+                }
+                else {
+                    value = Napi::Number::New(env, ((Values::Integer*)field)->value);
+                }
             } break;
             case SQLITE_FLOAT: {
                 value = Napi::Number::New(env, ((Values::Float*)field)->value);

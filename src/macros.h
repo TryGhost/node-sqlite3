@@ -23,6 +23,9 @@ inline bool OtherIsInt(Napi::Number source) {
     }
 }
 
+#define JS_MAX_SAFE_INTEGER 9007199254740991
+#define JS_MIN_SAFE_INTEGER -JS_MAX_SAFE_INTEGER
+
 #define REQUIRE_ARGUMENTS(n)                                                   \
     if (info.Length() < (n)) {                                                 \
         Napi::TypeError::New(env, "Expected " #n "arguments").ThrowAsJavaScriptException(); \
