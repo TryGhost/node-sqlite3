@@ -205,13 +205,13 @@ template <class T> Values::Field*
         return new Values::Float(pos, source.ToNumber().DoubleValue());
     }
     else if (source.IsBigInt()) {
-        bool hadLoss;
-        auto ret = new Values::Integer(pos, source.As<Napi::BigInt>().Int64Value(&hadLoss));
+        bool lossless;
+        auto ret = new Values::Integer(pos, source.As<Napi::BigInt>().Int64Value(&lossless));
 
-        if (!hadLoss) {
-            Napi::TypeError::New(
+        if (!lossless) {
+            Napi::RangeError::New(
                 source.Env(),
-                "Converting BigInt to internal representation results is not lossless.")
+                "Value can't be losslessly converted to 64 bit integer.")
             .ThrowAsJavaScriptException();
             return NULL;
         }

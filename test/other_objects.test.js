@@ -114,4 +114,18 @@ describe('data types', function() {
         });
     });
 
+    it('should fail to serialize larger numbers', function (done) {
+        const bigint = 0xffffffffffffffffffffn; // 80 bits
+        let error;
+
+        try {
+            db.run('INSERT INTO bigint_table VALUES(?)', bigint);
+        } catch (err) {
+            error = err;
+        } finally {
+            assert.notEqual(error, undefined);
+            done();
+        }
+    })
+
 });
