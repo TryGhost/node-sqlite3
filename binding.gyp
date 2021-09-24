@@ -49,7 +49,7 @@
         "src/node_sqlite3.cc",
         "src/statement.cc"
       ],
-      "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS=1" ]
+      "defines": [ "NAPI_VERSION=<(napi_build_version)", "NAPI_DISABLE_CPP_EXCEPTIONS=1" ]
     },
     {
       "target_name": "action_after_build",
