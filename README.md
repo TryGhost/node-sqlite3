@@ -1,3 +1,5 @@
+This is a fork of node-sqlite3 due to them not updating it. This fork fixes a circular dependency error and security vunerability with tar. I will try to keep this fork up to date the best I can.
+
 Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
 [![NPM](https://nodei.co/npm/sqlite3.png?downloads=true&downloadRank=true)](https://nodei.co/npm/sqlite3/)
