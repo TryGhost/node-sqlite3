@@ -3,13 +3,24 @@ var assert = require('assert');
 
 describe('patching', function() {
     var db;
-    var originalClose;
+    var originalFunctions = {};
+
+    before(function() {
+        originalFunctions.close = sqlite3.Database.prototype.close;
+        originalFunctions.exec = sqlite3.Database.prototype.exec;
+        originalFunctions.wait = sqlite3.Database.prototype.wait;
+        originalFunctions.loadExtension = sqlite3.Database.prototype.loadExtension;
+        originalFunctions.serialize = sqlite3.Database.prototype.serialize;
+        originalFunctions.parallelize = sqlite3.Database.prototype.parallelize;
+        originalFunctions.configure = sqlite3.Database.prototype.configure;
+        originalFunctions.interrupt = sqlite3.Database.prototype.interrupt;
+    });
 
     it('allow patching native functions', function() {
         var myFun = function myFunction() {
             return "Success";
         }
-        originalClose = sqlite3.Database.prototype.close;
+        
         assert.doesNotThrow(() => {
             sqlite3.Database.prototype.close = myFun;
         });
@@ -48,7 +59,14 @@ describe('patching', function() {
 
     after(function() {
         if(db != null) {
-            db.close = originalClose;
+            sqlite3.Database.prototype.close = originalFunctions.close;
+            sqlite3.Database.prototype.exec = originalFunctions.exec;
+            sqlite3.Database.prototype.wait = originalFunctions.wait;
+            sqlite3.Database.prototype.loadExtension = originalFunctions.loadExtension;
+            sqlite3.Database.prototype.serialize = originalFunctions.serialize;
+            sqlite3.Database.prototype.parallelize = originalFunctions.parallelize;
+            sqlite3.Database.prototype.configure = originalFunctions.configure;
+            sqlite3.Database.prototype.interrupt = originalFunctions.interrupt;
             db.close();
         }
     });
