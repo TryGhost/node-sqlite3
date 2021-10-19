@@ -579,8 +579,10 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
 
     if (stmt->status != SQLITE_DONE) {
         Error(baton.get());
+        STATEMENT_END();
     }
     else {
+        STATEMENT_END();
         // Fire callbacks.
         Napi::Function cb = baton->callback.Value();
         if (!cb.IsUndefined() && cb.IsFunction()) {
@@ -607,8 +609,6 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
             }
         }
     }
-
-    STATEMENT_END();
 }
 
 Napi::Value Statement::Each(const Napi::CallbackInfo& info) {
