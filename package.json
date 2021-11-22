@@ -73,5 +73,6 @@
     "sqlite3",
     "database"
   ],
-  "main": "./lib/sqlite3"
+  "main": "./lib/sqlite3",
+  "types": "index.d.ts"
 }
