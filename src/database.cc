@@ -170,6 +170,11 @@ void Database::Work_Open(napi_env e, void* data) {
     );
 
     if (baton->status != SQLITE_OK) {
+        // Get the extended error code since this error happened
+        // during open where sqlite3_extended_result_codes was
+        // not called yet. We overwrite the status with the extended
+        // code to ensure we can produce a more detailed error.
+        baton->status = sqlite3_extended_errcode(db->_handle);
         baton->message = std::string(sqlite3_errmsg(db->_handle));
         sqlite3_close(db->_handle);
         db->_handle = NULL;
@@ -177,6 +182,9 @@ void Database::Work_Open(napi_env e, void* data) {
     else {
         // Set default database handle values.
         sqlite3_busy_timeout(db->_handle, 1000);
+
+        // Enable extended error codes.
+        sqlite3_extended_result_codes(db->_handle, 1);
     }
 }
 
