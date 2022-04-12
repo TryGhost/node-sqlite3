@@ -41,6 +41,8 @@ jobs:
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.1
         if: contains(matrix.os, 'windows')
+        with:
+          msbuild-architecture: ${{ matrix.architecture }}
 
       - name: Install dependencies
         run: yarn install --ignore-scripts
