@@ -57,7 +57,7 @@
     }
   },
   "optionalDependencies": {
-    "node-gyp": "8.x"
+    "node-gyp": "9.x"
   },
   "scripts": {
     "install": "node-pre-gyp install --fallback-to-build",
