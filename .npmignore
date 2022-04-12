@@ -12,7 +12,6 @@ benchmark
 configure
 Makefile
 scripts
-.travis.yml
 examples
 .dtps
 local.env
@@ -20,7 +19,6 @@ local.env
 .eslintrc.js
 setup.sh
 renovate.json
-appveyor.yml
 .vscode
 tools/
 *.tgz
