@@ -60,7 +60,7 @@
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/sqlite-autoconf-<@(sqlite_version)/sqlite3.c'
           ],
-          'action': ['<!(node -p "process.env.PYTHON")','./extract.py','./sqlite-autoconf-<@(sqlite_version).tar.gz','<(SHARED_INTERMEDIATE_DIR)']
+          'action': ['node','./extract.js','./sqlite-autoconf-<@(sqlite_version).tar.gz','<(SHARED_INTERMEDIATE_DIR)']
         }
       ],
       'direct_dependent_settings': {
