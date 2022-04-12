@@ -46,8 +46,8 @@
     "tar": "^6.1.11"
   },
   "devDependencies": {
-    "eslint": "^6.8.0",
-    "mocha": "^7.2.0"
+    "eslint": "6.8.0",
+    "mocha": "7.2.0"
   },
   "peerDependencies": {
     "node-gyp": "8.x"
