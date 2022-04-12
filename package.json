@@ -45,8 +45,6 @@
     "node-addon-api": "^4.2.0"
   },
   "devDependencies": {
-    "@mapbox/cloudfriend": "^1.9.0",
-    "aws-sdk": "2.x",
     "eslint": "^7.32.0",
     "mocha": "^9.2.2"
   },
