@@ -18,7 +18,7 @@ jobs:
         os:
           - macos-latest
           - ubuntu-latest
-          - windows-2019
+          - windows-latest
         architecture:
           - x64
         node:
@@ -27,7 +27,7 @@ jobs:
           - 16
           - 17
         include:
-          - os: windows-2019
+          - os: windows-latest
             node: 16
             architecture: x86
     name: ${{ matrix.os }} ${{ matrix.architecture }} - Node ${{ matrix.node }}
