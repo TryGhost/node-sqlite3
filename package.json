@@ -42,7 +42,8 @@
   },
   "dependencies": {
     "@mapbox/node-pre-gyp": "^1.0.0",
-    "node-addon-api": "^4.2.0"
+    "node-addon-api": "^4.2.0",
+    "tar": "^6.1.11"
   },
   "devDependencies": {
     "eslint": "^7.32.0",
