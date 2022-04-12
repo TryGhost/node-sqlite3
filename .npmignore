@@ -1,8 +1,12 @@
+.dockerignore
 .gitignore
+.github
 .npmignore
 node_modules
 lib/binding
 build
+build-tmp-napi-*
+Dockerfile
 test
 benchmark
 configure
@@ -15,6 +19,8 @@ local.env
 .mason
 .eslintrc.js
 setup.sh
-cloudformation/ci.template.js
+renovate.json
 appveyor.yml
 .vscode
+tools/
+*.tgz
