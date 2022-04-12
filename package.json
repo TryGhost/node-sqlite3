@@ -10,8 +10,8 @@
   "binary": {
     "module_name": "node_sqlite3",
     "module_path": "./lib/binding/napi-v{napi_build_version}-{platform}-{arch}",
-    "host": "https://mapbox-node-binary.s3.amazonaws.com",
-    "remote_path": "./{name}/v{version}/{toolset}/",
+    "host": "https://github.com/TryGhost/node-sqlite3/releases/download/",
+    "remote_path": "v{version}",
     "package_name": "napi-v{napi_build_version}-{platform}-{arch}.tar.gz",
     "napi_versions": [
       3,
@@ -47,7 +47,8 @@
   },
   "devDependencies": {
     "eslint": "6.8.0",
-    "mocha": "7.2.0"
+    "mocha": "7.2.0",
+    "node-pre-gyp-github": "1.4.4"
   },
   "peerDependencies": {
     "node-gyp": "8.x"
