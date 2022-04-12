@@ -1,0 +1,66 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+env:
+  FORCE_COLOR: 1
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-2019
+        architecture:
+          - x64
+        node:
+          - 12
+          - 14
+          - 16
+          - 17
+        include:
+          - os: windows-2019
+            node: 16
+            architecture: x86
+    name: ${{ matrix.os }} ${{ matrix.architecture }} - Node ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          architecture: ${{ matrix.architecture }}
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
+        if: contains(matrix.os, 'windows')
+
+      - name: Install dependencies
+        run: yarn install --ignore-scripts
+
+      - name: Configure build
+        run: yarn node-pre-gyp configure
+
+      - name: Build binaries
+        run: yarn node-pre-gyp build
+
+      - name: Run tests
+        run: yarn test
+
+      - name: Package prebuilt binaries
+        run: yarn node-pre-gyp package
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        if: matrix.node == 16
+        with:
+          name: prebuilt-binaries
+          path: build/stage/sqlite3/*/*
+          retention-days: 7
