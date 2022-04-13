@@ -31,3 +31,6 @@ local.env
 .mason
 .eslintrc.js
 setup.sh
+build-tmp-napi-v3
+build-tmp-napi-v6
+.github
