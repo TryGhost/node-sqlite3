@@ -63,7 +63,7 @@ jobs:
       - name: Package prebuilt binaries
         run: yarn node-pre-gyp package
 
-      - name: Upload build artifacts to commit artifacts
+      - name: Upload binaries to commit artifacts
         uses: actions/upload-artifact@v3
         if: matrix.node == 16
         with:
