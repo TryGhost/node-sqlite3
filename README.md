@@ -4,7 +4,6 @@ Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js]
 
 [![Latest release](https://img.shields.io/github/release/TryGhost/node-sqlite3.svg)](https://www.npmjs.com/package/sqlite3)
 ![Build Status](https://github.com/TryGhost/node-sqlite3/workflows/CI/badge.svg?branch=master)
-[![Coverage Status](https://coveralls.io/repos/mapbox/node-sqlite3/badge.svg?branch=master&service=github)](https://coveralls.io/github/mapbox/node-sqlite3?branch=master)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_shield)
 [![N-API v3 Badge](https://img.shields.io/badge/N--API-v3-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
 [![N-API v6 Badge](https://img.shields.io/badge/N--API-v6-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
@@ -15,14 +14,14 @@ Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js]
  - Full Buffer/Blob support
  - Extensive [debugging support](https://github.com/tryghost/node-sqlite3/wiki/Debugging)
  - [Query serialization](https://github.com/tryghost/node-sqlite3/wiki/Control-Flow) API
- - [Extension support](https://github.com/tryghost/node-sqlite3/wiki/Extensions), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html).
+ - [Extension support](https://github.com/tryghost/node-sqlite3/wiki/Extensions), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html)
  - Big test suite
  - Written in modern C++ and tested for memory leaks
- - Bundles SQLite3 3.38.2, or you can build using a local SQLite
+ - Bundles SQLite v3.38.2, or you can build using a local SQLite
 
 # Installing
 
-You can use [`npm`](https://github.com/isaacs/npm) or [`yarn`](https://github.com/yarnpkg/yarn) to install `sqlite3`:
+You can use [`npm`](https://github.com/npm/cli) or [`yarn`](https://github.com/yarnpkg/yarn) to install `sqlite3`:
 
 * (recommended) Latest package:
 ```bash
@@ -225,12 +224,7 @@ npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`bre
 
 # Testing
 
-[mocha](https://github.com/visionmedia/mocha) is required to run unit tests.
-
-In sqlite3's directory (where its `package.json` resides) run the following:
-
 ```bash
-npm install mocha
 npm test
 ```
 
