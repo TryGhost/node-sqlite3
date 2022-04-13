@@ -17,9 +17,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [10, 11, 12, 13, 14, 15, 16, 17]
+        node:
+          - 12
+          - 14
+          - 16
+          - 17
         os: [bullseye]
-        architecture: [linux/arm/v7, linux/arm64]
+        architecture:
+          - linux/arm/v7
+          - linux/arm64
     name: ${{ matrix.os }} ${{ matrix.architecture }} - Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v3
