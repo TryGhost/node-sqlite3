@@ -63,7 +63,7 @@ SQLite's [SQLCipher extension](https://github.com/sqlcipher/sqlcipher) is also 
 
 # API
 
-See the [API documentation](https://github.com/tryghost/node-sqlite3/wiki) in the wiki.
+See the [API documentation](https://github.com/TryGhost/node-sqlite3/wiki/API) in the wiki.
 
 # Usage
 
