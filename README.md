@@ -1,6 +1,6 @@
-Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
+# ⚙️ node-sqlite3
 
-[![NPM](https://nodei.co/npm/sqlite3.png?downloads=true&downloadRank=true)](https://nodei.co/npm/sqlite3/)
+Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
 [![Latest release](https://img.shields.io/github/release/TryGhost/node-sqlite3.svg)](https://www.npmjs.com/package/sqlite3)
 ![Build Status](https://github.com/TryGhost/node-sqlite3/workflows/CI/badge.svg?branch=master)
