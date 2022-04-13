@@ -78,3 +78,48 @@ jobs:
         if: matrix.node == 16 && startsWith(github.ref, 'refs/tags/')
         env:
           NODE_PRE_GYP_GITHUB_TOKEN: ${{ github.token }}
+  build-arm:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [10, 11, 12, 13, 14, 15, 16, 17]
+        os: [bullseye, alpine]
+        architecture: [linux/arm/v7, linux/arm64]
+    name: ${{ matrix.os }} ${{ matrix.architecture }} - Node ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and Push
+        run: |
+          docker buildx build \
+            --file BinaryBuilder.Dockerfile \
+            --load \
+            --tag sqlite-builder \
+            --platform ${{ matrix.architecture }} \
+            --no-cache \
+            --build-arg NODE_VERSION=${{ matrix.node }} \
+            --build-arg VARIANT=${{ matrix.os }} \
+            .
+          CONTAINER_ID=$(docker create -it sqlite-builder)
+          docker cp $CONTAINER_ID:/usr/src/build/build/ ./build
+
+      - name: Upload binaries to commit artifacts
+        uses: actions/upload-artifact@v3
+        if: matrix.node == 16
+        with:
+          name: prebuilt-binaries
+          path: build/stage/*/*
+          retention-days: 7
+
+      - name: Upload binaries to GitHub Release
+        run: yarn node-pre-gyp-github publish
+        if: matrix.node == 16 && startsWith(github.ref, 'refs/tags/')
+        env:
+          NODE_PRE_GYP_GITHUB_TOKEN: ${{ github.token }}
