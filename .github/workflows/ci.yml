@@ -68,7 +68,7 @@ jobs:
         if: matrix.node == 16
         with:
           name: prebuilt-binaries
-          path: build/stage/sqlite3/*/*
+          path: build/stage/*/*
           retention-days: 7
 
       - name: Upload binaries to GitHub Release
