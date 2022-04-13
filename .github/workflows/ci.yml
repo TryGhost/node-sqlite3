@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - '*'
 env:
   FORCE_COLOR: 1
 concurrency:
