@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         node: [10, 11, 12, 13, 14, 15, 16, 17]
-        os: [bullseye, alpine]
+        os: [bullseye]
         architecture: [linux/arm/v7, linux/arm64]
     name: ${{ matrix.os }} ${{ matrix.architecture }} - Node ${{ matrix.node }}
     steps:
@@ -33,7 +33,7 @@ jobs:
       - name: Build and Push
         run: |
           docker buildx build \
-            --file BinaryBuilder.Dockerfile \
+            --file ./tools/BinaryBuilder.Dockerfile \
             --load \
             --tag sqlite-builder \
             --platform ${{ matrix.architecture }} \
