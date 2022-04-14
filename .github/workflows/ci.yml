@@ -92,6 +92,11 @@ jobs:
         variant:
           - bullseye
           - alpine
+        include:
+          # musl x64 builds
+          - architecture: linux/amd64
+            variant: alpine
+            node: 16
     name: ${{ matrix.variant }} ${{ matrix.architecture }} - Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v3
