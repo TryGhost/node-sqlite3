@@ -40,13 +40,19 @@ The module uses [node-pre-gyp](https://github.com/mapbox/node-pre-gyp) to downlo
 Format: `napi-v{napi_build_version}-{platform}-{libc}-{arch}`
 
 * `napi-v3-darwin-unknown-x64`
+* `napi-v3-linux-glibc-arm64`
 * `napi-v3-linux-glibc-x64`
+* `napi-v3-linux-musl-arm64`
 * `napi-v3-win32-unknown-ia32`
 * `napi-v3-win32-unknown-x64`
 * `napi-v6-darwin-unknown-x64`
+* `napi-v6-linux-glibc-arm64`
 * `napi-v6-linux-glibc-x64`
+* `napi-v6-linux-musl-arm64`
 * `napi-v6-win32-unknown-ia32`
 * `napi-v6-win32-unknown-x64`
+
+Unfortunately, [node-pre-gyp](https://github.com/mapbox/node-pre-gyp) cannot differentiate between `armv6` and `armv7`, and instead uses `arm` as the `{arch}`. Until that is fixed, you will still need to install `sqlite3` from [source](#source-install).
 
 Support for other platforms and architectures may be added in the future if CI supports building on them.
 
@@ -54,7 +60,7 @@ If your environment isn't supported, it'll use `node-gyp` to build SQLite but yo
 
 ### Other ways to install
 
-It is also possible to make your own build of `sqlite3` from its source instead of its npm package ([See below.](#building-from-the-source)).
+It is also possible to make your own build of `sqlite3` from its source instead of its npm package ([See below.](#source-install)).
 
 The `sqlite3` module also works with [node-webkit](https://github.com/rogerwang/node-webkit) if node-webkit contains a supported version of Node.js engine. [(See below.)](#building-for-node-webkit)
 

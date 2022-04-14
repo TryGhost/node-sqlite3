@@ -79,3 +79,53 @@ jobs:
         if: matrix.node == 16 && startsWith(github.ref, 'refs/tags/')
         env:
           NODE_PRE_GYP_GITHUB_TOKEN: ${{ github.token }}
+  build-qemu:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - 16
+        architecture:
+          - linux/arm64
+        variant:
+          - bullseye
+          - alpine
+    name: ${{ matrix.variant }} ${{ matrix.architecture }} - Node ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build binaries and test
+        run: |
+          docker buildx build \
+            --file ./tools/BinaryBuilder.Dockerfile \
+            --load \
+            --tag sqlite-builder \
+            --platform ${{ matrix.architecture }} \
+            --no-cache \
+            --build-arg VARIANT=${{ matrix.variant }} \
+            --build-arg NODE_VERSION=${{ matrix.node }} \
+            .
+          CONTAINER_ID=$(docker create -it sqlite-builder)
+          docker cp $CONTAINER_ID:/usr/src/build/build/ ./build
+
+      - name: Upload binaries to commit artifacts
+        uses: actions/upload-artifact@v3
+        if: matrix.node == 16
+        with:
+          name: prebuilt-binaries
+          path: build/stage/*/*
+          retention-days: 7
+
+      - name: Upload binaries to GitHub Release
+        run: yarn node-pre-gyp-github publish
+        if: matrix.node == 16 && startsWith(github.ref, 'refs/tags/')
+        env:
+          NODE_PRE_GYP_GITHUB_TOKEN: ${{ github.token }}
