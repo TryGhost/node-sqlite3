@@ -37,16 +37,16 @@ yarn add sqlite3
 
 The module uses [node-pre-gyp](https://github.com/mapbox/node-pre-gyp) to download the prebuilt binary for your platform, if it exists. These binaries are hosted on GitHub Releases for `sqlite3` versions above 5.0.2, and they are hosted on S3 otherwise. The following targets are currently provided:
 
-Format: `napi-v{napi_build_version}-{platform}-{arch}`
+Format: `napi-v{napi_build_version}-{platform}-{libc}-{arch}`
 
-* `napi-v3-darwin-x64`
-* `napi-v3-linux-x64`
-* `napi-v3-win32-ia32`
-* `napi-v3-win32-x64`
-* `napi-v6-darwin-x64`
-* `napi-v6-linux-x64`
-* `napi-v6-win32-ia32`
-* `napi-v6-win32-x64`
+* `napi-v3-darwin-unknown-x64`
+* `napi-v3-linux-glibc-x64`
+* `napi-v3-win32-unknown-ia32`
+* `napi-v3-win32-unknown-x64`
+* `napi-v6-darwin-unknown-x64`
+* `napi-v6-linux-glibc-x64`
+* `napi-v6-win32-unknown-ia32`
+* `napi-v6-win32-unknown-x64`
 
 Support for other platforms and architectures may be added in the future if CI supports building on them.
 
