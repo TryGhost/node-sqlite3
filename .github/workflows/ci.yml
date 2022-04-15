@@ -60,6 +60,13 @@ jobs:
       - name: Build binaries
         run: yarn node-pre-gyp build
 
+      - name: Print glibc linking
+        if: contains(matrix.os, 'ubuntu')
+        run: |
+          ldd lib/binding/*/node_sqlite3.node
+          echo "---"
+          nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true
+
       - name: Run tests
         run: yarn test
 
