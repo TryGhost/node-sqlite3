@@ -20,7 +20,7 @@ RUN cd node_modules/\@mapbox/node-pre-gyp \
 RUN npx node-pre-gyp configure
 RUN npx node-pre-gyp build
 
-RUN if [ "$VARIANT" != "alpine" ] then; ldd lib/binding/*/node_sqlite3.node; nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true ; fi
+RUN if [ "$VARIANT" != "alpine" ] ; then ldd lib/binding/*/node_sqlite3.node; nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true ; fi
 
 RUN npm run test
 RUN npx node-pre-gyp package
