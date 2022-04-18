@@ -36,6 +36,12 @@
     "Mithgol",
     "Ben Noordhuis <ben@strongloop.com>"
   ],
+  "files": [
+    "binding.gyp",
+    "deps/",
+    "lib/*.js",
+    "src/"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/TryGhost/node-sqlite3.git"
