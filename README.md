@@ -251,6 +251,7 @@ npm test
 * [Audrius Kažukauskas](https://github.com/audriusk)
 * [Johannes Schauer](https://github.com/pyneo)
 * [Mithgol](https://github.com/Mithgol)
+* [Kewde](https://github.com/kewde)
 
 # Acknowledgments
 
@@ -258,7 +259,7 @@ Thanks to [Orlando Vazquez](https://github.com/orlandov),
 [Eric Fredricksen](https://github.com/grumdrig) and
 [Ryan Dahl](https://github.com/ry) for their SQLite bindings for node, and to mraleph on Freenode's #v8 for answering questions.
 
-Development of this module is sponsored by [MapBox](https://mapbox.com/).
+This module was originally created by [MapBox](https://mapbox.com/) & is now maintained by [Ghost](https://ghost.org).
 
 # License
 
