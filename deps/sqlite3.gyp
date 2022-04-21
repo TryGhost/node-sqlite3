@@ -92,11 +92,7 @@
           'SQLITE_ENABLE_MATH_FUNCTIONS'
         ],
       },
-      'cflags': [
-          '-include ../src/gcc-preinclude.h'
-      ],
       'cflags_cc': [
-          '-include ../src/gcc-preinclude.h',
           '-Wno-unused-value'
       ],
       'defines': [

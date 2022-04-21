@@ -54,6 +54,13 @@ jobs:
       - name: Install dependencies
         run: yarn install --ignore-scripts
 
+      - name: Add Linux env vars
+        if: contains(matrix.os, 'ubuntu')
+        run: |
+          echo "CFLAGS=${CFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
+          echo "CXXFLAGS=${CXXFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
+          echo "V=1" >> $GITHUB_ENV
+
       - name: Configure build
         run: yarn node-pre-gyp configure
 

@@ -17,6 +17,8 @@ RUN cd node_modules/\@mapbox/node-pre-gyp \
   && npm install fs-extra@10.0.1 \
   && sed -i -e s/\'fs/\'fs-extra/ -e s/fs\.renameSync/fs.moveSync/ ./lib/util/napi.js
 
+ENV CFLAGS="${CFLAGS:-} -include ../src/gcc-preinclude.h"
+ENV CXXFLAGS="${CXXFLAGS:-} -include ../src/gcc-preinclude.h"
 RUN npx node-pre-gyp configure
 RUN npx node-pre-gyp build
 
