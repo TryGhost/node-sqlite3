@@ -82,5 +82,10 @@
     "sqlite3",
     "database"
   ],
-  "main": "./lib/sqlite3"
+  "main": "./lib/sqlite3",
+  "renovate": {
+    "extends": [
+      "@tryghost:base"
+    ]
+  }
 }
