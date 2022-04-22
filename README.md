@@ -259,7 +259,7 @@ Thanks to [Orlando Vazquez](https://github.com/orlandov),
 [Eric Fredricksen](https://github.com/grumdrig) and
 [Ryan Dahl](https://github.com/ry) for their SQLite bindings for node, and to mraleph on Freenode's #v8 for answering questions.
 
-This module was originally created by [MapBox](https://mapbox.com/) & is now maintained by [Ghost](https://ghost.org).
+This module was originally created by [Mapbox](https://mapbox.com/) & is now maintained by [Ghost](https://ghost.org).
 
 # License
 
