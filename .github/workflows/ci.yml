@@ -22,7 +22,7 @@ jobs:
           - macos-latest
           - ubuntu-latest
           - windows-latest
-        architecture:
+        target:
           - x64
         node:
           - 10
@@ -37,30 +37,33 @@ jobs:
         include:
           - os: windows-latest
             node: 16
-            architecture: x86
-    name: ${{ matrix.os }} ${{ matrix.architecture }} - Node ${{ matrix.node }}
+            target: x86
+    name: ${{ matrix.os }} (node=${{ matrix.node }}, target=${{ matrix.target }})
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
-          architecture: ${{ matrix.architecture }}
+          architecture: ${{ matrix.target }}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.1
         if: contains(matrix.os, 'windows')
         with:
-          msbuild-architecture: ${{ matrix.architecture }}
+          msbuild-architecture: ${{ matrix.target }}
 
       - name: Install dependencies
         run: yarn install --ignore-scripts
+
+      - name: Add env vars
+        run: |
+          echo "V=1" >> $GITHUB_ENV
 
       - name: Add Linux env vars
         if: contains(matrix.os, 'ubuntu')
         run: |
           echo "CFLAGS=${CFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
           echo "CXXFLAGS=${CXXFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
-          echo "V=1" >> $GITHUB_ENV
 
       - name: Configure build
         run: yarn node-pre-gyp configure
@@ -68,12 +71,14 @@ jobs:
       - name: Build binaries
         run: yarn node-pre-gyp build
 
-      - name: Print glibc linking
+      - name: Print binary info
         if: contains(matrix.os, 'ubuntu')
         run: |
           ldd lib/binding/*/node_sqlite3.node
           echo "---"
           nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true
+          echo "---"
+          file lib/binding/napi-v*/*
 
       - name: Run tests
         run: yarn test
@@ -102,17 +107,17 @@ jobs:
       matrix:
         node:
           - 16
-        architecture:
+        target:
           - linux/arm64
         variant:
           - bullseye
           - alpine
         include:
           # musl x64 builds
-          - architecture: linux/amd64
+          - target: linux/amd64
             variant: alpine
             node: 16
-    name: ${{ matrix.variant }} ${{ matrix.architecture }} - Node ${{ matrix.node }}
+    name: ${{ matrix.variant }} (node=${{ matrix.node }}, target=${{ matrix.target }})
     steps:
       - uses: actions/checkout@v3
 
@@ -128,7 +133,7 @@ jobs:
             --file ./tools/BinaryBuilder.Dockerfile \
             --load \
             --tag sqlite-builder \
-            --platform ${{ matrix.architecture }} \
+            --platform ${{ matrix.target }} \
             --no-cache \
             --build-arg VARIANT=${{ matrix.variant }} \
             --build-arg NODE_VERSION=${{ matrix.node }} \
