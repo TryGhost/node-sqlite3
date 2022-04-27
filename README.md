@@ -17,7 +17,7 @@ Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js]
  - [Extension support](https://github.com/tryghost/node-sqlite3/wiki/Extensions), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html)
  - Big test suite
  - Written in modern C++ and tested for memory leaks
- - Bundles SQLite v3.38.2, or you can build using a local SQLite
+ - Bundles SQLite v3.38.3, or you can build using a local SQLite
 
 # Installing
 
