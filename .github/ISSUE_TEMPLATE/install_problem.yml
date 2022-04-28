@@ -1,0 +1,48 @@
+name: ⚙️ Installation problem
+description: Report an issue installing the library
+labels: ["install problem"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Welcome 👋
+        Thank you for taking the time to fill out a report with installing 🙂
+
+        The more information you provide, the easier & quicker it is for us to diagnose the problem.
+
+        Please search the existing issues and recent releases to make sure your problem hasn't already been solved.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Issue Summary
+      description: Explain what's wrong
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or output
+      placeholder: |
+        Error when installing `sqlite3` due to...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of `node-sqlite3` are you using?
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js Version
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: How did you install the library?
+      description: Provide details of your operating system and architecture
+    validations:
+      required: true

@@ -1,0 +1,27 @@
+name: ✨ Feature request
+description: Request a desired feature
+labels: ["feature request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Welcome 👋
+        Thank you for taking the time to fill out a feature request
+
+        The more information you provide, the easier it is for us to understand your use case.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Explain your use case. How would this improve your life?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Proposed implementation
+      description: Give an API proposal. How would the feature work?
+      placeholder: |
+        The Database class has a new function called...
+    validations:
+      required: true
