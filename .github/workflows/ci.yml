@@ -22,6 +22,8 @@ jobs:
           - macos-latest
           - ubuntu-latest
           - windows-latest
+        host:
+          - x64
         target:
           - x64
         node:
@@ -37,14 +39,15 @@ jobs:
         include:
           - os: windows-latest
             node: 16
+            host: x86
             target: x86
-    name: ${{ matrix.os }} (node=${{ matrix.node }}, target=${{ matrix.target }})
+    name: ${{ matrix.os }} (node=${{ matrix.node }}, host=${{ matrix.host }}, target=${{ matrix.target }})
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
-          architecture: ${{ matrix.target }}
+          architecture: ${{ matrix.host }}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.1
@@ -56,8 +59,15 @@ jobs:
         run: yarn install --ignore-scripts
 
       - name: Add env vars
+        shell: bash
         run: |
           echo "V=1" >> $GITHUB_ENV
+
+          if [ "${{ matrix.target }}" = "x86" ]; then
+            echo "TARGET=ia32" >> $GITHUB_ENV
+          else
+            echo "TARGET=${{ matrix.target }}" >> $GITHUB_ENV
+          fi
 
       - name: Add Linux env vars
         if: contains(matrix.os, 'ubuntu')
@@ -66,10 +76,10 @@ jobs:
           echo "CXXFLAGS=${CXXFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
 
       - name: Configure build
-        run: yarn node-pre-gyp configure
+        run: yarn node-pre-gyp configure --target_arch=${{ env.TARGET }}
 
       - name: Build binaries
-        run: yarn node-pre-gyp build
+        run: yarn node-pre-gyp build --target_arch=${{ env.TARGET }}
 
       - name: Print binary info
         if: contains(matrix.os, 'ubuntu')
@@ -84,7 +94,7 @@ jobs:
         run: yarn test
 
       - name: Package prebuilt binaries
-        run: yarn node-pre-gyp package
+        run: yarn node-pre-gyp package --target_arch=${{ env.TARGET }}
 
       - name: Upload binaries to commit artifacts
         uses: actions/upload-artifact@v3
