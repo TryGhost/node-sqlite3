@@ -14,7 +14,7 @@ Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js]
  - Full Buffer/Blob support
  - Extensive [debugging support](https://github.com/tryghost/node-sqlite3/wiki/Debugging)
  - [Query serialization](https://github.com/tryghost/node-sqlite3/wiki/Control-Flow) API
- - [Extension support](https://github.com/tryghost/node-sqlite3/wiki/Extensions), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html)
+ - [Extension support](https://github.com/TryGhost/node-sqlite3/wiki/API#databaseloadextensionpath-callback), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html)
  - Big test suite
  - Written in modern C++ and tested for memory leaks
  - Bundles SQLite v3.38.3, or you can build using a local SQLite
