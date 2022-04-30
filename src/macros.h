@@ -170,6 +170,13 @@ inline bool OtherIsInt(Napi::Number source) {
     stmt->Process();                                                           \
     stmt->db->Process();
 
+#define FETCH_COLUMN_NAMES(_handle, columns)                                   \
+    int cols = sqlite3_column_count(_handle);                                  \
+    for (int i = 0; i < cols; i++) {                                           \
+        const char* name = sqlite3_column_name(_handle, i);                    \
+        columns.push_back(Napi::String::New(env, name));                       \
+    }
+
 #define BACKUP_BEGIN(type)                                                     \
     assert(baton);                                                             \
     assert(baton->backup);                                                     \

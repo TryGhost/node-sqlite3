@@ -225,7 +225,7 @@ protected:
     bool Bind(const Parameters &parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
-    static Napi::Value RowToJS(Napi::Env env, Row* row);
+    static Napi::Value RowToJS(Napi::Env env, Row* row, std::vector<Napi::String> names);
     void Schedule(Work_Callback callback, Baton* baton);
     void Process();
     void CleanQueue();
@@ -242,6 +242,7 @@ protected:
     bool locked;
     bool finalized;
     std::queue<Call*> queue;
+    std::vector<Napi::String> columns;
 };
 
 }
