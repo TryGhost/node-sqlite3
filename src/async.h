@@ -6,11 +6,6 @@
 
 #include "threading.h"
 
-#if defined(NODE_SQLITE3_BOOST_THREADING)
-#include <boost/thread/mutex.hpp>
-#endif
-
-
 // Generic uv_async handler.
 template <class Item, class Parent> class Async {
     typedef void (*Callback)(Parent* parent, Item* item);
