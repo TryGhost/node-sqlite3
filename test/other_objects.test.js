@@ -96,36 +96,40 @@ describe('data types', function() {
         });
     });
 
-    [
-        1n,
-        1337n,
-        8876343627091516928n,
-        -8876343627091516928n,
-    ].forEach(function (bigint) {
-        it('should serialize BigInt ' + bigint, function (done) {
-            db.run("INSERT INTO bigint_table VALUES(?)", bigint, function(err) {
-                if (err) throw err;
-                db.get("SELECT big AS bigint FROM bigint_table", function (err, row) {
-                    if (err) throw err
-                    assert.equal(row.bigint, bigint);
-                    done();
+    if (process.versions.napi >= '6') {
+        [
+            1n,
+            1337n,
+            8876343627091516928n,
+            -8876343627091516928n,
+        ].forEach(function (bigint) {
+            it('should serialize BigInt ' + bigint, function (done) {
+                db.run("INSERT INTO bigint_table VALUES(?)", bigint, function(err) {
+                    if (err) throw err;
+                    db.get("SELECT big AS bigint FROM bigint_table", function (err, row) {
+                        if (err) throw err
+                        assert.equal(row.bigint, bigint);
+                        done();
+                    });
                 });
             });
         });
-    });
+    }
 
-    it('should fail to serialize larger numbers', function (done) {
-        const bigint = 0xffffffffffffffffffffn; // 80 bits
-        let error;
-
-        try {
-            db.run('INSERT INTO bigint_table VALUES(?)', bigint);
-        } catch (err) {
-            error = err;
-        } finally {
-            assert.notEqual(error, undefined);
-            done();
-        }
-    })
+    if (process.versions.napi >= '6') {
+        it('should fail to serialize larger numbers', function (done) {
+            const bigint = 0xffffffffffffffffffffn; // 80 bits
+            let error;
+    
+            try {
+                db.run('INSERT INTO bigint_table VALUES(?)', bigint);
+            } catch (err) {
+                error = err;
+            } finally {
+                assert.notEqual(error, undefined);
+                done();
+            }
+        })
+    }
 
 });

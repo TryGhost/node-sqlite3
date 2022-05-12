@@ -14,6 +14,7 @@
     "remote_path": "v{version}",
     "package_name": "napi-v{napi_build_version}-{platform}-{libc}-{arch}.tar.gz",
     "napi_versions": [
+      3,
       6
     ]
   },

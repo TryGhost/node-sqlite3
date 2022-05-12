@@ -204,6 +204,7 @@ template <class T> Values::Field*
     else if (OtherInstanceOf(source.As<Object>(), "Date")) {
         return new Values::Float(pos, source.ToNumber().DoubleValue());
     }
+#if NAPI_VERSION >= 6
     else if (source.IsBigInt()) {
         bool lossless;
         auto ret = new Values::Integer(pos, source.As<Napi::BigInt>().Int64Value(&lossless));
@@ -218,6 +219,7 @@ template <class T> Values::Field*
 
         return ret;
     }
+#endif
     else if (source.IsObject()) {
         Napi::String napiVal = source.ToString();
         // Check whether toString returned a value that is not undefined.
@@ -826,11 +828,13 @@ Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
             case SQLITE_INTEGER: {
                 auto field_value = ((Values::Integer*)field)->value;
 
+#if NAPI_VERSION >= 6
                 if (field_value > JS_MAX_SAFE_INTEGER || field_value < JS_MIN_SAFE_INTEGER) {
                     value = Napi::BigInt::New(env, field_value);
-                }
-                else {
-                    value = Napi::Number::New(env, ((Values::Integer*)field)->value);
+                } else
+#endif
+                {
+                    value = Napi::Number::New(env, field_value);
                 }
             } break;
             case SQLITE_FLOAT: {
