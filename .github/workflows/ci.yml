@@ -41,6 +41,10 @@ jobs:
             node: 16
             host: x86
             target: x86
+          - os: macos-m1
+            node: 16
+            host: arm64
+            target: arm64
     name: ${{ matrix.os }} (node=${{ matrix.node }}, host=${{ matrix.host }}, target=${{ matrix.target }})
     steps:
       - uses: actions/checkout@v3
@@ -48,6 +52,10 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           architecture: ${{ matrix.host }}
+
+      - name: Add yarn (self-hosted)
+        if: matrix.os == 'macos-m1'
+        run: npm install -g yarn
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.1
