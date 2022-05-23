@@ -17,7 +17,7 @@ describe('buffer', function() {
                 throw err;
             });
 
-            var buff = new Buffer(2);
+            var buff = Buffer.alloc(2);
             stmt.run(buff);
             stmt.finalize();
         });
