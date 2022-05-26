@@ -199,7 +199,7 @@ Set the location where `brew` installed it:
 
 ```bash
 export LDFLAGS="-L`brew --prefix`/opt/sqlcipher/lib"
-export CPPFLAGS="-I`brew --prefix`/opt/sqlcipher/include"
+export CPPFLAGS="-I`brew --prefix`/opt/sqlcipher/include/sqlcipher"
 npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix`
 
 node -e 'require("sqlite3")'
