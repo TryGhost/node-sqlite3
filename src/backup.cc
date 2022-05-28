@@ -178,12 +178,7 @@ void Backup::Work_BeginInitialize(Database::Baton* baton) {
     assert(baton->db->open);
     baton->db->pending++;
     auto env = baton->db->Env();
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Backup.Initialize"),
-        Work_Initialize, Work_AfterInitialize, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Backup.Initialize", Work_Initialize, Work_AfterInitialize);
 }
 
 void Backup::Work_Initialize(napi_env e, void* data) {

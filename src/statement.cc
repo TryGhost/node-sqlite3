@@ -121,13 +121,9 @@ Statement::Statement(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Statemen
 void Statement::Work_BeginPrepare(Database::Baton* baton) {
     assert(baton->db->open);
     baton->db->pending++;
+
     auto env = baton->db->Env();
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Statement.Prepare"),
-        Work_Prepare, Work_AfterPrepare, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Statement.Prepare", Work_Prepare, Work_AfterPrepare);
 }
 
 void Statement::Work_Prepare(napi_env e, void* data) {
