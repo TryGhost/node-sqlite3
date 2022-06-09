@@ -13,16 +13,18 @@ Napi::FunctionReference Database::constructor;
 
 Napi::Object Database::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
+    // declare napi_default_method here as it is only available in Node v14.12.0+
+    napi_property_attributes napi_default_method = static_cast<napi_property_attributes>(napi_writable | napi_configurable); 
 
     Napi::Function t = DefineClass(env, "Database", {
-        InstanceMethod("close", &Database::Close),
-        InstanceMethod("exec", &Database::Exec),
-        InstanceMethod("wait", &Database::Wait),
-        InstanceMethod("loadExtension", &Database::LoadExtension),
-        InstanceMethod("serialize", &Database::Serialize),
-        InstanceMethod("parallelize", &Database::Parallelize),
-        InstanceMethod("configure", &Database::Configure),
-        InstanceMethod("interrupt", &Database::Interrupt),
+        InstanceMethod("close", &Database::Close, napi_default_method),
+        InstanceMethod("exec", &Database::Exec, napi_default_method),
+        InstanceMethod("wait", &Database::Wait, napi_default_method),
+        InstanceMethod("loadExtension", &Database::LoadExtension, napi_default_method),
+        InstanceMethod("serialize", &Database::Serialize, napi_default_method),
+        InstanceMethod("parallelize", &Database::Parallelize, napi_default_method),
+        InstanceMethod("configure", &Database::Configure, napi_default_method),
+        InstanceMethod("interrupt", &Database::Interrupt, napi_default_method),
         InstanceAccessor("open", &Database::OpenGetter, nullptr)
     });
 

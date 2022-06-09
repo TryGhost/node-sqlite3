@@ -14,7 +14,6 @@ describe('profiling', function() {
             if (sql.match(/^SELECT/)) {
                 assert.ok(!select);
                 assert.equal(sql, "SELECT * FROM foo");
-                console.log('profile select');
                 select = true;
             }
             else if (sql.match(/^CREATE/)) {

@@ -1,4 +1,7 @@
 # Changelog
+
+Please check [GitHub Releases](https://github.com/TryGhost/node-sqlite3/releases) for notes on more recent releases.
+
 ## 5.0.2
 - build: rebuild binaries before publishing [#1426](https://github.com/mapbox/node-sqlite3/pull/1426)
 
