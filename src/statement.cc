@@ -840,6 +840,10 @@ void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
     for (int i = 0; i < cols; i++) {
         int type = sqlite3_column_type(stmt, i);
         const char* name = sqlite3_column_name(stmt, i);
+        if (name == NULL) {
+            assert(false);
+        }
+
         switch (type) {
             case SQLITE_INTEGER: {
                 row->push_back(new Values::Integer(name, sqlite3_column_int64(stmt, i)));
