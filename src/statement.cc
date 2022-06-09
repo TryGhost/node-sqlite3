@@ -835,9 +835,9 @@ Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
 }
 
 void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
-    int rows = sqlite3_column_count(stmt);
+    int cols = sqlite3_column_count(stmt);
 
-    for (int i = 0; i < rows; i++) {
+    for (int i = 0; i < cols; i++) {
         int type = sqlite3_column_type(stmt, i);
         const char* name = sqlite3_column_name(stmt, i);
         switch (type) {
