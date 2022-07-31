@@ -80,6 +80,13 @@ public:
             Baton(db_, cb_), filename(filename_) {}
     };
 
+    struct LimitBaton : Baton {
+        int id;
+        int value;
+        LimitBaton(Database* db_, Napi::Function cb_, int id_, int value_) :
+            Baton(db_, cb_), id(id_), value(value_) {}
+    };
+
     typedef void (*Work_Callback)(Baton* baton);
 
     struct Call {
@@ -169,6 +176,7 @@ protected:
     Napi::Value Interrupt(const Napi::CallbackInfo& info);
 
     static void SetBusyTimeout(Baton* baton);
+    static void SetLimit(Baton* baton);
 
     static void RegisterTraceCallback(Baton* baton);
     static void TraceCallback(void* db, const char* sql);
