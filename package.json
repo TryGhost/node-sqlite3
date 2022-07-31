@@ -40,6 +40,7 @@
     "binding.gyp",
     "deps/",
     "lib/*.js",
+    "lib/*.d.ts",
     "src/"
   ],
   "repository": {
@@ -83,7 +84,7 @@
     "database"
   ],
   "main": "./lib/sqlite3",
-  "types": "index.d.ts",
+  "types": "./lib/sqlite3.d.ts",
   "renovate": {
     "extends": [
       "@tryghost:base"
