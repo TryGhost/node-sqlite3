@@ -83,6 +83,7 @@
     "database"
   ],
   "main": "./lib/sqlite3",
+  "types": "index.d.ts",
   "renovate": {
     "extends": [
       "@tryghost:base"
