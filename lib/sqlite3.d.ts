@@ -88,6 +88,8 @@ export class Database extends events.EventEmitter {
     on(event: string, listener: (...args: any[]) => void): this;
 
     configure(option: "busyTimeout", value: number): void;
+    configure(option: "limit", id: number, value: number): void;
+
     interrupt(): void;
 }
 
