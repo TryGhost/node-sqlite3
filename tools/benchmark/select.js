@@ -1,4 +1,4 @@
-const sqlite3 = require('../');
+const sqlite3 = require('../../');
 const { readFileSync } = require('fs');
 const db = new sqlite3.Database(':memory:');
 

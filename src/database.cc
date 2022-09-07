@@ -371,6 +371,22 @@ Napi::Value Database::Configure(const Napi::CallbackInfo& info) {
         baton->status = info[1].As<Napi::Number>().Int32Value();
         db->Schedule(SetBusyTimeout, baton);
     }
+    else if (info[0].StrictEquals( Napi::String::New(env, "limit"))) {
+        REQUIRE_ARGUMENTS(3);
+        if (!info[1].IsNumber()) {
+            Napi::TypeError::New(env, "limit id must be an integer").ThrowAsJavaScriptException();
+            return env.Null();
+        }
+        if (!info[2].IsNumber()) {
+            Napi::TypeError::New(env, "limit value must be an integer").ThrowAsJavaScriptException();
+            return env.Null();
+        }
+        Napi::Function handle;
+        int id = info[1].As<Napi::Number>().Int32Value();
+        int value = info[2].As<Napi::Number>().Int32Value();
+        Baton* baton = new LimitBaton(db, handle, id, value);
+        db->Schedule(SetLimit, baton);
+    }
     else {
         Napi::TypeError::New(env, (StringConcat(
 #if V8_MAJOR_VERSION > 6
@@ -413,6 +429,15 @@ void Database::SetBusyTimeout(Baton* b) {
 
     // Abuse the status field for passing the timeout.
     sqlite3_busy_timeout(baton->db->_handle, baton->status);
+}
+
+void Database::SetLimit(Baton* b) {
+    std::unique_ptr<LimitBaton> baton(static_cast<LimitBaton*>(b));
+
+    assert(baton->db->open);
+    assert(baton->db->_handle);
+
+    sqlite3_limit(baton->db->_handle, baton->id, baton->value);
 }
 
 void Database::RegisterTraceCallback(Baton* b) {

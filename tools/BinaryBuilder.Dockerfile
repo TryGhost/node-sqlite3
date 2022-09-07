@@ -5,7 +5,7 @@ FROM node:$NODE_VERSION-$VARIANT
 
 ARG VARIANT
 
-RUN if [ "$VARIANT" = "alpine" ] ; then apk add build-base python3 --update-cache ; fi
+RUN if [[ "$VARIANT" =~ alpine* ]] ; then apk add build-base python3 --update-cache ; fi
 
 WORKDIR /usr/src/build
 
@@ -22,7 +22,7 @@ ENV CXXFLAGS="${CXXFLAGS:-} -include ../src/gcc-preinclude.h"
 RUN npx node-pre-gyp configure
 RUN npx node-pre-gyp build
 
-RUN if [ "$VARIANT" != "alpine" ] ; then ldd lib/binding/*/node_sqlite3.node; nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true ; fi
+RUN if [[ ! "$VARIANT" =~ alpine* ]] ; then ldd lib/binding/*/node_sqlite3.node; nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true ; fi
 
 RUN npm run test
 RUN npx node-pre-gyp package

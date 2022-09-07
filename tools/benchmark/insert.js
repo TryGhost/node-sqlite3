@@ -1,4 +1,4 @@
-var sqlite3 = require('../lib/sqlite3');
+var sqlite3 = require('../../lib/sqlite3');
 var fs = require('fs');
 
 var iterations = 10000;
