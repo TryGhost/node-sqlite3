@@ -74,6 +74,7 @@ describe('patching', function() {
     });
 
     describe('Statement', function() {
+        var db;
         var statement;
         var originalFunctions = {};
 
@@ -114,7 +115,8 @@ describe('patching', function() {
                 sqlite3.Statement.prototype.finalize = myFun;
             });
 
-            statement = new sqlite3.Statement();
+            db = new sqlite3.Database(':memory:');
+            statement = db.prepare("");
             assert.strictEqual(statement.bind(), "Success");
             assert.strictEqual(statement.get(), "Success");
             assert.strictEqual(statement.run(), "Success");
@@ -134,10 +136,14 @@ describe('patching', function() {
                 sqlite3.Statement.prototype.reset = originalFunctions.reset;
                 sqlite3.Statement.prototype.finalize = originalFunctions.finalize;
             }
+            if(db != null) {
+                db.close();
+            }
         });
     });
 
     describe('Backup', function() {
+        var db;
         var backup;
         var originalFunctions = {};
 
@@ -158,15 +164,20 @@ describe('patching', function() {
                 sqlite3.Backup.prototype.finish = myFun;
             });
 
-            backup = new sqlite3.Backup();
+            db = new sqlite3.Database(':memory:');
+            backup = db.backup("somefile", myFun);
             assert.strictEqual(backup.step(), "Success");
             assert.strictEqual(backup.finish(), "Success");
         });
 
         after(function() {
-            if(statement != null) {
+            if(backup != null) {
                 sqlite3.Backup.prototype.step = originalFunctions.step;
                 sqlite3.Backup.prototype.finish = originalFunctions.finish;
+                backup.finish();
+            }
+            if(db != null) {
+                db.close();
             }
         });
     });
