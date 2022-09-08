@@ -11,14 +11,17 @@ using namespace node_sqlite3;
 Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
+    // declare napi_default_method here as it is only available in Node v14.12.0+
+    napi_property_attributes napi_default_method = static_cast<napi_property_attributes>(napi_writable | napi_configurable);
+
     Napi::Function t = DefineClass(env, "Statement", {
-      InstanceMethod("bind", &Statement::Bind),
-      InstanceMethod("get", &Statement::Get),
-      InstanceMethod("run", &Statement::Run),
-      InstanceMethod("all", &Statement::All),
-      InstanceMethod("each", &Statement::Each),
-      InstanceMethod("reset", &Statement::Reset),
-      InstanceMethod("finalize", &Statement::Finalize_),
+      InstanceMethod("bind", &Statement::Bind, napi_default_method),
+      InstanceMethod("get", &Statement::Get, napi_default_method),
+      InstanceMethod("run", &Statement::Run, napi_default_method),
+      InstanceMethod("all", &Statement::All, napi_default_method),
+      InstanceMethod("each", &Statement::Each, napi_default_method),
+      InstanceMethod("reset", &Statement::Reset, napi_default_method),
+      InstanceMethod("finalize", &Statement::Finalize_, napi_default_method),
     });
 
     exports.Set("Statement", t);

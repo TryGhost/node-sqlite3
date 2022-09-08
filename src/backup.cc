@@ -10,9 +10,12 @@ using namespace node_sqlite3;
 Napi::Object Backup::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
+    // declare napi_default_method here as it is only available in Node v14.12.0+
+    napi_property_attributes napi_default_method = static_cast<napi_property_attributes>(napi_writable | napi_configurable);
+
     Napi::Function t = DefineClass(env, "Backup", {
-        InstanceMethod("step", &Backup::Step),
-        InstanceMethod("finish", &Backup::Finish),
+        InstanceMethod("step", &Backup::Step, napi_default_method),
+        InstanceMethod("finish", &Backup::Finish, napi_default_method),
         InstanceAccessor("idle", &Backup::IdleGetter, nullptr),
         InstanceAccessor("completed", &Backup::CompletedGetter, nullptr),
         InstanceAccessor("failed", &Backup::FailedGetter, nullptr),
