@@ -28,3 +28,4 @@ setup.sh
 /build-tmp-napi-v6
 *.tgz
 package-lock.json
+yarn.lock
