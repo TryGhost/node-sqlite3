@@ -93,13 +93,16 @@ export class Statement extends events.EventEmitter {
     each(...params: any[]): this;
 }
 
+type PromisseFunction<T> = (sql: string, params?: any[]) => Promise<T>
 
 export class Database extends events.EventEmitter {
-    static Promisses = class DatabasePromisses extends Database {
-        get(sql: string): Promise<any>
-        all(sql: string): Promise<any[]>
-        run(sql: string): Promise<void>
+
+    static withPromisses = class DatabasePromisses extends Database {
+        get: PromisseFunction<any>
+        all: PromisseFunction<any[]>
+        run: PromisseFunction<RunResult>
     }
+    
     constructor(filename: string, callback?: (err: Error | null) => void);
     constructor(filename: string, mode?: number, callback?: (err: Error | null) => void);
 
