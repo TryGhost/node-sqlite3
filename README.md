@@ -39,6 +39,7 @@ The module uses [node-pre-gyp](https://github.com/mapbox/node-pre-gyp) to downlo
 
 Format: `napi-v{napi_build_version}-{platform}-{libc}-{arch}`
 
+* `napi-v3-darwin-unknown-arm64`
 * `napi-v3-darwin-unknown-x64`
 * `napi-v3-linux-glibc-arm64`
 * `napi-v3-linux-glibc-x64`
@@ -46,6 +47,7 @@ Format: `napi-v{napi_build_version}-{platform}-{libc}-{arch}`
 * `napi-v3-linux-musl-x64`
 * `napi-v3-win32-unknown-ia32`
 * `napi-v3-win32-unknown-x64`
+* `napi-v6-darwin-unknown-arm64`
 * `napi-v6-darwin-unknown-x64`
 * `napi-v6-linux-glibc-arm64`
 * `napi-v6-linux-glibc-x64`
