@@ -93,16 +93,7 @@ export class Statement extends events.EventEmitter {
     each(...params: any[]): this;
 }
 
-type PromisseFunction<T> = (sql: string, params?: any[]) => Promise<T>
-
-export class Database extends events.EventEmitter {
-
-    static withPromisses = class DatabasePromisses extends Database {
-        get: PromisseFunction<any>
-        all: PromisseFunction<any[]>
-        run: PromisseFunction<RunResult>
-    }
-    
+declare class Database extends events.EventEmitter {
     constructor(filename: string, callback?: (err: Error | null) => void);
     constructor(filename: string, mode?: number, callback?: (err: Error | null) => void);
 
@@ -111,14 +102,17 @@ export class Database extends events.EventEmitter {
     run(sql: string, callback?: (this: RunResult, err: Error | null) => void): this;
     run(sql: string, params: any, callback?: (this: RunResult, err: Error | null) => void): this;
     run(sql: string, ...params: any[]): this;
-
+    runAsPromise(sql: string, params: any[]): Promise<RunResult>
+    
     get(sql: string, callback?: (this: Statement, err: Error | null, row: any) => void): this;
     get(sql: string, params: any, callback?: (this: Statement, err: Error | null, row: any) => void): this;
     get(sql: string, ...params: any[]): this;
-
+    getAsPromise(sql: string, params: any[]): Promise<any>
+    
     all(sql: string, callback?: (this: Statement, err: Error | null, rows: any[]) => void): this;
     all(sql: string, params: any, callback?: (this: Statement, err: Error | null, rows: any[]) => void): this;
     all(sql: string, ...params: any[]): this;
+    allAsPromise(sql: string, params: any[]): Promise<any[]>
 
     each(sql: string, callback?: (this: Statement, err: Error | null, row: any) => void, complete?: (err: Error | null, count: number) => void): this;
     each(sql: string, params: any, callback?: (this: Statement, err: Error | null, row: any) => void, complete?: (err: Error | null, count: number) => void): this;
