@@ -93,7 +93,7 @@ export class Statement extends events.EventEmitter {
     each(...params: any[]): this;
 }
 
-declare class Database extends events.EventEmitter {
+export class Database extends events.EventEmitter {
     constructor(filename: string, callback?: (err: Error | null) => void);
     constructor(filename: string, mode?: number, callback?: (err: Error | null) => void);
 
