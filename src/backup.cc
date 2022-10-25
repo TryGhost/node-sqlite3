@@ -156,11 +156,17 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
 
     Database* db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
     Database* otherDb = NULL;
+
+    Napi::String filename;
+
     if (info[1].IsObject()) {
         // A database instance was passed instead of a filename
         otherDb = Napi::ObjectWrap<Database>::Unwrap(info[1].As<Napi::Object>());
-    }    
-    Napi::String filename = info[1].As<Napi::String>();
+        filename = Napi::String::New(env, "<sqlite3 instance>");
+    } else {
+        filename = info[1].As<Napi::String>();
+    }
+
     Napi::String sourceName = info[2].As<Napi::String>();
     Napi::String destName = info[3].As<Napi::String>();
     Napi::Boolean filenameIsDest = info[4].As<Napi::Boolean>();
@@ -393,7 +399,6 @@ void Backup::FinishAll() {
         assert(otherDb->locked);
         otherDb->pending--;
         otherDb->Process();
-        otherDb->Unref();
         otherDb = NULL;
     }    
 }
