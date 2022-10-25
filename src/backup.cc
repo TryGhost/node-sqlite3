@@ -273,8 +273,8 @@ void Backup::Work_AfterInitialize(napi_env e, napi_status status, void* data) {
         backup->inited = true;
         Napi::Function cb = baton->callback.Value();
         if (!cb.IsEmpty() && cb.IsFunction()) {
-            Napi::Value argv[] = { env.Null() };
-            TRY_CATCH_CALL(backup->Value(), cb, 1, argv);
+            Napi::Value argv[] = { env.Null(), backup->Value() };
+            TRY_CATCH_CALL(backup->Value(), cb, 2, argv);
         }
     }
     BACKUP_END();
