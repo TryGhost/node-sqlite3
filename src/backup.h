@@ -146,9 +146,9 @@ public:
         Baton* baton;
     };
 
-    void init(Database* db_) {
+    void init(Database* db_, Database* otherDb_) {
         db = db_;
-        otherDb = NULL;
+        otherDb = otherDb_;
         _handle = NULL;
         _otherDbHandle = NULL;
         _destDbHandle = NULL;
@@ -159,6 +159,7 @@ public:
         remaining = -1;
         pageCount = -1;
         finished = false;
+        db->Ref();
     }
 
     Backup(const Napi::CallbackInfo& info);

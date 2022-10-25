@@ -133,8 +133,9 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
         Napi::TypeError::New(env, "Database object expected").ThrowAsJavaScriptException();
         return;
     }
-    else if (length <= 1 || !(info[1]->IsString() || info[1]->IsObject())) {
-        return Nan::ThrowTypeError("Filename or database object expected");
+    else if (length <= 1 || !(info[1].IsString() || info[1].IsObject())) {
+        Napi::TypeError::New(env, "Filename or database object expected").ThrowAsJavaScriptException();
+        return;
     }
     else if (length <= 2 || !info[2].IsString()) {
         Napi::TypeError::New(env, "Source database name expected").ThrowAsJavaScriptException();
@@ -155,10 +156,9 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
 
     Database* db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
     Database* otherDb = NULL;
-    if (info[1]->IsObject()) {
+    if (info[1].IsObject()) {
         // A database instance was passed instead of a filename
         otherDb = Napi::ObjectWrap<Database>::Unwrap(info[1].As<Napi::Object>());
-        otherDb->Ref();
     }    
     Napi::String filename = info[1].As<Napi::String>();
     Napi::String sourceName = info[2].As<Napi::String>();
@@ -170,7 +170,7 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("destName", destName));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filenameIsDest", filenameIsDest));
 
-    init(db);
+    init(db, otherDb);
 
     InitializeBaton* baton = new InitializeBaton(db, info[5].As<Napi::Function>(), this);
     baton->otherDb = otherDb;
@@ -184,7 +184,6 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
     } else {
         db->Schedule(Work_BeginInitialize, baton);
     }
-    info.GetReturnValue().Set(info.This());
 }
 
 void Backup::Work_BeforeInitialize(Database::Baton* baton) {
@@ -217,14 +216,19 @@ void Backup::Work_Initialize(napi_env e, void* data) {
 
     backup->message = "";
     if (baton->otherDb) {
+        // If another database instance was passed,
+        // link other (locked) db to the backup state
         backup->otherDb = baton->otherDb;
         backup->_otherDbHandle = baton->otherDb->_handle;
+
         backup->status = SQLITE_OK;
         if (!baton->filenameIsDest) {
             backup->status = SQLITE_MISUSE;
             backup->message = "do not toggle filenameIsDest when backing up between sqlite3.Database instances";
         }
     } else {
+        // Do not initialize otherDb and continue with normal
+        // initialization by using the filename that was provided
         backup->otherDb = NULL;
         backup->status = sqlite3_open(baton->filename.c_str(), &backup->_otherDbHandle);
     }
@@ -384,13 +388,14 @@ void Backup::FinishAll() {
     CleanQueue();
     FinishSqlite();
     db->Unref();
+
     if (otherDb) {
         assert(otherDb->locked);
         otherDb->pending--;
         otherDb->Process();
         otherDb->Unref();
         otherDb = NULL;
-    }
+    }    
 }
 
 void Backup::FinishSqlite() {
@@ -400,6 +405,8 @@ void Backup::FinishSqlite() {
     }
     if (_otherDbHandle) {
         if (!otherDb) {
+            // Only close the database if it was
+            // not passed as a descriptor already.
             sqlite3_close(_otherDbHandle);
         }
         _otherDbHandle = NULL;
