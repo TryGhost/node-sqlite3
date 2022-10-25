@@ -93,11 +93,25 @@ export class Statement extends events.EventEmitter {
     each(...params: any[]): this;
 }
 
+export class Backup extends events.EventEmitter {
+    step(pages: number, callback?: (error: Error, backup: Backup) => void): Backup;
+    finish(callback?: (error: Error, backup: Backup) => void): Backup;
+
+    get idle(): boolean;
+    get completed(): boolean;
+    get failed(): boolean;
+    get remaining(): number;
+    get pageCount(): number;
+}
+
 export class Database extends events.EventEmitter {
     constructor(filename: string, callback?: (err: Error | null) => void);
     constructor(filename: string, mode?: number, callback?: (err: Error | null) => void);
 
     close(callback?: (err: Error | null) => void): void;
+
+    backup(destination: string | Database, destName: string, sourceName: string, filenameIsDest = true, callback?: (this: Backup, err: Error | null, backup: Backup) => void): this;
+    backup(destination: string | Database, callback?: (this: Backup, err: Error | null, backup: Backup) => void): this;
 
     run(sql: string, callback?: (this: RunResult, err: Error | null) => void): this;
     run(sql: string, params: any, callback?: (this: RunResult, err: Error | null) => void): this;
@@ -201,5 +215,6 @@ export interface sqlite3 {
     RunResult: RunResult;
     Statement: typeof Statement;
     Database: typeof Database;
+    Backup: typeof Backup;
     verbose(): this;
 }
