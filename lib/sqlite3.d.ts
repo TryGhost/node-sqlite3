@@ -225,27 +225,27 @@ export class Backup extends events.EventEmitter {
     /**
      * `true` when the backup is idle and ready for `step()` to be called, `false` when busy.
      */
-    idle: boolean
+    readonly idle: boolean
 
     /**
      * `true` when the backup has completed, `false` otherwise.
      */
-    completed: boolean
+    readonly completed: boolean
 
     /**
      * `true` when the backup has failed, `false` otherwise.
      */
-    failed: boolean
+    readonly failed: boolean
 
     /**
      * The number of remaining pages after the last call to `step()`, or `-1` if `step()` has never been called.
      */
-    remaining: number
+    readonly remaining: number
 
     /**
      * The total number of pages measured during the last call to `step()`, or `-1` if `step()` has never been called.
      */
-    pageCount: number
+    readonly pageCount: number
 
 
     /**
