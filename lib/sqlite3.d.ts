@@ -223,7 +223,8 @@ export class Database extends events.EventEmitter {
  */
 export class Backup extends events.EventEmitter {
     /**
-     * `true` when the backup is idle and ready for `step()` to be called, `false` when busy.
+     * `true` when the backup is idle and ready for `step()` to 
+     * be called, `false` when busy.
      */
     readonly idle: boolean
 
@@ -238,18 +239,22 @@ export class Backup extends events.EventEmitter {
     readonly failed: boolean
 
     /**
-     * The number of remaining pages after the last call to `step()`, or `-1` if `step()` has never been called.
+     * The number of remaining pages after the last call to `step()`, 
+     * or `-1` if `step()` has never been called.
      */
     readonly remaining: number
 
     /**
-     * The total number of pages measured during the last call to `step()`, or `-1` if `step()` has never been called.
+     * The total number of pages measured during the last call to `step()`, 
+     * or `-1` if `step()` has never been called.
      */
     readonly pageCount: number
 
 
     /**
-     * An array of sqlite3 error codes that are treated as non-fatal - meaning, if they occur, `Backup.failed` is not set, and the backup may continue. By default, this is `[sqlite3.BUSY, sqlite3.LOCKED]`.
+     * An array of sqlite3 error codes that are treated as non-fatal - 
+     * meaning, if they occur, `Backup.failed` is not set, and the backup 
+     * may continue. By default, this is `[sqlite3.BUSY, sqlite3.LOCKED]`.
      */
     retryErrors: number[]
 
