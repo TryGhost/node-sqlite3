@@ -259,7 +259,17 @@ export class Backup extends events.EventEmitter {
     retryErrors: number[]
 
     /**
-     * Asynchronously finalize the backup (required).
+     * Asynchronously finalize the backup.
+     * 
+     * A backup will finish automatically when it succeeds or a fatal
+     * error occurs, meaning it is not necessary to call `db.finish()`.
+     * By default, SQLITE_LOCKED and SQLITE_BUSY errors are not
+     * treated as failures, and the backup will continue if they
+     * occur. The set of errors that are tolerated can be controlled
+     * by setting `backup.retryErrors`. To disable automatic
+     * finishing and stick strictly to sqlite's raw api, set
+     * `Backup.retryErrors` to `[]`. In that case, it is necessary
+     * to call `Backup.finish()`.
      * 
      * @param callback Called when the backup is finalized.
      */
@@ -274,7 +284,8 @@ export class Backup extends events.EventEmitter {
      * backup.step(5)
      * ```
      * 
-     * @param nPages Number of pages to process (5 recommended).
+     * @param nPages Number of pages to process (`5` recommended), or `-1` 
+     * to perform all steps at once.
      * @param callback Called when the step is completed.
      */
     step(nPages: number,callback?: ()=>void): void
