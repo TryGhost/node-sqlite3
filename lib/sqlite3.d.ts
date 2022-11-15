@@ -178,6 +178,8 @@ export class Database extends events.EventEmitter {
  *     succeeeds.
  *   - `backup.failed` is set to `true` when the backup
  *     has a fatal error.
+ *   - `backup.message` is set to the error string 
+ *     the backup has a fatal error.
  *   - `backup.idle` is set to `true` when no operation
  *     is currently in progress or queued for the backup.
  *   - `backup.remaining` is an integer with the remaining
@@ -234,7 +236,8 @@ export class Backup extends events.EventEmitter {
     readonly completed: boolean
 
     /**
-     * `true` when the backup has failed, `false` otherwise.
+     * `true` when the backup has failed, `false` otherwise. `Backup.message`
+     * contains the error message.
      */
     readonly failed: boolean
 
