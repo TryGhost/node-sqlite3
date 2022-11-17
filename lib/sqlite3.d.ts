@@ -244,7 +244,7 @@ export class Backup extends events.EventEmitter {
     /**
      * Message failure string from sqlite3_errstr() if `Backup.failed` is `true`
      */
-    readonly failed: boolean
+    readonly message: boolean
 
     /**
      * The number of remaining pages after the last call to `step()`, 
