@@ -208,7 +208,7 @@ template <class T> Values::Field*
         return new Values::Float(pos, source.ToNumber().DoubleValue());
     }
     else if (source.IsObject()) {
-        Napi::String napiVal = source.ToString();
+        Napi::String napiVal = Napi::String::New(source.Env(), "[object Object]");
         // Check whether toString returned a value that is not undefined.
         if(napiVal.Type() == 0) {
             return NULL;
