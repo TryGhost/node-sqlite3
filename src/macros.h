@@ -23,6 +23,9 @@ inline bool OtherIsInt(Napi::Number source) {
     }
 }
 
+#define IS_FUNCTION(cb) \
+    !cb.IsUndefined() && cb.IsFunction()
+
 #define REQUIRE_ARGUMENTS(n)                                                   \
     if (info.Length() < (n)) {                                                 \
         Napi::TypeError::New(env, "Expected " #n "arguments").ThrowAsJavaScriptException(); \

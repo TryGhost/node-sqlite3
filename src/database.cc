@@ -56,7 +56,7 @@ void Database::Process() {
             queue.pop();
             std::unique_ptr<Baton> baton(call->baton);
             Napi::Function cb = baton->callback.Value();
-            if (!cb.IsUndefined() && cb.IsFunction()) {
+            if (IS_FUNCTION(cb)) {
                 TRY_CATCH_CALL(this->Value(), cb, 1, argv);
                 called = true;
             }
@@ -97,7 +97,7 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
         // We don't call the actual callback, so we have to make sure that
         // the baton gets destroyed.
         delete baton;
-        if (!cb.IsUndefined() && cb.IsFunction()) {
+        if (IS_FUNCTION(cb)) {
             Napi::Value argv[] = { exception };
             TRY_CATCH_CALL(Value(), cb, 1, argv);
         }
@@ -202,7 +202,7 @@ void Database::Work_AfterOpen(napi_env e, napi_status status, void* data) {
 
     Napi::Function cb = baton->callback.Value();
 
-    if (!cb.IsUndefined() && cb.IsFunction()) {
+    if (IS_FUNCTION(cb)) {
         TRY_CATCH_CALL(db->Value(), cb, 1, argv);
     }
     else if (!db->open) {
@@ -294,7 +294,7 @@ void Database::Work_AfterClose(napi_env e, napi_status status, void* data) {
     Napi::Function cb = baton->callback.Value();
 
     // Fire callbacks.
-    if (!cb.IsUndefined() && cb.IsFunction()) {
+    if (IS_FUNCTION(cb)) {
         TRY_CATCH_CALL(db->Value(), cb, 1, argv);
     }
     else if (db->open) {
@@ -630,7 +630,7 @@ void Database::Work_AfterExec(napi_env e, napi_status status, void* data) {
     if (baton->status != SQLITE_OK) {
         EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
 
-        if (!cb.IsUndefined() && cb.IsFunction()) {
+        if (IS_FUNCTION(cb)) {
             Napi::Value argv[] = { exception };
             TRY_CATCH_CALL(db->Value(), cb, 1, argv);
         }
@@ -639,7 +639,7 @@ void Database::Work_AfterExec(napi_env e, napi_status status, void* data) {
             EMIT_EVENT(db->Value(), 2, info);
         }
     }
-    else if (!cb.IsUndefined() && cb.IsFunction()) {
+    else if (IS_FUNCTION(cb)) {
         Napi::Value argv[] = { env.Null() };
         TRY_CATCH_CALL(db->Value(), cb, 1, argv);
     }
@@ -671,7 +671,7 @@ void Database::Work_Wait(Baton* b) {
     assert(baton->db->pending == 0);
 
     Napi::Function cb = baton->callback.Value();
-    if (!cb.IsUndefined() && cb.IsFunction()) {
+    if (IS_FUNCTION(cb)) {
         Napi::Value argv[] = { env.Null() };
         TRY_CATCH_CALL(baton->db->Value(), cb, 1, argv);
     }
@@ -742,7 +742,7 @@ void Database::Work_AfterLoadExtension(napi_env e, napi_status status, void* dat
     if (baton->status != SQLITE_OK) {
         EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
 
-        if (!cb.IsUndefined() && cb.IsFunction()) {
+        if (IS_FUNCTION(cb)) {
             Napi::Value argv[] = { exception };
             TRY_CATCH_CALL(db->Value(), cb, 1, argv);
         }
@@ -751,7 +751,7 @@ void Database::Work_AfterLoadExtension(napi_env e, napi_status status, void* dat
             EMIT_EVENT(db->Value(), 2, info);
         }
     }
-    else if (!cb.IsUndefined() && cb.IsFunction()) {
+    else if (IS_FUNCTION(cb)) {
         Napi::Value argv[] = { env.Null() };
         TRY_CATCH_CALL(db->Value(), cb, 1, argv);
     }

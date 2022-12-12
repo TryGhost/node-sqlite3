@@ -77,7 +77,7 @@ template <class T> void Statement::Error(T* baton) {
 
     Napi::Function cb = baton->callback.Value();
 
-    if (!cb.IsUndefined() && cb.IsFunction()) {
+    if (IS_FUNCTION(cb)) {
         Napi::Value argv[] = { exception };
         TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
     }
@@ -375,7 +375,7 @@ void Statement::Work_AfterBind(napi_env e, napi_status status, void* data) {
     else {
         // Fire callbacks.
         Napi::Function cb = baton->callback.Value();
-        if (!cb.IsUndefined() && cb.IsFunction()) {
+        if (IS_FUNCTION(cb)) {
             Napi::Value argv[] = { env.Null() };
             TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
         }
@@ -442,7 +442,7 @@ void Statement::Work_AfterGet(napi_env e, napi_status status, void* data) {
     else {
         // Fire callbacks.
         Napi::Function cb = baton->callback.Value();
-        if (!cb.IsUndefined() && cb.IsFunction()) {
+        if (IS_FUNCTION(cb)) {
             if (stmt->status == SQLITE_ROW) {
                 // Create the result array from the data we acquired.
                 Napi::Value argv[] = { env.Null(), RowToJS(env, &baton->row) };
@@ -516,7 +516,7 @@ void Statement::Work_AfterRun(napi_env e, napi_status status, void* data) {
     else {
         // Fire callbacks.
         Napi::Function cb = baton->callback.Value();
-        if (!cb.IsUndefined() && cb.IsFunction()) {
+        if (IS_FUNCTION(cb)) {
             (stmt->Value()).Set(Napi::String::New(env, "lastID"), Napi::Number::New(env, baton->inserted_id));
             (stmt->Value()).Set( Napi::String::New(env, "changes"), Napi::Number::New(env, baton->changes));
 
@@ -586,7 +586,7 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
     else {
         // Fire callbacks.
         Napi::Function cb = baton->callback.Value();
-        if (!cb.IsUndefined() && cb.IsFunction()) {
+        if (IS_FUNCTION(cb)) {
             if (baton->rows.size()) {
                 // Create the result array from the data we acquired.
                 Napi::Array result(Napi::Array::New(env, baton->rows.size()));
@@ -716,7 +716,7 @@ void Statement::AsyncEach(uv_async_t* handle) {
         }
 
         Napi::Function cb = async->item_cb.Value();
-        if (!cb.IsUndefined() && cb.IsFunction()) {
+        if (IS_FUNCTION(cb)) {
             Napi::Value argv[2];
             argv[0] = env.Null();
 
@@ -791,7 +791,7 @@ void Statement::Work_AfterReset(napi_env e, napi_status status, void* data) {
 
     // Fire callbacks.
     Napi::Function cb = baton->callback.Value();
-    if (!cb.IsUndefined() && cb.IsFunction()) {
+    if (IS_FUNCTION(cb)) {
         Napi::Value argv[] = { env.Null() };
         TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
     }
@@ -893,7 +893,7 @@ void Statement::Finalize_(Baton* b) {
 
     // Fire callback in case there was one.
     Napi::Function cb = baton->callback.Value();
-    if (!cb.IsUndefined() && cb.IsFunction()) {
+    if (IS_FUNCTION(cb)) {
         TRY_CATCH_CALL(baton->stmt->Value(), cb, 0, NULL);
     }
 }
