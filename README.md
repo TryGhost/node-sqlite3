@@ -3,7 +3,7 @@
 Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
 [![Latest release](https://img.shields.io/github/release/TryGhost/node-sqlite3.svg)](https://www.npmjs.com/package/sqlite3)
-![Build Status](https://github.com/TryGhost/node-sqlite3/workflows/CI/badge.svg?branch=main)
+![Build Status](https://github.com/TryGhost/node-sqlite3/workflows/CI/badge.svg?branch=master)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_shield)
 [![N-API v3 Badge](https://img.shields.io/badge/N--API-v3-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
 [![N-API v6 Badge](https://img.shields.io/badge/N--API-v6-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
@@ -29,7 +29,7 @@ npm install sqlite3
 # or
 yarn add sqlite3
 ```
-* GitHub's `main` branch: `npm install https://github.com/tryghost/node-sqlite3/tarball/main`
+* GitHub's `master` branch: `npm install https://github.com/tryghost/node-sqlite3/tarball/master`
 
 ### Prebuilt binaries
 
@@ -255,6 +255,6 @@ We use [GitHub releases](https://github.com/TryGhost/node-sqlite3/releases) for 
 
 # License
 
-`node-sqlite3` is [BSD licensed](https://github.com/tryghost/node-sqlite3/raw/main/LICENSE).
+`node-sqlite3` is [BSD licensed](https://github.com/tryghost/node-sqlite3/raw/master/LICENSE).
 
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=large)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_large)
