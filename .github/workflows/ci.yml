@@ -45,6 +45,10 @@ jobs:
             node: 16
             host: arm64
             target: arm64
+          - os: ubuntu-20.04
+            node: 16
+            host: x64
+            target: wasm32
     name: ${{ matrix.os }} (node=${{ matrix.node }}, host=${{ matrix.host }}, target=${{ matrix.target }})
     steps:
       - uses: actions/checkout@v3
@@ -52,6 +56,13 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           architecture: ${{ matrix.host }}
+      
+      - name: Setup Emscripten (WebAssembly)
+        if: matrix.target == 'wasm32'
+        uses: mymindstorm/setup-emsdk@v11
+        with:
+          version: '3.1.29'
+          actions-cache-folder: 'emsdk-cache'
 
       - name: Add yarn (self-hosted)
         if: matrix.os == 'macos-m1'
@@ -84,10 +95,20 @@ jobs:
           echo "CXXFLAGS=${CXXFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
 
       - name: Configure build
+        if: matrix.target != 'wasm32'
         run: yarn node-pre-gyp configure --target_arch=${{ env.TARGET }}
+      
+      - name: Configure build (WebAssembly)
+        if: matrix.target == 'wasm32'
+        run: yarn node-pre-gyp configure --nodedir=./wasm --target_arch=${{ env.TARGET }}
 
       - name: Build binaries
+        if: matrix.target != 'wasm32'
         run: yarn node-pre-gyp build --target_arch=${{ env.TARGET }}
+      
+      - name: Build binaries (WebAssembly)
+        if: matrix.target == 'wasm32'
+        run: emmake yarn node-pre-gyp build --nodedir=./wasm --target_arch=${{ env.TARGET }}
 
       - name: Print binary info
         if: contains(matrix.os, 'ubuntu')
@@ -99,7 +120,12 @@ jobs:
           file lib/binding/napi-v*/*
 
       - name: Run tests
+        if: matrix.target != 'wasm32'
         run: yarn test
+      
+      - name: Run tests (WebAssembly)
+        if: matrix.target == 'wasm32'
+        run: yarn test --arch=wasm32
 
       - name: Package prebuilt binaries
         run: yarn node-pre-gyp package --target_arch=${{ env.TARGET }}
