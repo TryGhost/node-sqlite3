@@ -49,12 +49,12 @@
   },
   "dependencies": {
     "@mapbox/node-pre-gyp": "^1.0.0",
+    "@tybys/emnapi-runtime": "^0.28.1",
     "node-addon-api": "^4.2.0",
     "tar": "^6.1.11"
   },
   "devDependencies": {
-    "@tybys/emnapi": "^0.27.0",
-    "@tybys/emnapi-runtime": "^0.27.0",
+    "@tybys/emnapi": "^0.28.1",
     "eslint": "6.8.0",
     "mocha": "7.2.0",
     "node-pre-gyp-github": "1.4.4"
@@ -68,6 +68,7 @@
     }
   },
   "optionalDependencies": {
+    "@tybys/emnapi-node-binding": "^0.28.1",
     "node-gyp": "8.x"
   },
   "scripts": {

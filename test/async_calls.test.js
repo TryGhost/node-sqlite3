@@ -6,12 +6,11 @@ const { createHook, executionAsyncId } = require("async_hooks");
 
 
 describe('async_hooks', function() {
-    before(function() {
-        if (process.env.npm_config_arch.includes('wasm')) {
-            // async_hooks is not supported by emnapi
-            this.skip();
-        }
-    });
+    // before(function() {
+    //     if (process.env.npm_config_arch.includes('wasm')) {
+    //         this.skip();
+    //     }
+    // });
 
     let db;
     let dbId;
