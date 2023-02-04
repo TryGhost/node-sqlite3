@@ -35,32 +35,34 @@
             "deps/sqlite3.gyp:sqlite3"
           ]
         }, {
-          "conditions": ["sqlite != 'internal'", {
-            "include_dirs": [
-              "<!@(node -p \"require('node-addon-api').include\")", "<(sqlite)/include" ],
-            "libraries": [
-               "-l<(sqlite_libname)"
-            ],
-            "conditions": [
-              [ "OS=='linux'", {"libraries+":["-Wl,-rpath=<@(sqlite)/lib"]} ],
-              [ "OS!='win'", {"libraries+":["-L<@(sqlite)/lib"]} ]
-            ],
-            'msvs_settings': {
-              'VCLinkerTool': {
-                'AdditionalLibraryDirectories': [
-                  '<(sqlite)/lib'
-                ],
-              },
-            }
-          }, {
-            "include_dirs": [
-              "<!@(node -p \"require('node-addon-api').include\")"
-            ],
-            "dependencies": [
-              "<!(node -p \"require('node-addon-api').gyp\")",
-              "deps/sqlite3.gyp:sqlite3"
-            ]
-          }]
+          "conditions": [
+            ["sqlite != 'internal'", {
+              "include_dirs": [
+                "<!@(node -p \"require('node-addon-api').include\")", "<(sqlite)/include" ],
+              "libraries": [
+                "-l<(sqlite_libname)"
+              ],
+              "conditions": [
+                [ "OS=='linux'", {"libraries+":["-Wl,-rpath=<@(sqlite)/lib"]} ],
+                [ "OS!='win'", {"libraries+":["-L<@(sqlite)/lib"]} ]
+              ],
+              'msvs_settings': {
+                'VCLinkerTool': {
+                  'AdditionalLibraryDirectories': [
+                    '<(sqlite)/lib'
+                  ],
+                },
+              }
+            }, {
+              "include_dirs": [
+                "<!@(node -p \"require('node-addon-api').include\")"
+              ],
+              "dependencies": [
+                "<!(node -p \"require('node-addon-api').gyp\")",
+                "deps/sqlite3.gyp:sqlite3"
+              ]
+            }]
+          ]
         }],
       ],
       "sources": [
