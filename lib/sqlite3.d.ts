@@ -102,14 +102,17 @@ export class Database extends events.EventEmitter {
     run(sql: string, callback?: (this: RunResult, err: Error | null) => void): this;
     run(sql: string, params: any, callback?: (this: RunResult, err: Error | null) => void): this;
     run(sql: string, ...params: any[]): this;
-
+    runAsPromise(sql: string, params: any[]): Promise<RunResult>
+    
     get(sql: string, callback?: (this: Statement, err: Error | null, row: any) => void): this;
     get(sql: string, params: any, callback?: (this: Statement, err: Error | null, row: any) => void): this;
     get(sql: string, ...params: any[]): this;
-
+    getAsPromise(sql: string, params: any[]): Promise<any>
+    
     all(sql: string, callback?: (this: Statement, err: Error | null, rows: any[]) => void): this;
     all(sql: string, params: any, callback?: (this: Statement, err: Error | null, rows: any[]) => void): this;
     all(sql: string, ...params: any[]): this;
+    allAsPromise(sql: string, params: any[]): Promise<any[]>
 
     each(sql: string, callback?: (this: Statement, err: Error | null, row: any) => void, complete?: (err: Error | null, count: number) => void): this;
     each(sql: string, params: any, callback?: (this: Statement, err: Error | null, row: any) => void, complete?: (err: Error | null, count: number) => void): this;
