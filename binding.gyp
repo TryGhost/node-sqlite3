@@ -25,8 +25,10 @@
             "libraries": [
                "-l<(sqlite_libname)"
             ],
-            "conditions": [ [ "OS=='linux'", {"libraries+":["-Wl,-rpath=<@(sqlite)/lib"]} ] ],
-            "conditions": [ [ "OS!='win'", {"libraries+":["-L<@(sqlite)/lib"]} ] ],
+            "conditions": [
+              [ "OS=='linux'", {"libraries+":["-Wl,-rpath=<@(sqlite)/lib"]} ],
+              [ "OS!='win'", {"libraries+":["-L<@(sqlite)/lib"]} ]
+            ],
             'msvs_settings': {
               'VCLinkerTool': {
                 'AdditionalLibraryDirectories': [
