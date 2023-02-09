@@ -1,3 +1,5 @@
+# This file is originally created by [RReverser](https://github.com/RReverser)
+# in https://github.com/lovell/sharp/pull/3522
 {
   'variables': {
     'OS': 'emscripten',
