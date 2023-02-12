@@ -76,7 +76,7 @@ export class Statement extends events.EventEmitter {
 
     finalize(callback?: (err: Error) => void): Database;
 
-    run(callback?: (err: Error | null) => void): this;
+    run(callback?: (this: RunResult, err: Error | null) => void): this;
     run(params: any, callback?: (this: RunResult, err: Error | null) => void): this;
     run(...params: any[]): this;
 
@@ -91,6 +91,8 @@ export class Statement extends events.EventEmitter {
     each(callback?: (err: Error | null, row: any) => void, complete?: (err: Error | null, count: number) => void): this;
     each(params: any, callback?: (this: RunResult, err: Error | null, row: any) => void, complete?: (err: Error | null, count: number) => void): this;
     each(...params: any[]): this;
+
+    readonly expandedSql: string;
 }
 
 export class Database extends events.EventEmitter {
@@ -117,7 +119,7 @@ export class Database extends events.EventEmitter {
 
     exec(sql: string, callback?: (this: Statement, err: Error | null) => void): this;
 
-    prepare(sql: string, callback?: (this: Statement, err: Error | null) => void): Statement;
+    prepare(sql: string, callback?: (this: Statement, err: Error | null, expandedSql: string) => void): Statement;
     prepare(sql: string, params: any, callback?: (this: Statement, err: Error | null) => void): Statement;
     prepare(sql: string, ...params: any[]): Statement;
 

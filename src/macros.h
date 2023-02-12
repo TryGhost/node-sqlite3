@@ -165,6 +165,14 @@ inline bool OtherIsInt(Napi::Number source) {
     } \
     sqlite3_mutex* name = sqlite3_db_mutex(stmt->db->_handle);
 
+#define STATEMENT_EXPAND_SQL() \
+    if (stmt->_handle != NULL) { \
+        Napi::Env env = stmt->Env();                                        \
+        Napi::Value expanded_sql = Napi::String::New(env, sqlite3_expanded_sql(stmt->_handle)); \
+        Napi::Value key = Napi::String::New(env, "expandedSql"); \
+        (stmt->Value()).Set(key, expanded_sql); \
+    }
+
 #define STATEMENT_END()                                                        \
     assert(stmt->locked);                                                      \
     assert(stmt->db->pending);                                                 \
@@ -210,6 +218,6 @@ inline bool OtherIsInt(Napi::Number source) {
             case SQLITE_BLOB:    delete (Values::Blob*)(field); break;         \
             case SQLITE_NULL:    delete (Values::Null*)(field); break;         \
         }                                                                      \
-    }
+    }                                         
 
 #endif

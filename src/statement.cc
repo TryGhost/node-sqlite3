@@ -161,6 +161,8 @@ void Statement::Work_AfterPrepare(napi_env e, napi_status status, void* data) {
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
+    STATEMENT_EXPAND_SQL();
+
     if (stmt->status != SQLITE_OK) {
         Error(baton.get());
         stmt->Finalize_();
@@ -170,6 +172,7 @@ void Statement::Work_AfterPrepare(napi_env e, napi_status status, void* data) {
         if (!baton->callback.IsEmpty() && baton->callback.Value().IsFunction()) {
             Napi::Function cb = baton->callback.Value();
             Napi::Value argv[] = { env.Null() };
+            
             TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
         }
     }
@@ -359,6 +362,7 @@ void Statement::Work_Bind(napi_env e, void* data) {
     STATEMENT_MUTEX(mtx);
     sqlite3_mutex_enter(mtx);
     stmt->Bind(baton->parameters);
+
     sqlite3_mutex_leave(mtx);
 }
 
@@ -368,6 +372,8 @@ void Statement::Work_AfterBind(napi_env e, napi_status status, void* data) {
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
+
+    STATEMENT_EXPAND_SQL();
 
     if (stmt->status != SQLITE_OK) {
         Error(baton.get());
@@ -435,6 +441,8 @@ void Statement::Work_AfterGet(napi_env e, napi_status status, void* data) {
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
+
+    STATEMENT_EXPAND_SQL();
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton.get());
@@ -510,6 +518,8 @@ void Statement::Work_AfterRun(napi_env e, napi_status status, void* data) {
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
+    STATEMENT_EXPAND_SQL();
+
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton.get());
     }
@@ -518,8 +528,7 @@ void Statement::Work_AfterRun(napi_env e, napi_status status, void* data) {
         Napi::Function cb = baton->callback.Value();
         if (IS_FUNCTION(cb)) {
             (stmt->Value()).Set(Napi::String::New(env, "lastID"), Napi::Number::New(env, baton->inserted_id));
-            (stmt->Value()).Set( Napi::String::New(env, "changes"), Napi::Number::New(env, baton->changes));
-
+            (stmt->Value()).Set(Napi::String::New(env, "changes"), Napi::Number::New(env, baton->changes));
             Napi::Value argv[] = { env.Null() };
             TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
         }
@@ -579,6 +588,8 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
+
+    STATEMENT_EXPAND_SQL();
 
     if (stmt->status != SQLITE_DONE) {
         Error(baton.get());
@@ -752,10 +763,11 @@ void Statement::Work_AfterEach(napi_env e, napi_status status, void* data) {
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
+    STATEMENT_EXPAND_SQL();
+
     if (stmt->status != SQLITE_DONE) {
         Error(baton.get());
     }
-
     STATEMENT_END();
 }
 
@@ -788,6 +800,8 @@ void Statement::Work_AfterReset(napi_env e, napi_status status, void* data) {
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
+
+    STATEMENT_EXPAND_SQL();
 
     // Fire callbacks.
     Napi::Function cb = baton->callback.Value();
