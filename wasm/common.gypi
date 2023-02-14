@@ -26,7 +26,7 @@
       '-std=gnu++17'
     ],
     'ldflags': [
-      '--js-library=<!(node -p "require(\'@tybys/emnapi\').js_library")',
+      '--js-library=<!(node -p "require(\'emnapi\').js_library")',
       "-sALLOW_MEMORY_GROWTH=1",
       "-sEXPORTED_FUNCTIONS=['_malloc','_free']",
       '-sNODEJS_CATCH_EXIT=0',
@@ -38,10 +38,10 @@
       '__STDC_FORMAT_MACROS',
     ],
     'include_dirs': [
-      '<!(node -p "require(\'@tybys/emnapi\').include")',
+      '<!(node -p "require(\'emnapi\').include")',
     ],
     'sources': [
-      '<!@(node -p "require(\'@tybys/emnapi\').sources.map(x => JSON.stringify(path.relative(process.cwd(), x))).join(\' \')")'
+      '<!@(node -p "require(\'emnapi\').sources.map(x => JSON.stringify(path.relative(process.cwd(), x))).join(\' \')")'
     ],
 
     'default_configuration': 'Release',
