@@ -103,16 +103,16 @@ export class Database extends events.EventEmitter {
     run(sql: string, params: any, callback?: (this: RunResult, err: Error | null) => void): this;
     run(sql: string, ...params: any[]): this;
 
-    get(sql: string, callback?: (this: Statement, err: Error | null, row: any) => void): this;
-    get(sql: string, params: any, callback?: (this: Statement, err: Error | null, row: any) => void): this;
+    get<T>(sql: string, callback?: (this: Statement, err: Error | null, row: T) => void): this;
+    get<T>(sql: string, params: any, callback?: (this: Statement, err: Error | null, row: T) => void): this;
     get(sql: string, ...params: any[]): this;
 
-    all(sql: string, callback?: (this: Statement, err: Error | null, rows: any[]) => void): this;
-    all(sql: string, params: any, callback?: (this: Statement, err: Error | null, rows: any[]) => void): this;
+    all<T>(sql: string, callback?: (this: Statement, err: Error | null, rows: T[]) => void): this;
+    all<T>(sql: string, params: any, callback?: (this: Statement, err: Error | null, rows: T[]) => void): this;
     all(sql: string, ...params: any[]): this;
 
-    each(sql: string, callback?: (this: Statement, err: Error | null, row: any) => void, complete?: (err: Error | null, count: number) => void): this;
-    each(sql: string, params: any, callback?: (this: Statement, err: Error | null, row: any) => void, complete?: (err: Error | null, count: number) => void): this;
+    each<T>(sql: string, callback?: (this: Statement, err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
+    each<T>(sql: string, params: any, callback?: (this: Statement, err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
     each(sql: string, ...params: any[]): this;
 
     exec(sql: string, callback?: (this: Statement, err: Error | null) => void): this;
