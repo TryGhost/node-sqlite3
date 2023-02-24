@@ -80,16 +80,16 @@ export class Statement extends events.EventEmitter {
     run(params: any, callback?: (this: RunResult, err: Error | null) => void): this;
     run(...params: any[]): this;
 
-    get(callback?: (err: Error | null, row?: any) => void): this;
-    get(params: any, callback?: (this: RunResult, err: Error | null, row?: any) => void): this;
+    get<T>(callback?: (err: Error | null, row?: T) => void): this;
+    get<T>(params: any, callback?: (this: RunResult, err: Error | null, row?: T) => void): this;
     get(...params: any[]): this;
 
-    all(callback?: (err: Error | null, rows: any[]) => void): this;
-    all(params: any, callback?: (this: RunResult, err: Error | null, rows: any[]) => void): this;
+    all<T>(callback?: (err: Error | null, rows: T[]) => void): this;
+    all<T>(params: any, callback?: (this: RunResult, err: Error | null, rows: T[]) => void): this;
     all(...params: any[]): this;
 
-    each(callback?: (err: Error | null, row: any) => void, complete?: (err: Error | null, count: number) => void): this;
-    each(params: any, callback?: (this: RunResult, err: Error | null, row: any) => void, complete?: (err: Error | null, count: number) => void): this;
+    each<T>(callback?: (err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
+    each<T>(params: any, callback?: (this: RunResult, err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
     each(...params: any[]): this;
 }
 
