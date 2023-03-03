@@ -19,13 +19,13 @@ namespace node_sqlite3 {
 
 namespace Values {
     struct Field {
-        inline Field(unsigned short _index, unsigned short _type = SQLITE_NULL) :
+        inline Field(int _index, unsigned short _type = SQLITE_NULL) :
             type(_type), index(_index) {}
         inline Field(const char* _name, unsigned short _type = SQLITE_NULL) :
             type(_type), index(0), name(_name) {}
 
         unsigned short type;
-        unsigned short index;
+        int index;
         std::string name;
 
         virtual ~Field() = default;
@@ -62,7 +62,7 @@ namespace Values {
         inline virtual ~Blob() override {
             delete[] value;
         }
-        int length;
+        size_t length;
         char* value;
     };
 
