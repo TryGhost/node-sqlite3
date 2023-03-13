@@ -226,6 +226,7 @@ npm test
 
 # Contributors
 
+* [Daniel Lockyer](https://github.com/daniellockyer)
 * [Konstantin Käfer](https://github.com/kkaefer)
 * [Dane Springmeyer](https://github.com/springmeyer)
 * [Will White](https://github.com/willwhite)
