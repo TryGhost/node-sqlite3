@@ -1,6 +1,6 @@
 {
   'variables': {
-      'sqlite_version%':'3400000',
+      'sqlite_version%':'3410100',
       "toolset%":'',
   },
   'target_defaults': {
