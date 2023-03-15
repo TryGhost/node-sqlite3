@@ -130,7 +130,9 @@ jobs:
       
       - name: Run tests (WebAssembly)
         if: matrix.target == 'wasm32'
-        run: npx --arch=wasm32 yarn test
+        env:
+          npm_config_target_arch: 'wasm32'
+        run: yarn test
 
       - name: Package prebuilt binaries
         run: yarn node-pre-gyp package --target_arch=${{ env.TARGET }}
