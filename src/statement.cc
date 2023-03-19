@@ -947,8 +947,5 @@ void Statement::CleanQueue() {
         // preparing the statement failed.
         std::unique_ptr<Call> call(queue.front());
         queue.pop();
-        // We don't call the actual callback, so we have to make sure that
-        // the baton gets destroyed.
-        delete call->baton;
     }
 }
