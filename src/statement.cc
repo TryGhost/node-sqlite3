@@ -801,8 +801,6 @@ void Statement::Work_AfterReset(napi_env e, napi_status status, void* data) {
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
-    STATEMENT_EXPAND_SQL();
-
     // Fire callbacks.
     Napi::Function cb = baton->callback.Value();
     if (IS_FUNCTION(cb)) {
