@@ -70,14 +70,20 @@ describe('expandedSql', function() {
                 assert.equal(this.expandedSql, "select * from foo where id = 3;");
             });
 
-            /** each */
+            /** each - testing within each callback */
             stmt.each(1, function() {
+                assert.equal(this.expandedSql, "select * from foo where id = 1;");
+            }, function() {
                 assert.equal(this.expandedSql, "select * from foo where id = 1;");
             });
             stmt.each({ $id: 2 }, function() {
                 assert.equal(this.expandedSql, "select * from foo where id = 2;");
+            }, function() {
+                assert.equal(this.expandedSql, "select * from foo where id = 2;");
             });
             stmt.each([3], function() {
+                assert.equal(this.expandedSql, "select * from foo where id = 3;");
+            }, function() {
                 assert.equal(this.expandedSql, "select * from foo where id = 3;");
             });
 
@@ -117,6 +123,8 @@ describe('expandedSql', function() {
 
             /** each */
             db.each("select * from foo;", function() {
+                assert.equal(this.expandedSql, "select * from foo;");
+            }, function() {
                 assert.equal(this.expandedSql, "select * from foo;");
             });
             db.each("select * from bar;", function() {

@@ -165,12 +165,11 @@ inline bool OtherIsInt(Napi::Number source) {
     } \
     sqlite3_mutex* name = sqlite3_db_mutex(stmt->db->_handle);
 
-#define STATEMENT_EXPAND_SQL() \
+#define STATEMENT_EXPAND_SQL(stmt) \
     if (stmt->_handle != NULL) { \
         Napi::Env env = stmt->Env();                                        \
         Napi::Value expanded_sql = Napi::String::New(env, sqlite3_expanded_sql(stmt->_handle)); \
-        Napi::Value key = Napi::String::New(env, "expandedSql"); \
-        (stmt->Value()).Set(key, expanded_sql); \
+        (stmt->Value()).Set(Napi::String::New(env, "expandedSql"), expanded_sql); \
     }
 
 #define STATEMENT_END()                                                        \

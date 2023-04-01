@@ -161,7 +161,7 @@ void Statement::Work_AfterPrepare(napi_env e, napi_status status, void* data) {
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
-    STATEMENT_EXPAND_SQL();
+    STATEMENT_EXPAND_SQL(stmt);
 
     if (stmt->status != SQLITE_OK) {
         Error(baton.get());
@@ -373,7 +373,7 @@ void Statement::Work_AfterBind(napi_env e, napi_status status, void* data) {
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
-    STATEMENT_EXPAND_SQL();
+    STATEMENT_EXPAND_SQL(stmt);
 
     if (stmt->status != SQLITE_OK) {
         Error(baton.get());
@@ -442,7 +442,7 @@ void Statement::Work_AfterGet(napi_env e, napi_status status, void* data) {
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
-    STATEMENT_EXPAND_SQL();
+    STATEMENT_EXPAND_SQL(stmt);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton.get());
@@ -518,7 +518,7 @@ void Statement::Work_AfterRun(napi_env e, napi_status status, void* data) {
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
-    STATEMENT_EXPAND_SQL();
+    STATEMENT_EXPAND_SQL(stmt);
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton.get());
@@ -589,7 +589,7 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
 
-    STATEMENT_EXPAND_SQL();
+    STATEMENT_EXPAND_SQL(stmt);
 
     if (stmt->status != SQLITE_DONE) {
         Error(baton.get());
@@ -721,6 +721,7 @@ void Statement::AsyncEach(uv_async_t* handle) {
         NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
         rows.swap(async->data);
         NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
+        STATEMENT_EXPAND_SQL(async->stmt);
 
         if (rows.empty()) {
             break;
@@ -762,8 +763,6 @@ void Statement::Work_AfterEach(napi_env e, napi_status status, void* data) {
 
     Napi::Env env = stmt->Env();
     Napi::HandleScope scope(env);
-
-    STATEMENT_EXPAND_SQL();
 
     if (stmt->status != SQLITE_DONE) {
         Error(baton.get());
