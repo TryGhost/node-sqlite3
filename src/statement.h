@@ -6,7 +6,6 @@
 #include <string>
 #include <queue>
 #include <vector>
-
 #include <sqlite3.h>
 #include <napi.h>
 #include <uv.h>
@@ -28,34 +27,40 @@ namespace Values {
         unsigned short type;
         unsigned short index;
         std::string name;
+
+        virtual ~Field() = default;
     };
 
     struct Integer : Field {
         template <class T> inline Integer(T _name, int64_t val) :
             Field(_name, SQLITE_INTEGER), value(val) {}
         int64_t value;
+        virtual ~Integer() override = default;
     };
 
     struct Float : Field {
         template <class T> inline Float(T _name, double val) :
             Field(_name, SQLITE_FLOAT), value(val) {}
         double value;
+        virtual ~Float() override = default;
     };
 
     struct Text : Field {
         template <class T> inline Text(T _name, size_t len, const char* val) :
             Field(_name, SQLITE_TEXT), value(val, len) {}
         std::string value;
+        virtual ~Text() override = default;
     };
 
     struct Blob : Field {
         template <class T> inline Blob(T _name, size_t len, const void* val) :
                 Field(_name, SQLITE_BLOB), length(len) {
-            value = (char*)malloc(len);
+            value = new char[len];
+            assert(value != nullptr);
             memcpy(value, val, len);
         }
-        inline ~Blob() {
-            free(value);
+        inline virtual ~Blob() override {
+            delete[] value;
         }
         int length;
         char* value;
@@ -64,8 +69,8 @@ namespace Values {
     typedef Field Null;
 }
 
-typedef std::vector<Values::Field*> Row;
-typedef std::vector<Row*> Rows;
+typedef std::vector<std::unique_ptr<Values::Field>> Row;
+typedef std::vector<std::unique_ptr<Row>> Rows;
 typedef Row Parameters;
 
 
@@ -86,10 +91,7 @@ public:
             callback.Reset(cb_, 1);
         }
         virtual ~Baton() {
-            for (size_t i = 0; i < parameters.size(); i++) {
-                Values::Field* field = parameters[i];
-                DELETE_FIELD(field);
-            }
+            parameters.clear();
             if (request) napi_delete_async_work(stmt->Env(), request);
             stmt->Unref();
             callback.Reset();
@@ -100,6 +102,7 @@ public:
         RowBaton(Statement* stmt_, Napi::Function cb_) :
             Baton(stmt_, cb_) {}
         Row row;
+        virtual ~RowBaton() override = default;
     };
 
     struct RunBaton : Baton {
@@ -107,12 +110,14 @@ public:
             Baton(stmt_, cb_), inserted_id(0), changes(0) {}
         sqlite3_int64 inserted_id;
         int changes;
+        virtual ~RunBaton() override = default;
     };
 
     struct RowsBaton : Baton {
         RowsBaton(Statement* stmt_, Napi::Function cb_) :
             Baton(stmt_, cb_) {}
         Rows rows;
+        virtual ~RowsBaton() override = default;
     };
 
     struct Async;
@@ -123,7 +128,7 @@ public:
 
         EachBaton(Statement* stmt_, Napi::Function cb_) :
             Baton(stmt_, cb_) {}
-        virtual ~EachBaton() {
+        virtual ~EachBaton() override {
             completed.Reset();
         }
     };
@@ -135,7 +140,7 @@ public:
             Baton(db_, cb_), stmt(stmt_) {
             stmt->Ref();
         }
-        virtual ~PrepareBaton() {
+        virtual ~PrepareBaton() override {
             stmt->Unref();
             if (!db->IsOpen() && db->IsLocked()) {
                 // The database handle was closed before the statement could be
@@ -200,12 +205,12 @@ public:
         if (!finalized) Finalize_();
     }
 
-    WORK_DEFINITION(Bind);
-    WORK_DEFINITION(Get);
-    WORK_DEFINITION(Run);
-    WORK_DEFINITION(All);
-    WORK_DEFINITION(Each);
-    WORK_DEFINITION(Reset);
+    WORK_DEFINITION(Bind)
+    WORK_DEFINITION(Get)
+    WORK_DEFINITION(Run)
+    WORK_DEFINITION(All)
+    WORK_DEFINITION(Each)
+    WORK_DEFINITION(Reset)
 
     Napi::Value Finalize_(const Napi::CallbackInfo& info);
 
@@ -220,7 +225,7 @@ protected:
     static void Finalize_(Baton* baton);
     void Finalize_();
 
-    template <class T> inline Values::Field* BindParameter(const Napi::Value source, T pos);
+    template <class T> inline std::unique_ptr<Values::Field> BindParameter(const Napi::Value source, T pos);
     template <class T> T* Bind(const Napi::CallbackInfo& info, int start = 0, int end = -1);
     bool Bind(const Parameters &parameters);
 

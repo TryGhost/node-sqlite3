@@ -2,6 +2,7 @@
 
 function createdb(callback) {
     var existsSync = require('fs').existsSync || require('path').existsSync;
+    var statSync   = require('fs').statSync || require('path').statSync;
     var path = require('path');
 
     var sqlite3 = require('../../lib/sqlite3');
@@ -18,8 +19,8 @@ function createdb(callback) {
         return str;
     }
 
-
-    if (existsSync(db_path)) {
+// Make sure the file exists and is also valid.
+    if (existsSync(db_path) && statSync(db_path).size !== 0) {
         console.log('okay: database already created (' + db_path + ')');
         if (callback) callback();
     } else {
