@@ -76,7 +76,7 @@ export class Statement extends events.EventEmitter {
 
     finalize(callback?: (err: Error) => void): Database;
 
-    run(callback?: (err: Error | null) => void): this;
+    run(callback?: (this: RunResult, err: Error | null) => void): this;
     run(params: any, callback?: (this: RunResult, err: Error | null) => void): this;
     run(...params: any[]): this;
 
@@ -91,6 +91,8 @@ export class Statement extends events.EventEmitter {
     each<T>(callback?: (err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
     each<T>(params: any, callback?: (this: RunResult, err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
     each(...params: any[]): this;
+
+    readonly expandedSql: string;
 }
 
 export class Database extends events.EventEmitter {

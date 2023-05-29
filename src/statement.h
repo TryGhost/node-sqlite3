@@ -208,7 +208,7 @@ public:
     WORK_DEFINITION(Reset);
 
     Napi::Value Finalize_(const Napi::CallbackInfo& info);
-
+    
 protected:
     static void Work_BeginPrepare(Database::Baton* baton);
     static void Work_Prepare(napi_env env, void* data);
@@ -223,7 +223,7 @@ protected:
     template <class T> inline Values::Field* BindParameter(const Napi::Value source, T pos);
     template <class T> T* Bind(const Napi::CallbackInfo& info, int start = 0, int end = -1);
     bool Bind(const Parameters &parameters);
-
+    
     static void GetRow(Row* row, sqlite3_stmt* stmt);
     static Napi::Value RowToJS(Napi::Env env, Row* row);
     void Schedule(Work_Callback callback, Baton* baton);
