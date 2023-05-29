@@ -651,8 +651,6 @@ void Statement::Work_Each(napi_env e, void* data) {
 
     STATEMENT_MUTEX(mtx);
 
-    int retrieved = 0;
-
     // Make sure that we also reset when there are no parameters.
     if (!baton->parameters.size()) {
         sqlite3_reset(stmt->_handle);
@@ -668,7 +666,6 @@ void Statement::Work_Each(napi_env e, void* data) {
                 GetRow(row.get(), stmt->_handle);
                 NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
                 async->data.emplace_back(std::move(row));
-                retrieved++;
                 NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
 
                 uv_async_send(&async->watcher);
