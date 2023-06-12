@@ -17,8 +17,8 @@
         "VCCLCompilerTool": {
           "ExceptionHandling": 1,
           "AdditionalOptions": [
-            "/we4244",
-            "/we4267"
+            "/w34244",
+            "/w34267"
           ]
         },
       },
