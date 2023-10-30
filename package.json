@@ -66,7 +66,7 @@
     }
   },
   "optionalDependencies": {
-    "node-gyp": "8.x"
+    "node-gyp": "10.x"
   },
   "scripts": {
     "build": "node-pre-gyp build",
