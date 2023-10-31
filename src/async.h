@@ -29,20 +29,19 @@ public:
     }
 
     static void listener(uv_async_t* handle) {
-        Async* async = static_cast<Async*>(handle->data);
+        auto* async = static_cast<Async*>(handle->data);
         std::vector<Item*> rows;
         NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
         rows.swap(async->data);
         NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
-        for (unsigned int i = 0, size = rows.size(); i < size; i++) {
-            async->callback(async->parent, rows[i]);
-        }
+        for(auto row : rows)
+            async->callback(async->parent, row);
     }
 
     static void close(uv_handle_t* handle) {
         assert(handle != NULL);
         assert(handle->data != NULL);
-        Async* async = static_cast<Async*>(handle->data);
+        auto* async = static_cast<Async*>(handle->data);
         delete async;
     }
 
@@ -56,7 +55,7 @@ public:
 
     void add(Item* item) {
         NODE_SQLITE3_MUTEX_LOCK(&mutex);
-        data.push_back(item);
+        data.emplace_back(item);
         NODE_SQLITE3_MUTEX_UNLOCK(&mutex)
     }
 
