@@ -1,6 +1,5 @@
-#include <string.h>
+#include <cstring>
 #include <napi.h>
-
 #include "macros.h"
 #include "database.h"
 #include "backup.h"
@@ -11,9 +10,9 @@ Napi::Object Backup::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
     // declare napi_default_method here as it is only available in Node v14.12.0+
-    napi_property_attributes napi_default_method = static_cast<napi_property_attributes>(napi_writable | napi_configurable);
+    auto napi_default_method = static_cast<napi_property_attributes>(napi_writable | napi_configurable);
 
-    Napi::Function t = DefineClass(env, "Backup", {
+    auto t = DefineClass(env, "Backup", {
         InstanceMethod("step", &Backup::Step, napi_default_method),
         InstanceMethod("finish", &Backup::Finish, napi_default_method),
         InstanceAccessor("idle", &Backup::IdleGetter, nullptr),
@@ -34,7 +33,7 @@ void Backup::Process() {
     }
 
     while (inited && !locked && !queue.empty()) {
-        std::unique_ptr<Call> call(queue.front());
+        auto call = std::move(queue.front());
         queue.pop();
 
         call->callback(call->baton);
@@ -43,11 +42,11 @@ void Backup::Process() {
 
 void Backup::Schedule(Work_Callback callback, Baton* baton) {
     if (finished) {
-        queue.push(new Call(callback, baton));
+        queue.emplace(new Call(callback, baton));
         CleanQueue();
     }
     else if (!inited || locked || !queue.empty()) {
-        queue.push(new Call(callback, baton));
+        queue.emplace(new Call(callback, baton));
     }
     else {
         callback(baton);
@@ -55,7 +54,7 @@ void Backup::Schedule(Work_Callback callback, Baton* baton) {
 }
 
 template <class T> void Backup::Error(T* baton) {
-    Napi::Env env = baton->backup->Env();
+    auto env = baton->backup->Env();
     Napi::HandleScope scope(env);
 
     Backup* backup = baton->backup;
@@ -76,7 +75,7 @@ template <class T> void Backup::Error(T* baton) {
 }
 
 void Backup::CleanQueue() {
-    Napi::Env env = this->Env();
+    auto env = this->Env();
     Napi::HandleScope scope(env);
 
     if (inited && !queue.empty()) {
@@ -88,7 +87,7 @@ void Backup::CleanQueue() {
 
         // Clear out the queue so that this object can get GC'ed.
         while (!queue.empty()) {
-            std::unique_ptr<Call> call(queue.front());
+            auto call = std::move(queue.front());
             queue.pop();
 
             std::unique_ptr<Baton> baton(call->baton);
@@ -111,7 +110,7 @@ void Backup::CleanQueue() {
     else while (!queue.empty()) {
         // Just delete all items in the queue; we already fired an event when
         // initializing the backup failed.
-        std::unique_ptr<Call> call(queue.front());
+        auto call = std::move(queue.front());
         queue.pop();
 
         // We don't call the actual callback, so we have to make sure that
@@ -121,13 +120,13 @@ void Backup::CleanQueue() {
 }
 
 Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) {
-    Napi::Env env = info.Env();
+    auto env = info.Env();
     if (!info.IsConstructCall()) {
         Napi::TypeError::New(env, "Use the new operator to create new Backup objects").ThrowAsJavaScriptException();
         return;
     }
 
-    int length = info.Length();
+    auto length = info.Length();
 
     if (length <= 0 || !Database::HasInstance(info[0])) {
         Napi::TypeError::New(env, "Database object expected").ThrowAsJavaScriptException();
@@ -154,32 +153,32 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
         return;
     }
 
-    Database* db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
-    Napi::String filename = info[1].As<Napi::String>();
-    Napi::String sourceName = info[2].As<Napi::String>();
-    Napi::String destName = info[3].As<Napi::String>();
-    Napi::Boolean filenameIsDest = info[4].As<Napi::Boolean>();
+    auto* database = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    auto filename = info[1].As<Napi::String>();
+    auto sourceName = info[2].As<Napi::String>();
+    auto destName = info[3].As<Napi::String>();
+    auto filenameIsDest = info[4].As<Napi::Boolean>();
 
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filename", filename));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("sourceName", sourceName));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("destName", destName));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filenameIsDest", filenameIsDest));
 
-    init(db);
+    init(database);
 
-    InitializeBaton* baton = new InitializeBaton(db, info[5].As<Napi::Function>(), this);
+    auto* baton = new InitializeBaton(database, info[5].As<Napi::Function>(), this);
     baton->filename = filename.Utf8Value();
     baton->sourceName = sourceName.Utf8Value();
     baton->destName = destName.Utf8Value();
     baton->filenameIsDest = filenameIsDest.Value();
-    db->Schedule(Work_BeginInitialize, baton);
+    database->Schedule(Work_BeginInitialize, baton);
 }
 
 void Backup::Work_BeginInitialize(Database::Baton* baton) {
     assert(baton->db->open);
     baton->db->pending++;
-    Napi::Env env = baton->db->Env();
-    int status = napi_create_async_work(
+    auto env = baton->db->Env();
+    int UNUSED(status) = napi_create_async_work(
         env, NULL, Napi::String::New(env, "sqlite3.Backup.Initialize"),
         Work_Initialize, Work_AfterInitialize, baton, &baton->request
     );
@@ -192,7 +191,7 @@ void Backup::Work_Initialize(napi_env e, void* data) {
 
     // In case stepping fails, we use a mutex to make sure we get the associated
     // error message.
-    sqlite3_mutex* mtx = sqlite3_db_mutex(baton->db->_handle);
+    auto* mtx = sqlite3_db_mutex(baton->db->_handle);
     sqlite3_mutex_enter(mtx);
 
     backup->status = sqlite3_open(baton->filename.c_str(), &backup->_otherDb);
@@ -218,9 +217,9 @@ void Backup::Work_Initialize(napi_env e, void* data) {
 
 void Backup::Work_AfterInitialize(napi_env e, napi_status status, void* data) {
     std::unique_ptr<InitializeBaton> baton(static_cast<InitializeBaton*>(data));
-    Backup* backup = baton->backup;
+    auto* backup = baton->backup;
 
-    Napi::Env env = backup->Env();
+    auto env = backup->Env();
     Napi::HandleScope scope(env);
 
     if (backup->status != SQLITE_OK) {
@@ -239,13 +238,13 @@ void Backup::Work_AfterInitialize(napi_env e, napi_status status, void* data) {
 }
 
 Napi::Value Backup::Step(const Napi::CallbackInfo& info) {
-    Backup* backup = this;
-    Napi::Env env = backup->Env();
+    auto* backup = this;
+    auto env = backup->Env();
 
     REQUIRE_ARGUMENT_INTEGER(0, pages);
     OPTIONAL_ARGUMENT_FUNCTION(1, callback);
 
-    StepBaton* baton = new StepBaton(backup, callback, pages);
+    auto* baton = new StepBaton(backup, callback, pages);
     backup->GetRetryErrors(baton->retryErrorsSet);
     backup->Schedule(Work_BeginStep, baton);
     return info.This();
@@ -281,9 +280,9 @@ void Backup::Work_Step(napi_env e, void* data) {
 
 void Backup::Work_AfterStep(napi_env e, napi_status status, void* data) {
     std::unique_ptr<StepBaton> baton(static_cast<StepBaton*>(data));
-    Backup* backup = baton->backup;
+    auto* backup = baton->backup;
 
-    Napi::Env env = backup->Env();
+    auto env = backup->Env();
     Napi::HandleScope scope(env);
 
     if (backup->status == SQLITE_DONE) {
@@ -308,12 +307,12 @@ void Backup::Work_AfterStep(napi_env e, napi_status status, void* data) {
 }
 
 Napi::Value Backup::Finish(const Napi::CallbackInfo& info) {
-    Backup* backup = this;
-    Napi::Env env = backup->Env();
+    auto* backup = this;
+    auto env = backup->Env();
 
     OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
-    Baton* baton = new Baton(backup, callback);
+    auto* baton = new Baton(backup, callback);
     backup->Schedule(Work_BeginFinish, baton);
     return info.This();
 }
@@ -329,9 +328,9 @@ void Backup::Work_Finish(napi_env e, void* data) {
 
 void Backup::Work_AfterFinish(napi_env e, napi_status status, void* data) {
     std::unique_ptr<Baton> baton(static_cast<Baton*>(data));
-    Backup* backup = baton->backup;
+    auto* backup = baton->backup;
 
-    Napi::Env env = backup->Env();
+    auto env = backup->Env();
     Napi::HandleScope scope(env);
 
     backup->FinishAll();
@@ -369,39 +368,39 @@ void Backup::FinishSqlite() {
 }
 
 Napi::Value Backup::IdleGetter(const Napi::CallbackInfo& info) {
-    Backup* backup = this;
+    auto* backup = this;
     bool idle = backup->inited && !backup->locked && backup->queue.empty();
     return Napi::Boolean::New(this->Env(), idle);
 }
 
 Napi::Value Backup::CompletedGetter(const Napi::CallbackInfo& info) {
-    Backup* backup = this;
+    auto* backup = this;
     return Napi::Boolean::New(this->Env(), backup->completed);
 }
 
 Napi::Value Backup::FailedGetter(const Napi::CallbackInfo& info) {
-    Backup* backup = this;
+    auto* backup = this;
     return Napi::Boolean::New(this->Env(), backup->failed);
 }
 
 Napi::Value Backup::RemainingGetter(const Napi::CallbackInfo& info) {
-    Backup* backup = this;
+    auto* backup = this;
     return Napi::Number::New(this->Env(), backup->remaining);
 }
 
 Napi::Value Backup::PageCountGetter(const Napi::CallbackInfo& info) {
-    Backup* backup = this;
+    auto* backup = this;
     return Napi::Number::New(this->Env(), backup->pageCount);
 }
 
 Napi::Value Backup::RetryErrorGetter(const Napi::CallbackInfo& info) {
-    Backup* backup = this;
+    auto* backup = this;
     return backup->retryErrors.Value();
 }
 
 void Backup::RetryErrorSetter(const Napi::CallbackInfo& info, const Napi::Value& value) {
-    Backup* backup = this;
-    Napi::Env env = backup->Env();
+    auto* backup = this;
+    auto env = backup->Env();
     if (!value.IsArray()) {
         Napi::Error::New(env, "retryErrors must be an array").ThrowAsJavaScriptException();
         return;
@@ -413,9 +412,9 @@ void Backup::RetryErrorSetter(const Napi::CallbackInfo& info, const Napi::Value&
 void Backup::GetRetryErrors(std::set<int>& retryErrorsSet) {
     retryErrorsSet.clear();
     Napi::Array array = retryErrors.Value();
-    int length = array.Length();
-    for (int i = 0; i < length; i++) {
-        Napi::Value code = (array).Get(i);
+    auto length = array.Length();
+    for (size_t i = 0; i < length; i++) {
+        Napi::Value code = (array).Get(static_cast<uint32_t>(i));
         if (code.IsNumber()) {
             retryErrorsSet.insert(code.As<Napi::Number>().Int32Value());
         }

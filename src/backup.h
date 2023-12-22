@@ -121,7 +121,7 @@ public:
             Baton(db_, cb_), backup(backup_), filenameIsDest(true) {
             backup->Ref();
         }
-        virtual ~InitializeBaton() {
+        virtual ~InitializeBaton() override {
             backup->Unref();
             if (!db->IsOpen() && db->IsLocked()) {
                 // The database handle was closed before the backup could be opened.
@@ -135,6 +135,7 @@ public:
         std::set<int> retryErrorsSet;
         StepBaton(Backup* backup_, Napi::Function cb_, int pages_) :
             Baton(backup_, cb_), pages(pages_) {}
+        virtual ~StepBaton() override = default;
     };
 
     typedef void (*Work_Callback)(Baton* baton);
@@ -169,8 +170,8 @@ public:
         retryErrors.Reset();
     }
 
-    WORK_DEFINITION(Step);
-    WORK_DEFINITION(Finish);
+    WORK_DEFINITION(Step)
+    WORK_DEFINITION(Finish)
     Napi::Value IdleGetter(const Napi::CallbackInfo& info);
     Napi::Value CompletedGetter(const Napi::CallbackInfo& info);
     Napi::Value FailedGetter(const Napi::CallbackInfo& info);
@@ -211,7 +212,7 @@ protected:
     int remaining;
     int pageCount;
     bool finished;
-    std::queue<Call*> queue;
+    std::queue<std::unique_ptr<Call>> queue;
 
     Napi::Reference<Array> retryErrors;
 };
