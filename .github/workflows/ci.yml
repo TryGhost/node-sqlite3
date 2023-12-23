@@ -82,40 +82,35 @@ jobs:
           echo "CFLAGS=${CFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
           echo "CXXFLAGS=${CXXFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
 
-      - name: Configure build
-        run: yarn node-pre-gyp configure --target_arch=${{ env.TARGET }}
-
       - name: Build binaries
-        run: yarn node-pre-gyp build --target_arch=${{ env.TARGET }}
+        run: yarn prebuild -a ${{ env.TARGET }}
 
       - name: Print binary info
         if: contains(matrix.os, 'ubuntu')
         run: |
-          ldd lib/binding/*/node_sqlite3.node
+          ldd build/**/node_sqlite3.node
           echo "---"
-          nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true
+          nm build/**/node_sqlite3.node | grep "GLIBC_" | c++filt || true
           echo "---"
-          file lib/binding/napi-v*/*
+          file build/**/node_sqlite3.node
 
       - name: Run tests
         run: yarn test
-
-      - name: Package prebuilt binaries
-        run: yarn node-pre-gyp package --target_arch=${{ env.TARGET }}
 
       - name: Upload binaries to commit artifacts
         uses: actions/upload-artifact@v3
         if: matrix.node == 18
         with:
           name: prebuilt-binaries
-          path: build/stage/*/*
+          path: prebuilds/*
           retention-days: 7
 
       - name: Upload binaries to GitHub Release
-        run: yarn node-pre-gyp-github publish
+        run: yarn upload
         if: matrix.node == 18 && startsWith(github.ref, 'refs/tags/')
         env:
-          NODE_PRE_GYP_GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+
   build-qemu:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
@@ -167,7 +162,7 @@ jobs:
           retention-days: 7
 
       - name: Upload binaries to GitHub Release
-        run: yarn install --ignore-scripts && yarn node-pre-gyp-github publish
+        run: yarn install --ignore-scripts && yarn upload
         if: matrix.node == 18 && startsWith(github.ref, 'refs/tags/')
         env:
-          NODE_PRE_GYP_GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}

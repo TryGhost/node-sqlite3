@@ -29,3 +29,4 @@ setup.sh
 *.tgz
 package-lock.json
 yarn.lock
+prebuilds

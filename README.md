@@ -35,7 +35,7 @@ yarn add sqlite3
 
 `sqlite3` v5+ was rewritten to use [Node-API](https://nodejs.org/api/n-api.html) so prebuilt binaries do not need to be built for specific Node versions. `sqlite3` currently builds for both Node-API v3 and v6. Check the [Node-API version matrix](https://nodejs.org/api/n-api.html#node-api-version-matrix) to ensure your Node version supports one of these. The prebuilt binaries should be supported on Node v10+.
 
-The module uses [node-pre-gyp](https://github.com/mapbox/node-pre-gyp) to download the prebuilt binary for your platform, if it exists. These binaries are hosted on GitHub Releases for `sqlite3` versions above 5.0.2, and they are hosted on S3 otherwise. The following targets are currently provided:
+The module uses [`prebuild-install`](https://github.com/prebuild/prebuild-install) to download the prebuilt binary for your platform, if it exists. These binaries are hosted on GitHub Releases for `sqlite3` versions above 5.0.2, and they are hosted on S3 otherwise. The following targets are currently provided:
 
 Format: `napi-v{napi_build_version}-{platform}-{libc}-{arch}`
 
@@ -56,11 +56,11 @@ Format: `napi-v{napi_build_version}-{platform}-{libc}-{arch}`
 * `napi-v6-win32-unknown-ia32`
 * `napi-v6-win32-unknown-x64`
 
-Unfortunately, [node-pre-gyp](https://github.com/mapbox/node-pre-gyp) cannot differentiate between `armv6` and `armv7`, and instead uses `arm` as the `{arch}`. Until that is fixed, you will still need to install `sqlite3` from [source](#source-install).
+Unfortunately, [prebuild](https://github.com/prebuild/prebuild/issues/174) cannot differentiate between `armv6` and `armv7`, and instead uses `arm` as the `{arch}`. Until that is fixed, you will still need to install `sqlite3` from [source](#source-install).
 
 Support for other platforms and architectures may be added in the future if CI supports building on them.
 
-If your environment isn't supported, it'll use `node-gyp` to build SQLite but you will need to install a C++ compiler and linker.
+If your environment isn't supported, it'll use `node-gyp` to build SQLite, but you will need to install a C++ compiler and linker.
 
 ### Other ways to install
 
@@ -147,8 +147,6 @@ To build `sqlite3` for node-webkit:
 NODE_WEBKIT_VERSION="0.8.6" # see latest version at https://github.com/rogerwang/node-webkit#downloads
 npm install sqlite3 --build-from-source --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
 ```
-
-This command internally calls out to [`node-pre-gyp`](https://github.com/mapbox/node-pre-gyp) which itself calls out to [`nw-gyp`](https://github.com/rogerwang/nw-gyp) when the `--runtime=node-webkit` option is passed.
 
 You can also run this command from within a `sqlite3` checkout:
 
