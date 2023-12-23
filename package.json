@@ -73,9 +73,7 @@
     "build": "node-pre-gyp build",
     "build:debug": "node-pre-gyp build --debug",
     "install": "node-pre-gyp install --fallback-to-build",
-    "pretest": "node test/support/createdb.js",
-    "test": "mocha -R spec --timeout 480000",
-    "pack": "node-pre-gyp package"
+    "test": "node test/support/createdb.js && mocha -R spec --timeout 480000"
   },
   "license": "BSD-3-Clause",
   "keywords": [
