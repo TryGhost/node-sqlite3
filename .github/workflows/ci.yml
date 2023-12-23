@@ -45,6 +45,10 @@ jobs:
             node: 16
             host: arm64
             target: arm64
+          - os: ubuntu-20.04
+            node: 16
+            host: x64
+            target: wasm32
     name: ${{ matrix.os }} (node=${{ matrix.node }}, host=${{ matrix.host }}, target=${{ matrix.target }})
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
@@ -52,6 +56,13 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           architecture: ${{ matrix.host }}
+      
+      - name: Setup Emscripten (WebAssembly)
+        if: matrix.target == 'wasm32'
+        uses: mymindstorm/setup-emsdk@v11
+        with:
+          version: '3.1.29'
+          actions-cache-folder: 'emsdk-cache'
 
       - name: Add yarn (self-hosted)
         if: matrix.os == 'macos-m1'
@@ -88,21 +99,43 @@ jobs:
           echo "CXXFLAGS=${CXXFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
 
       - name: Configure build
+        if: matrix.target != 'wasm32'
         run: yarn node-pre-gyp configure --target_arch=${{ env.TARGET }}
+      
+      - name: Configure build (WebAssembly)
+        if: matrix.target == 'wasm32'
+        run: yarn node-pre-gyp configure --nodedir=./wasm --target_arch=${{ env.TARGET }}
 
       - name: Build binaries
+        if: matrix.target != 'wasm32'
         run: yarn node-pre-gyp build --target_arch=${{ env.TARGET }}
+      
+      - name: Build binaries (WebAssembly)
+        if: matrix.target == 'wasm32'
+        run: emmake yarn node-pre-gyp build --nodedir=./wasm --target_arch=${{ env.TARGET }}
 
       - name: Print binary info
-        if: contains(matrix.os, 'ubuntu')
+        if: contains(matrix.os, 'ubuntu') && matrix.target != 'wasm32'
         run: |
           ldd lib/binding/*/node_sqlite3.node
           echo "---"
           nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true
           echo "---"
           file lib/binding/napi-v*/*
+      
+      - name: Print binary info (WebAssembly)
+        if: contains(matrix.os, 'ubuntu') && matrix.target == 'wasm32'
+        run: |
+          file lib/binding/napi-v*/*
 
       - name: Run tests
+        if: matrix.target != 'wasm32'
+        run: yarn test
+      
+      - name: Run tests (WebAssembly)
+        if: matrix.target == 'wasm32'
+        env:
+          npm_config_target_arch: 'wasm32'
         run: yarn test
 
       - name: Package prebuilt binaries
