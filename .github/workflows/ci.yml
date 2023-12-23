@@ -57,6 +57,10 @@ jobs:
         if: matrix.os == 'macos-m1'
         run: npm install -g yarn
 
+      - name: Add setuptools for Python 3.12 (temp)
+        if: matrix.os != 'macos-m1'
+        run: pip install setuptools
+
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3
         if: contains(matrix.os, 'windows')
