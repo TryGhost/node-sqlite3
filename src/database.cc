@@ -152,12 +152,7 @@ Database::Database(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Database>(
 
 void Database::Work_BeginOpen(Baton* baton) {
     auto env = baton->db->Env();
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Database.Open"),
-        Work_Open, Work_AfterOpen, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Database.Open", Work_Open, Work_AfterOpen);
 }
 
 void Database::Work_Open(napi_env e, void* data) {
@@ -245,13 +240,7 @@ void Database::Work_BeginClose(Baton* baton) {
     baton->db->closing = true;
 
     auto env = baton->db->Env();
-
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Database.Close"),
-        Work_Close, Work_AfterClose, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Database.Close", Work_Close, Work_AfterClose);
 }
 
 void Database::Work_Close(napi_env e, void* data) {
@@ -585,13 +574,9 @@ void Database::Work_BeginExec(Baton* baton) {
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
     baton->db->pending++;
+
     auto env = baton->db->Env();
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Database.Exec"),
-        Work_Exec, Work_AfterExec, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Database.Exec", Work_Exec, Work_AfterExec);
 }
 
 void Database::Work_Exec(napi_env e, void* data) {
@@ -694,13 +679,9 @@ void Database::Work_BeginLoadExtension(Baton* baton) {
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
     baton->db->pending++;
+
     auto env = baton->db->Env();
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Database.LoadExtension"),
-        Work_LoadExtension, Work_AfterLoadExtension, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Database.LoadExtension", Work_LoadExtension, Work_AfterLoadExtension);
 }
 
 void Database::Work_LoadExtension(napi_env e, void* data) {

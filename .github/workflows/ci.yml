@@ -27,28 +27,20 @@ jobs:
         target:
           - x64
         node:
-          - 10
-          - 11
-          - 12
-          - 13
-          - 14
-          - 15
-          - 16
-          - 17
           - 18
         include:
           - os: windows-latest
-            node: 16
+            node: 18
             host: x86
             target: x86
           - os: macos-m1
-            node: 16
+            node: 18
             host: arm64
             target: arm64
     name: ${{ matrix.os }} (node=${{ matrix.node }}, host=${{ matrix.host }}, target=${{ matrix.target }})
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           architecture: ${{ matrix.host }}
@@ -56,6 +48,10 @@ jobs:
       - name: Add yarn (self-hosted)
         if: matrix.os == 'macos-m1'
         run: npm install -g yarn
+
+      - name: Add setuptools for Python 3.12 (temp)
+        if: matrix.os != 'macos-m1'
+        run: pip install setuptools
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3
@@ -65,6 +61,9 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --ignore-scripts
+
+      - name: Check Node compatibility
+        run: node tools/semver-check.js
 
       - name: Add env vars
         shell: bash
@@ -83,40 +82,35 @@ jobs:
           echo "CFLAGS=${CFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
           echo "CXXFLAGS=${CXXFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
 
-      - name: Configure build
-        run: yarn node-pre-gyp configure --target_arch=${{ env.TARGET }}
-
       - name: Build binaries
-        run: yarn node-pre-gyp build --target_arch=${{ env.TARGET }}
+        run: yarn prebuild -a ${{ env.TARGET }}
 
       - name: Print binary info
         if: contains(matrix.os, 'ubuntu')
         run: |
-          ldd lib/binding/*/node_sqlite3.node
+          ldd build/**/node_sqlite3.node
           echo "---"
-          nm lib/binding/*/node_sqlite3.node | grep "GLIBC_" | c++filt || true
+          nm build/**/node_sqlite3.node | grep "GLIBC_" | c++filt || true
           echo "---"
-          file lib/binding/napi-v*/*
+          file build/**/node_sqlite3.node
 
       - name: Run tests
         run: yarn test
 
-      - name: Package prebuilt binaries
-        run: yarn node-pre-gyp package --target_arch=${{ env.TARGET }}
-
       - name: Upload binaries to commit artifacts
         uses: actions/upload-artifact@v3
-        if: matrix.node == 16
+        if: matrix.node == 18
         with:
           name: prebuilt-binaries
-          path: build/stage/*/*
+          path: prebuilds/*
           retention-days: 7
 
       - name: Upload binaries to GitHub Release
-        run: yarn node-pre-gyp-github publish
-        if: matrix.node == 16 && startsWith(github.ref, 'refs/tags/')
+        run: yarn upload
+        if: matrix.node == 18 && startsWith(github.ref, 'refs/tags/')
         env:
-          NODE_PRE_GYP_GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+
   build-qemu:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
@@ -124,7 +118,7 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - 16
+          - 18
         target:
           - linux/arm64
         variant:
@@ -134,16 +128,16 @@ jobs:
           # musl x64 builds
           - target: linux/amd64
             variant: alpine3.15
-            node: 16
+            node: 18
     name: ${{ matrix.variant }} (node=${{ matrix.node }}, target=${{ matrix.target }})
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build binaries and test
         run: |
@@ -161,14 +155,14 @@ jobs:
 
       - name: Upload binaries to commit artifacts
         uses: actions/upload-artifact@v3
-        if: matrix.node == 16
+        if: matrix.node == 18
         with:
           name: prebuilt-binaries
           path: build/stage/*/*
           retention-days: 7
 
       - name: Upload binaries to GitHub Release
-        run: yarn install --ignore-scripts && yarn node-pre-gyp-github publish
-        if: matrix.node == 16 && startsWith(github.ref, 'refs/tags/')
+        run: yarn install --ignore-scripts && yarn upload
+        if: matrix.node == 18 && startsWith(github.ref, 'refs/tags/')
         env:
-          NODE_PRE_GYP_GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}

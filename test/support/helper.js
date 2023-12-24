@@ -29,9 +29,5 @@ assert.fileDoesNotExist = function(name) {
 };
 
 assert.fileExists = function(name) {
-    try {
-        fs.statSync(name);
-    } catch(err) {
-        throw err;
-    }
+    fs.statSync(name);
 };
