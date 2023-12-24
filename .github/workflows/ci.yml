@@ -158,7 +158,7 @@ jobs:
         if: matrix.node == 18
         with:
           name: prebuilt-binaries
-          path: build/stage/*/*
+          path: prebuilds/*
           retention-days: 7
 
       - name: Upload binaries to GitHub Release
