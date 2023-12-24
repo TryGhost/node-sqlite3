@@ -2,6 +2,7 @@
   "includes": [ "deps/common-sqlite.gypi" ],
   "variables": {
       "sqlite%":"internal",
+      "openssl_fips":"",
       "sqlite_libname%":"sqlite3"
   },
   "targets": [
