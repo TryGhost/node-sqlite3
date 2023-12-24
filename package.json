@@ -55,7 +55,7 @@
   },
   "devDependencies": {
     "eslint": "8.56.0",
-    "mocha": "7.2.0",
+    "mocha": "10.2.0",
     "node-pre-gyp-github": "1.4.4"
   },
   "peerDependencies": {
