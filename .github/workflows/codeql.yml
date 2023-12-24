@@ -31,7 +31,6 @@ jobs:
           node-version: 18
 
     - name: Add setuptools for Python 3.12 (temp)
-      if: matrix.os != 'macos-m1'
       run: pip install setuptools
 
     - name: Install dependencies
