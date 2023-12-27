@@ -118,7 +118,6 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
 }
 
 Database::Database(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Database>(info) {
-    init();
     auto env = info.Env();
 
     if (info.Length() <= 0 || !info[0].IsString()) {

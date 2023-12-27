@@ -105,17 +105,19 @@ Statement::Statement(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Statemen
         return;
     }
 
-    Database* db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    this->db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    this->db->Ref();
+
     auto sql = info[1].As<Napi::String>();
 
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("sql", sql, napi_default));
 
-    init(db);
+
     Statement* stmt = this;
 
-    auto* baton = new PrepareBaton(db, info[2].As<Napi::Function>(), stmt);
+    auto* baton = new PrepareBaton(this->db, info[2].As<Napi::Function>(), stmt);
     baton->sql = std::string(sql.As<Napi::String>().Utf8Value().c_str());
-    db->Schedule(Work_BeginPrepare, baton);
+    this->db->Schedule(Work_BeginPrepare, baton);
 }
 
 void Statement::Work_BeginPrepare(Database::Baton* baton) {

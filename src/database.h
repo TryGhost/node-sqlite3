@@ -123,18 +123,6 @@ public:
     friend class Statement;
     friend class Backup;
 
-    void init() {
-        _handle = NULL;
-        open = false;
-        closing = false;
-        locked = false;
-        pending = 0;
-        serialize = false;
-        debug_trace = NULL;
-        debug_profile = NULL;
-        update_event = NULL;
-    }
-
     Database(const Napi::CallbackInfo& info);
 
     ~Database() {
@@ -179,20 +167,20 @@ protected:
     void RemoveCallbacks();
 
 protected:
-    sqlite3* _handle;
+    sqlite3* _handle = NULL;
 
-    bool open;
-    bool closing;
-    bool locked;
-    unsigned int pending;
+    bool open = false;
+    bool closing = false;
+    bool locked = false;
+    unsigned int pending = 0;
 
-    bool serialize;
+    bool serialize = false;
 
     std::queue<Call*> queue;
 
-    AsyncTrace* debug_trace;
-    AsyncProfile* debug_profile;
-    AsyncUpdate* update_event;
+    AsyncTrace* debug_trace = NULL;
+    AsyncProfile* debug_profile = NULL;
+    AsyncUpdate* update_event = NULL;
 };
 
 }

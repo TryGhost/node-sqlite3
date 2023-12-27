@@ -153,7 +153,9 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
         return;
     }
 
-    auto* database = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    this->db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    this->db->Ref();
+
     auto filename = info[1].As<Napi::String>();
     auto sourceName = info[2].As<Napi::String>();
     auto destName = info[3].As<Napi::String>();
@@ -164,14 +166,13 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("destName", destName));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filenameIsDest", filenameIsDest));
 
-    init(database);
-
-    auto* baton = new InitializeBaton(database, info[5].As<Napi::Function>(), this);
+    auto* baton = new InitializeBaton(this->db, info[5].As<Napi::Function>(), this);
     baton->filename = filename.Utf8Value();
     baton->sourceName = sourceName.Utf8Value();
     baton->destName = destName.Utf8Value();
     baton->filenameIsDest = filenameIsDest.Value();
-    database->Schedule(Work_BeginInitialize, baton);
+
+    this->db->Schedule(Work_BeginInitialize, baton);
 }
 
 void Backup::Work_BeginInitialize(Database::Baton* baton) {
