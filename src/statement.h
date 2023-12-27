@@ -69,8 +69,8 @@ namespace Values {
     typedef Field Null;
 }
 
-typedef std::vector<std::unique_ptr<Values::Field>> Row;
-typedef std::vector<std::unique_ptr<Row>> Rows;
+typedef std::vector<std::unique_ptr<Values::Field> > Row;
+typedef std::vector<std::unique_ptr<Row> > Rows;
 typedef Row Parameters;
 
 
