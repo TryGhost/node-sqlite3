@@ -25,7 +25,7 @@ Napi::Object Database::Init(Napi::Env env, Napi::Object exports) {
         InstanceMethod("parallelize", &Database::Parallelize, napi_default_method),
         InstanceMethod("configure", &Database::Configure, napi_default_method),
         InstanceMethod("interrupt", &Database::Interrupt, napi_default_method),
-        InstanceAccessor("open", &Database::OpenGetter, nullptr)
+        InstanceAccessor("open", &Database::Open, nullptr)
     });
 
 #if NAPI_VERSION < 6
@@ -212,7 +212,7 @@ void Database::Work_AfterOpen(napi_env e, napi_status status, void* data) {
     }
 }
 
-Napi::Value Database::OpenGetter(const Napi::CallbackInfo& info) {
+Napi::Value Database::Open(const Napi::CallbackInfo& info) {
     auto env = this->Env();
     auto* db = this;
     return Napi::Boolean::New(env, db->open);

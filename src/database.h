@@ -145,38 +145,20 @@ public:
     }
 
 protected:
-    static void Work_BeginOpen(Baton* baton);
-    static void Work_Open(napi_env env, void* data);
-    static void Work_AfterOpen(napi_env env, napi_status status, void* data);
-
-    Napi::Value OpenGetter(const Napi::CallbackInfo& info);
+    WORK_DEFINITION(Open);
+    WORK_DEFINITION(Exec);
+    WORK_DEFINITION(Close);
+    WORK_DEFINITION(LoadExtension);
 
     void Schedule(Work_Callback callback, Baton* baton, bool exclusive = false);
     void Process();
 
-    Napi::Value Exec(const Napi::CallbackInfo& info);
-    static void Work_BeginExec(Baton* baton);
-    static void Work_Exec(napi_env env, void* data);
-    static void Work_AfterExec(napi_env env, napi_status status, void* data);
-
     Napi::Value Wait(const Napi::CallbackInfo& info);
     static void Work_Wait(Baton* baton);
 
-    Napi::Value Close(const Napi::CallbackInfo& info);
-    static void Work_BeginClose(Baton* baton);
-    static void Work_Close(napi_env env, void* data);
-    static void Work_AfterClose(napi_env env, napi_status status, void* data);
-
-    Napi::Value LoadExtension(const Napi::CallbackInfo& info);
-    static void Work_BeginLoadExtension(Baton* baton);
-    static void Work_LoadExtension(napi_env env, void* data);
-    static void Work_AfterLoadExtension(napi_env env, napi_status status, void* data);
-
     Napi::Value Serialize(const Napi::CallbackInfo& info);
     Napi::Value Parallelize(const Napi::CallbackInfo& info);
-
     Napi::Value Configure(const Napi::CallbackInfo& info);
-
     Napi::Value Interrupt(const Napi::CallbackInfo& info);
 
     static void SetBusyTimeout(Baton* baton);
