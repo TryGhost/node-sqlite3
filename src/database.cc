@@ -291,7 +291,7 @@ void Database::Work_AfterClose(napi_env e, napi_status status, void* data) {
     }
 
     if (!db->open) {
-        Napi::Value info[] = { Napi::String::New(env, "close"), argv[0] };
+        Napi::Value info[] = { Napi::String::New(env, "close") };
         EMIT_EVENT(db->Value(), 1, info);
         db->Process();
     }
