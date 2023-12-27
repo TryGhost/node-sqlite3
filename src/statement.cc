@@ -814,7 +814,7 @@ Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
             } break;
         }
 
-        (result).Set(Napi::String::New(env, field->name.c_str()), value);
+        result.Set(field->name, value);
     }
 
     return scope.Escape(result);
