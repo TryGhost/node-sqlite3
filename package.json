@@ -69,7 +69,7 @@
     "install": "prebuild-install -r napi || node-gyp rebuild",
     "prebuild": "prebuild --runtime napi --all --verbose",
     "rebuild": "node-gyp rebuild",
-    "upload": "prebuild --verbose --prerelease --upload-all ${GITHUB_TOKEN}",
+    "upload": "prebuild --verbose --prerelease",
     "test": "node test/support/createdb.js && mocha -R spec --timeout 480000"
   },
   "license": "BSD-3-Clause",
