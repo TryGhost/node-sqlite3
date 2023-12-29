@@ -149,7 +149,7 @@ jobs:
             --build-arg NODE_VERSION=${{ matrix.node }} \
             .
           CONTAINER_ID=$(docker create -it sqlite-builder)
-          docker cp $CONTAINER_ID:/usr/src/build/build/ ./build
+          docker cp $CONTAINER_ID:/usr/src/build/prebuilds/ ./prebuilds
 
       - name: Upload binaries to commit artifacts
         uses: actions/upload-artifact@v3
