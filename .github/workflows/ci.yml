@@ -37,7 +37,7 @@ jobs:
             node: 18
             host: arm64
             target: arm64
-    name: ${{ matrix.os }} (node=${{ matrix.node }}, host=${{ matrix.host }}, target=${{ matrix.target }})
+    name: ${{ matrix.os }} (host=${{ matrix.host }}, target=${{ matrix.target }})
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - uses: actions/setup-node@v4
