@@ -29,6 +29,10 @@ jobs:
         node:
           - 18
         include:
+          - os: ubuntu-20.04
+            node: 18
+            host: x64
+            target: arm64
           - os: windows-latest
             node: 18
             host: x86
@@ -82,19 +86,38 @@ jobs:
           echo "CFLAGS=${CFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
           echo "CXXFLAGS=${CXXFLAGS:-} -include ../src/gcc-preinclude.h" >> $GITHUB_ENV
 
+      - name: Setup cross compilation for Linux ARM64
+        if: contains(matrix.os, 'ubuntu') && matrix.target == 'arm64'
+        run: |
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
+          echo "AS=aarch64-linux-gnu-as" >> $GITHUB_ENV
+          echo "STRIP=aarch64-linux-gnu-strip" >> $GITHUB_ENV
+          echo "AR=aarch64-linux-gnu-ar" >> $GITHUB_ENV
+          echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          echo "CPP=aarch64-linux-gnu-cpp" >> $GITHUB_ENV
+          echo "CXX=aarch64-linux-gnu-g++" >> $GITHUB_ENV
+          echo "LD=aarch64-linux-gnu-ld" >> $GITHUB_ENV
+          echo "FC=aarch64-linux-gnu-gfortran" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+
       - name: Build binaries
         run: yarn prebuild -a ${{ env.TARGET }}
 
       - name: Print binary info
         if: contains(matrix.os, 'ubuntu')
         run: |
-          ldd build/**/node_sqlite3.node
+          if [ "${{ matrix.target }}" = "arm64"  ]; then
+            PREFIX=aarch64-linux-gnu-
+          fi
+
+          ${PREFIX}readelf -d build/**/node_sqlite3.node | grep "Shared library"
           echo "---"
-          nm build/**/node_sqlite3.node | grep "GLIBC_" | c++filt || true
+          ${PREFIX}nm build/**/node_sqlite3.node | grep "GLIBC_" | ${PREFIX}c++filt || true
           echo "---"
           file build/**/node_sqlite3.node
 
       - name: Run tests
+        if: matrix.target != 'arm64' && !contains(matrix.os, 'ubuntu')
         run: yarn test
 
       - name: Upload binaries to commit artifacts
@@ -120,7 +143,6 @@ jobs:
         target:
           - linux/arm64
         variant:
-          - bullseye
           - alpine3.15
         include:
           # musl x64 builds
