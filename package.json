@@ -52,7 +52,7 @@
   "devDependencies": {
     "eslint": "8.56.0",
     "mocha": "10.2.0",
-    "prebuild": "12.1.0"
+    "prebuild": "13.0.0"
   },
   "peerDependencies": {
     "node-gyp": "8.x"
