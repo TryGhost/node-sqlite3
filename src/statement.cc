@@ -587,8 +587,9 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
                 Napi::Array result(Napi::Array::New(env, baton->rows.size()));
                 auto it = static_cast<Rows::const_iterator>(baton->rows.begin());
                 decltype(it) end = baton->rows.end();
+                std::vector<napi_value> js_names;
                 for (int i = 0; it < end; ++it, i++) {
-                    (result).Set(i, RowToJS(env, it->get()));
+                    (result).Set(i, RowToJS(env, it->get(), &js_names));
                 }
 
                 Napi::Value argv[] = { env.Null(), result };
@@ -711,8 +712,9 @@ void Statement::AsyncEach(uv_async_t* handle) {
             Napi::Value argv[2];
             argv[0] = env.Null();
 
+            std::vector<napi_value> js_names;
             for(auto& row : rows) {
-                argv[1] = RowToJS(env,row.get());
+                argv[1] = RowToJS(env, row.get(), &js_names);
                 async->retrieved++;
                 TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
             }
@@ -787,11 +789,19 @@ void Statement::Work_AfterReset(napi_env e, napi_status status, void* data) {
     STATEMENT_END();
 }
 
-Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
+Napi::Value Statement::RowToJS(Napi::Env env, Row* row, std::vector<napi_value>* js_names) {
+    // Must fill this array if empty before we enter the escapable handle scope below.
+    if (js_names != nullptr && js_names->empty()) {
+        for (auto& field : *row) {
+            js_names->push_back(Napi::String::New(env, field->name));
+        }
+    }
+
     Napi::EscapableHandleScope scope(env);
 
     auto result = Napi::Object::New(env);
 
+    size_t js_name_idx = 0;
     for (auto& field : *row) {
 
         Napi::Value value;
@@ -816,7 +826,10 @@ Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
             } break;
         }
 
-        result.Set(field->name, value);
+        napi_value field_name = js_names && js_names->empty()
+            ? Napi::String::New(env, field->name)
+            : (*js_names)[js_name_idx++];
+        result.Set(field_name, value);
     }
 
     return scope.Escape(result);
