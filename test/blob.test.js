@@ -7,48 +7,47 @@ var sqlite3 = require('..'),
 var elmo = fs.readFileSync(__dirname + '/support/elmo.png');
 
 describe('blob', function() {
-    var db;
-    before(function(done) {
-        db = new sqlite3.Database(':memory:');
-        db.run("CREATE TABLE elmos (id INT, image BLOB)", done);
+    /** @type {sqlite3.Database} */
+    let db;
+    before(async function() {
+        db = await sqlite3.Database.create(':memory:');
+        await db.run("CREATE TABLE elmos (id INT, image BLOB)");
     });
 
-    var total = 10;
-    var inserted = 0;
-    var retrieved = 0;
+    const total = 10;
+    let inserted = 0;
+    let retrieved = 0;
 
-
-    it('should insert blobs', function(done) {
-        for (var i = 0; i < total; i++) {
-            db.run('INSERT INTO elmos (id, image) VALUES (?, ?)', i, elmo, function(err) {
-                if (err) throw err;
-                inserted++;
-            });
+    it('should insert blobs', async function() {
+        const promises = [];
+        for (let i = 0; i < total; i++) {
+            promises.push(
+                db.run('INSERT INTO elmos (id, image) VALUES (?, ?)', i, elmo).then(() => {
+                    inserted++;
+                })
+            );
         }
-        db.wait(function() {
-            assert.equal(inserted, total);
-            done();
-        });
+        // TODO: fix wait
+        // await db.wait();
+        await Promise.all(promises);
+        assert.equal(inserted, total);
     });
 
-    it('should retrieve the blobs', function(done) {
-        db.all('SELECT id, image FROM elmos ORDER BY id', function(err, rows) {
-            if (err) throw err;
-            for (var i = 0; i < rows.length; i++) {
-                assert.ok(Buffer.isBuffer(rows[i].image));
-                assert.ok(elmo.length, rows[i].image);
+    it('should retrieve the blobs', async function() {
+        const rows = await db.all('SELECT id, image FROM elmos ORDER BY id');
+        for (let i = 0; i < rows.length; i++) {
+            assert.ok(Buffer.isBuffer(rows[i].image));
+            assert.ok(elmo.length, rows[i].image);
 
-                for (var j = 0; j < elmo.length; j++) {
-                    if (elmo[j] !== rows[i].image[j]) {
-                        assert.ok(false, "Wrong byte");
-                    }
+            for (var j = 0; j < elmo.length; j++) {
+                if (elmo[j] !== rows[i].image[j]) {
+                    assert.ok(false, "Wrong byte");
                 }
-
-                retrieved++;
             }
 
-            assert.equal(retrieved, total);
-            done();
-        });
+            retrieved++;
+        }
+
+        assert.equal(retrieved, total);
     });
 });

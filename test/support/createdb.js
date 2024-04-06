@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-function createdb(callback) {
+async function createdb() {
     var existsSync = require('fs').existsSync || require('path').existsSync;
     var statSync   = require('fs').statSync || require('path').statSync;
     var path = require('path');
@@ -19,24 +19,22 @@ function createdb(callback) {
         return str;
     }
 
-// Make sure the file exists and is also valid.
+    // Make sure the file exists and is also valid.
     if (existsSync(db_path) && statSync(db_path).size !== 0) {
         console.log('okay: database already created (' + db_path + ')');
-        if (callback) callback();
     } else {
         console.log("Creating test database... This may take several minutes.");
-        var db = new sqlite3.Database(db_path);
-        db.serialize(function() {
-            db.run("CREATE TABLE foo (id INT, txt TEXT)");
+        var db = await sqlite3.Database.create(db_path);
+        await db.serialize(async function() {
+            await db.run("CREATE TABLE foo (id INT, txt TEXT)");
             db.run("BEGIN TRANSACTION");
-            var stmt = db.prepare("INSERT INTO foo VALUES(?, ?)");
+            var stmt = await db.prepare("INSERT INTO foo VALUES(?, ?)");
             for (var i = 0; i < count; i++) {
                 stmt.run(i, randomString());
             }
-            stmt.finalize();
-            db.run("COMMIT TRANSACTION", [], function () {
-                db.close(callback);
-            });
+            await stmt.finalize();
+            await db.run("COMMIT TRANSACTION", []);
+            await db.close();
         });
     }
 }

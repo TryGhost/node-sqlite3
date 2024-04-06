@@ -98,16 +98,16 @@ public:
     struct Baton {
         napi_async_work request = NULL;
         Backup* backup;
-        Napi::FunctionReference callback;
+        Napi::Promise::Deferred deferred;
 
-        Baton(Backup* backup_, Napi::Function cb_) : backup(backup_) {
+        Baton(Backup* backup_) :
+                backup(backup_),
+                deferred(Napi::Promise::Deferred::New(backup_->Env())) {
             backup->Ref();
-            callback.Reset(cb_, 1);
         }
         virtual ~Baton() {
             if (request) napi_delete_async_work(backup->Env(), request);
             backup->Unref();
-            callback.Reset();
         }
     };
 
@@ -117,8 +117,8 @@ public:
         std::string sourceName;
         std::string destName;
         bool filenameIsDest;
-        InitializeBaton(Database* db_, Napi::Function cb_, Backup* backup_) :
-            Baton(db_, cb_), backup(backup_), filenameIsDest(true) {
+        InitializeBaton(Database* db_, Napi::Promise::Deferred deferred_, Backup* backup_) :
+            Baton(db_, deferred_), backup(backup_), filenameIsDest(true) {
             backup->Ref();
         }
         virtual ~InitializeBaton() override {
@@ -133,8 +133,8 @@ public:
     struct StepBaton : Baton {
         int pages;
         std::set<int> retryErrorsSet;
-        StepBaton(Backup* backup_, Napi::Function cb_, int pages_) :
-            Baton(backup_, cb_), pages(pages_) {}
+        StepBaton(Backup* backup_, int pages_) :
+            Baton(backup_), pages(pages_) {}
         virtual ~StepBaton() override = default;
     };
 
@@ -170,6 +170,7 @@ public:
     void RetryErrorSetter(const Napi::CallbackInfo& info, const Napi::Value& value);
 
 protected:
+    Napi::Value Initialize(const Napi::CallbackInfo& info);
     static void Work_BeginInitialize(Database::Baton* baton);
     static void Work_Initialize(napi_env env, void* data);
     static void Work_AfterInitialize(napi_env env, napi_status status, void* data);
@@ -188,6 +189,11 @@ protected:
     sqlite3_backup* _handle = NULL;
     sqlite3* _otherDb = NULL;
     sqlite3* _destDb = NULL;
+
+    std::string filename;
+    std::string sourceName;
+    std::string destName;
+    bool filenameIsDest;
 
     bool inited = false;
     bool locked = true;

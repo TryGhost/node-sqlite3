@@ -43,51 +43,47 @@ public:
     struct Baton {
         napi_async_work request = NULL;
         Database* db;
-        Napi::FunctionReference callback;
+        Napi::Promise::Deferred deferred;
         int status;
         std::string message;
 
-        Baton(Database* db_, Napi::Function cb_) :
-                db(db_), status(SQLITE_OK) {
+        Baton(Database* db_, Napi::Promise::Deferred deferred_) :
+                db(db_), deferred(deferred_), status(SQLITE_OK) {
             db->Ref();
-            if (!cb_.IsUndefined() && cb_.IsFunction()) {
-                callback.Reset(cb_, 1);
-            }
         }
         virtual ~Baton() {
             if (request) napi_delete_async_work(db->Env(), request);
             db->Unref();
-            callback.Reset();
         }
     };
 
     struct OpenBaton : Baton {
         std::string filename;
         int mode;
-        OpenBaton(Database* db_, Napi::Function cb_, const char* filename_, int mode_) :
-            Baton(db_, cb_), filename(filename_), mode(mode_) {}
+        OpenBaton(Database* db_, Napi::Promise::Deferred deferred_, const char* filename_, int mode_) :
+            Baton(db_, deferred_), filename(filename_), mode(mode_) {}
         virtual ~OpenBaton() override = default;
     };
 
     struct ExecBaton : Baton {
         std::string sql;
-        ExecBaton(Database* db_, Napi::Function cb_, const char* sql_) :
-            Baton(db_, cb_), sql(sql_) {}
+        ExecBaton(Database* db_, Napi::Promise::Deferred deferred_, const char* sql_) :
+            Baton(db_, deferred_), sql(sql_) {}
         virtual ~ExecBaton() override = default;
     };
 
     struct LoadExtensionBaton : Baton {
         std::string filename;
-        LoadExtensionBaton(Database* db_, Napi::Function cb_, const char* filename_) :
-            Baton(db_, cb_), filename(filename_) {}
+        LoadExtensionBaton(Database* db_, Napi::Promise::Deferred deferred_, const char* filename_) :
+            Baton(db_, deferred_), filename(filename_) {}
         virtual ~LoadExtensionBaton() override = default;
     };
 
     struct LimitBaton : Baton {
         int id;
         int value;
-        LimitBaton(Database* db_, Napi::Function cb_, int id_, int value_) :
-            Baton(db_, cb_), id(id_), value(value_) {}
+        LimitBaton(Database* db_, Napi::Promise::Deferred deferred_, int id_, int value_) :
+            Baton(db_, deferred_), id(id_), value(value_) {}
         virtual ~LimitBaton() override = default;
     };
 
@@ -138,6 +134,7 @@ protected:
     WORK_DEFINITION(Close);
     WORK_DEFINITION(LoadExtension);
 
+    Napi::Value Connect(const Napi::CallbackInfo& info);
     void Schedule(Work_Callback callback, Baton* baton, bool exclusive = false);
     void Process();
 
@@ -168,6 +165,9 @@ protected:
 
 protected:
     sqlite3* _handle = NULL;
+
+    std::string filename;
+    int mode;
 
     bool open = false;
     bool closing = false;

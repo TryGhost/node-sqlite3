@@ -83,39 +83,58 @@ public:
     struct Baton {
         napi_async_work request = NULL;
         Statement* stmt;
-        Napi::FunctionReference callback;
+        Napi::Promise::Deferred deferred;
+        Napi::Reference<Napi::Promise> promise;
         Parameters parameters;
+        bool bound = false;
 
-        Baton(Statement* stmt_, Napi::Function cb_) : stmt(stmt_) {
+        Baton(Statement* stmt_) :
+                stmt(stmt_),
+                deferred(Napi::Promise::Deferred::New(stmt_->Env())),
+                promise(Napi::Persistent(deferred.Promise())) {
             stmt->Ref();
-            callback.Reset(cb_, 1);
+            promise.Ref();
         }
         virtual ~Baton() {
             parameters.clear();
             if (request) napi_delete_async_work(stmt->Env(), request);
             stmt->Unref();
-            callback.Reset();
+            promise.Unref();
         }
     };
 
+    class Worker : public Napi::AsyncWorker {
+        public:
+            Worker(Napi::Env& env, Baton* baton);
+            virtual ~Worker(){};
+
+            void Execute();
+            void OnOK();
+            void OnError(const Napi::Error& e);
+
+        private:
+            Baton* baton;
+    };
+
+
     struct RowBaton : Baton {
-        RowBaton(Statement* stmt_, Napi::Function cb_) :
-            Baton(stmt_, cb_) {}
+        RowBaton(Statement* stmt_) :
+            Baton(stmt_) {}
         Row row;
         virtual ~RowBaton() override = default;
     };
 
     struct RunBaton : Baton {
-        RunBaton(Statement* stmt_, Napi::Function cb_) :
-            Baton(stmt_, cb_), inserted_id(0), changes(0) {}
+        RunBaton(Statement* stmt_) :
+            Baton(stmt_), inserted_id(0), changes(0) {}
         sqlite3_int64 inserted_id;
         int changes;
         virtual ~RunBaton() override = default;
     };
 
     struct RowsBaton : Baton {
-        RowsBaton(Statement* stmt_, Napi::Function cb_) :
-            Baton(stmt_, cb_) {}
+        RowsBaton(Statement* stmt_) :
+            Baton(stmt_) {}
         Rows rows;
         virtual ~RowsBaton() override = default;
     };
@@ -126,8 +145,8 @@ public:
         Napi::FunctionReference completed;
         Async* async; // Isn't deleted when the baton is deleted.
 
-        EachBaton(Statement* stmt_, Napi::Function cb_) :
-            Baton(stmt_, cb_) {}
+        EachBaton(Statement* stmt_) :
+            Baton(stmt_) {}
         virtual ~EachBaton() override {
             completed.Reset();
         }
@@ -136,8 +155,8 @@ public:
     struct PrepareBaton : Database::Baton {
         Statement* stmt;
         std::string sql;
-        PrepareBaton(Database* db_, Napi::Function cb_, Statement* stmt_) :
-            Baton(db_, cb_), stmt(stmt_) {
+        PrepareBaton(Database* db_, Statement* stmt_) :
+            Baton(db_, Napi::Promise::Deferred::New(stmt_->Env())), stmt(stmt_) {
             stmt->Ref();
         }
         virtual ~PrepareBaton() override {
@@ -199,12 +218,13 @@ public:
     WORK_DEFINITION(Get)
     WORK_DEFINITION(Run)
     WORK_DEFINITION(All)
-    WORK_DEFINITION(Each)
+    // WORK_DEFINITION(Each)
     WORK_DEFINITION(Reset)
 
     Napi::Value Finalize_(const Napi::CallbackInfo& info);
 
 protected:
+    Napi::Value Prepare(const Napi::CallbackInfo& info);                          \
     static void Work_BeginPrepare(Database::Baton* baton);
     static void Work_Prepare(napi_env env, void* data);
     static void Work_AfterPrepare(napi_env env, napi_status status, void* data);
@@ -216,7 +236,7 @@ protected:
     void Finalize_();
 
     template <class T> inline std::unique_ptr<Values::Field> BindParameter(const Napi::Value source, T pos);
-    template <class T> T* Bind(const Napi::CallbackInfo& info, int start = 0, int end = -1);
+    template <class T> T* Bind(const Napi::CallbackInfo& info);
     bool Bind(const Parameters &parameters);
 
     static void GetRow(Row* row, sqlite3_stmt* stmt);
@@ -228,6 +248,8 @@ protected:
 
 protected:
     Database* db;
+
+    std::string sql;
 
     sqlite3_stmt* _handle = NULL;
     int status = SQLITE_OK;

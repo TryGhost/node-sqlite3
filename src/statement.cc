@@ -15,11 +15,12 @@ Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
     auto napi_default_method = static_cast<napi_property_attributes>(napi_writable | napi_configurable);
 
     auto t = DefineClass(env, "Statement", {
+      InstanceMethod("prepare", &Statement::Prepare, napi_default_method),
       InstanceMethod("bind", &Statement::Bind, napi_default_method),
       InstanceMethod("get", &Statement::Get, napi_default_method),
       InstanceMethod("run", &Statement::Run, napi_default_method),
       InstanceMethod("all", &Statement::All, napi_default_method),
-      InstanceMethod("each", &Statement::Each, napi_default_method),
+    //   InstanceMethod("each", &Statement::Each, napi_default_method),
       InstanceMethod("reset", &Statement::Reset, napi_default_method),
       InstanceMethod("finalize", &Statement::Finalize_, napi_default_method),
     });
@@ -75,16 +76,8 @@ template <class T> void Statement::Error(T* baton) {
     assert(stmt->status != 0);
     EXCEPTION(Napi::String::New(env, stmt->message.c_str()), stmt->status, exception);
 
-    Napi::Function cb = baton->callback.Value();
-
-    if (IS_FUNCTION(cb)) {
-        Napi::Value argv[] = { exception };
-        TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
-    }
-    else {
-        Napi::Value argv[] = { Napi::String::New(env, "error"), exception };
-        EMIT_EVENT(stmt->Value(), 2, argv);
-    }
+    baton->deferred.Reject(exception);
+    return;
 }
 
 // { Database db, String sql, Array params, Function callback }
@@ -100,24 +93,31 @@ Statement::Statement(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Statemen
         Napi::TypeError::New(env, "SQL query expected").ThrowAsJavaScriptException();
         return;
     }
-    else if (length > 2 && !info[2].IsUndefined() && !info[2].IsFunction()) {
-        Napi::TypeError::New(env, "Callback expected").ThrowAsJavaScriptException();
-        return;
-    }
 
     this->db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
     this->db->Ref();
 
     auto sql = info[1].As<Napi::String>();
+    this->sql = sql.Utf8Value();
 
-    info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("sql", sql, napi_default));
+    info.This()
+        .As<Napi::Object>()
+        .DefineProperty(
+            Napi::PropertyDescriptor::Value(
+                "sql",
+                sql,
+                napi_default
+            )
+        );
+}
 
-
+Napi::Value Statement::Prepare(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
     Statement* stmt = this;
-
-    auto* baton = new PrepareBaton(this->db, info[2].As<Napi::Function>(), stmt);
-    baton->sql = std::string(sql.As<Napi::String>().Utf8Value().c_str());
-    this->db->Schedule(Work_BeginPrepare, baton);
+    auto* baton = new PrepareBaton(stmt->db, stmt);
+    baton->sql = sql;
+    stmt->db->Schedule(Work_BeginPrepare, baton);
+    return baton->deferred.Promise();
 }
 
 void Statement::Work_BeginPrepare(Database::Baton* baton) {
@@ -165,11 +165,7 @@ void Statement::Work_AfterPrepare(napi_env e, napi_status status, void* data) {
     }
     else {
         stmt->prepared = true;
-        if (!baton->callback.IsEmpty() && baton->callback.Value().IsFunction()) {
-            Napi::Function cb = baton->callback.Value();
-            Napi::Value argv[] = { env.Null() };
-            TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
-        }
+        baton->deferred.Resolve(stmt->Value());
     }
 
     STATEMENT_END();
@@ -220,59 +216,55 @@ template <class T> std::unique_ptr<Values::Field>
     }
 }
 
-template <class T> T* Statement::Bind(const Napi::CallbackInfo& info, int start, int last) {
+template <class T> T* Statement::Bind(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    Napi::HandleScope scope(env);
+    
+    // Napi::HandleScope scope(env);
+    auto *baton = new T(this);
 
-    if (last < 0) last = info.Length();
-    Napi::Function callback;
-    if (last > start && info[last - 1].IsFunction()) {
-        callback = info[last - 1].As<Napi::Function>();
-        last--;
-    }
+    auto start = 0;
+    auto last = info.Length();
 
-    auto *baton = new T(this, callback);
 
-    if (start < last) {
-        if (info[start].IsArray()) {
-            auto array = info[start].As<Napi::Array>();
-            int length = array.Length();
-            // Note: bind parameters start with 1.
-            for (int i = 0, pos = 1; i < length; i++, pos++) {
-                baton->parameters.emplace_back(BindParameter((array).Get(i), i + 1));
-            }
-        }
-        else if (!info[start].IsObject() || OtherInstanceOf(info[start].As<Object>(), "RegExp") 
-                || OtherInstanceOf(info[start].As<Object>(), "Date") || info[start].IsBuffer()) {
-            // Parameters directly in array.
-            // Note: bind parameters start with 1.
-            for (int i = start, pos = 1; i < last; i++, pos++) {
-                baton->parameters.emplace_back(BindParameter(info[i], pos));
-            }
-        }
-        else if (info[start].IsObject()) {
-            auto object = info[start].As<Napi::Object>();
-            auto array = object.GetPropertyNames();
-            int length = array.Length();
-            for (int i = 0; i < length; i++) {
-                Napi::Value name = (array).Get(i);
-                Napi::Number num = name.ToNumber();
-
-                if (num.Int32Value() == num.DoubleValue()) {
-                    baton->parameters.emplace_back(
-                        BindParameter((object).Get(name), num.Int32Value()));
-                }
-                else {
-                    baton->parameters.emplace_back(BindParameter((object).Get(name),
-                        name.As<Napi::String>().Utf8Value().c_str()));
-                }
-            }
-        }
-        else {
-            return NULL;
+    if (info[start].IsArray()) {
+        auto array = info[start].As<Napi::Array>();
+        int length = array.Length();
+        // Note: bind parameters start with 1.
+        for (int i = 0, pos = 1; i < length; i++, pos++) {
+            baton->parameters.emplace_back(BindParameter((array).Get(i), i + 1));
         }
     }
+    else if (!info[start].IsObject() || OtherInstanceOf(info[start].As<Object>(), "RegExp") 
+            || OtherInstanceOf(info[start].As<Object>(), "Date") || info[start].IsBuffer()) {
+        // Parameters directly in array.
+        // Note: bind parameters start with 1.
+        for (int i = start, pos = 1; i < last; i++, pos++) {
+            baton->parameters.emplace_back(BindParameter(info[i], pos));
+        }
+    }
+    else if (info[start].IsObject()) {
+        auto object = info[start].As<Napi::Object>();
+        auto array = object.GetPropertyNames();
+        int length = array.Length();
+        for (int i = 0; i < length; i++) {
+            Napi::Value name = (array).Get(i);
+            Napi::Number num = name.ToNumber();
 
+            if (num.Int32Value() == num.DoubleValue()) {
+                baton->parameters.emplace_back(
+                    BindParameter((object).Get(name), num.Int32Value()));
+            }
+            else {
+                baton->parameters.emplace_back(BindParameter((object).Get(name),
+                    name.As<Napi::String>().Utf8Value().c_str()));
+            }
+        }
+    }
+    else {
+        return baton;
+    }
+
+    baton->bound = true;
     return baton;
 }
 
@@ -334,7 +326,7 @@ Napi::Value Statement::Bind(const Napi::CallbackInfo& info) {
     Statement* stmt = this;
 
     auto baton = stmt->Bind<Baton>(info);
-    if (baton == NULL) {
+    if (!baton->bound) {
         Napi::TypeError::New(env, "Data type is not supported").ThrowAsJavaScriptException();
         return env.Null();
     }
@@ -342,6 +334,7 @@ Napi::Value Statement::Bind(const Napi::CallbackInfo& info) {
         stmt->Schedule(Work_BeginBind, baton);
         return info.This();
     }
+    return baton->deferred.Promise();
 }
 
 void Statement::Work_BeginBind(Baton* baton) {
@@ -369,11 +362,8 @@ void Statement::Work_AfterBind(napi_env e, napi_status status, void* data) {
     }
     else {
         // Fire callbacks.
-        Napi::Function cb = baton->callback.Value();
-        if (IS_FUNCTION(cb)) {
-            Napi::Value argv[] = { env.Null() };
-            TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
-        }
+        auto deferred = baton->deferred;
+        deferred.Resolve(stmt->Value());
     }
 
     STATEMENT_END();
@@ -386,14 +376,13 @@ Napi::Value Statement::Get(const Napi::CallbackInfo& info) {
     Statement* stmt = this;
 
     Baton* baton = stmt->Bind<RowBaton>(info);
-    if (baton == NULL) {
-        Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
-        return env.Null();
+    if (!baton->bound) {
+        baton->deferred.Reject(Napi::Error::New(env, "Data type is not supported").Value());
     }
     else {
         stmt->Schedule(Work_BeginGet, baton);
-        return info.This();
     }
+    return baton->deferred.Promise();
 }
 
 void Statement::Work_BeginGet(Baton* baton) {
@@ -435,18 +424,12 @@ void Statement::Work_AfterGet(napi_env e, napi_status status, void* data) {
         Error(baton.get());
     }
     else {
-        // Fire callbacks.
-        Napi::Function cb = baton->callback.Value();
-        if (IS_FUNCTION(cb)) {
-            if (stmt->status == SQLITE_ROW) {
-                // Create the result array from the data we acquired.
-                Napi::Value argv[] = { env.Null(), RowToJS(env, &baton->row) };
-                TRY_CATCH_CALL(stmt->Value(), cb, 2, argv);
-            }
-            else {
-                Napi::Value argv[] = { env.Null() };
-                TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
-            }
+        auto deferred = baton->deferred;
+        if (stmt->status == SQLITE_ROW) {
+            Napi::Value result = RowToJS(env, &baton->row);
+            deferred.Resolve(result);
+        } else {
+            deferred.Resolve(stmt->Value());
         }
     }
 
@@ -458,14 +441,17 @@ Napi::Value Statement::Run(const Napi::CallbackInfo& info) {
     Statement* stmt = this;
 
     Baton* baton = stmt->Bind<RunBaton>(info);
-    if (baton == NULL) {
-        Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
-        return env.Null();
+    if (!baton->bound) {
+        baton->deferred.Reject(
+            Napi::Error::New(env, "Data type is not supported").Value()
+        );
     }
     else {
+        auto test = Napi::String::New(env, "test string");
         stmt->Schedule(Work_BeginRun, baton);
-        return info.This();
     }
+
+    return baton->deferred.Promise();
 }
 
 void Statement::Work_BeginRun(Baton* baton) {
@@ -509,15 +495,9 @@ void Statement::Work_AfterRun(napi_env e, napi_status status, void* data) {
         Error(baton.get());
     }
     else {
-        // Fire callbacks.
-        Napi::Function cb = baton->callback.Value();
-        if (IS_FUNCTION(cb)) {
-            (stmt->Value()).Set(Napi::String::New(env, "lastID"), Napi::Number::New(env, baton->inserted_id));
-            (stmt->Value()).Set( Napi::String::New(env, "changes"), Napi::Number::New(env, baton->changes));
-
-            Napi::Value argv[] = { env.Null() };
-            TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
-        }
+        (stmt->Value()).Set(Napi::String::New(env, "lastID"), Napi::Number::New(env, baton->inserted_id));
+        (stmt->Value()).Set(Napi::String::New(env, "changes"), Napi::Number::New(env, baton->changes));
+        baton->deferred.Resolve(stmt->Value());
     }
 
     STATEMENT_END();
@@ -528,14 +508,13 @@ Napi::Value Statement::All(const Napi::CallbackInfo& info) {
     Statement* stmt = this;
 
     Baton* baton = stmt->Bind<RowsBaton>(info);
-    if (baton == NULL) {
-        Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
-        return env.Null();
+    if (!baton->bound) {
+        baton->deferred.Reject(Napi::Error::New(env, "Data type is not supported").Value());
     }
     else {
         stmt->Schedule(Work_BeginAll, baton);
-        return info.This();
     }
+    return baton->deferred.Promise();
 }
 
 void Statement::Work_BeginAll(Baton* baton) {
@@ -579,184 +558,173 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
         Error(baton.get());
     }
     else {
-        // Fire callbacks.
-        Napi::Function cb = baton->callback.Value();
-        if (IS_FUNCTION(cb)) {
-            if (baton->rows.size()) {
-                // Create the result array from the data we acquired.
-                Napi::Array result(Napi::Array::New(env, baton->rows.size()));
-                auto it = static_cast<Rows::const_iterator>(baton->rows.begin());
-                decltype(it) end = baton->rows.end();
-                for (int i = 0; it < end; ++it, i++) {
-                    (result).Set(i, RowToJS(env, it->get()));
-                }
-
-                Napi::Value argv[] = { env.Null(), result };
-                TRY_CATCH_CALL(stmt->Value(), cb, 2, argv);
+        if (baton->rows.size()) {
+            // Create the result array from the data we acquired.
+            Napi::Array result(Napi::Array::New(env, baton->rows.size()));
+            auto it = static_cast<Rows::const_iterator>(baton->rows.begin());
+            decltype(it) end = baton->rows.end();
+            for (int i = 0; it < end; ++it, i++) {
+                (result).Set(i, RowToJS(env, it->get()));
             }
-            else {
-                // There were no result rows.
-                Napi::Value argv[] = {
-                    env.Null(),
-                    Napi::Array::New(env, 0)
-                };
-                TRY_CATCH_CALL(stmt->Value(), cb, 2, argv);
-            }
+            baton->deferred.Resolve(result);
+        }
+        else {
+            baton->deferred.Resolve(Napi::Array::New(env, 0));
         }
     }
 
     STATEMENT_END();
 }
 
-Napi::Value Statement::Each(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
-    Statement* stmt = this;
+// Napi::Value Statement::Each(const Napi::CallbackInfo& info) {
+//     auto env = info.Env();
+//     Statement* stmt = this;
 
-    int last = info.Length();
+//     int last = info.Length();
 
-    Napi::Function completed;
-    if (last >= 2 && info[last - 1].IsFunction() && info[last - 2].IsFunction()) {
-        completed = info[--last].As<Napi::Function>();
-    }
+//     Napi::Function completed;
+//     if (last >= 2 && info[last - 1].IsFunction() && info[last - 2].IsFunction()) {
+//         completed = info[--last].As<Napi::Function>();
+//     }
 
-    auto baton = stmt->Bind<EachBaton>(info, 0, last);
-    if (baton == NULL) {
-        Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    else {
-        baton->completed.Reset(completed, 1);
-        stmt->Schedule(Work_BeginEach, baton);
-        return info.This();
-    }
-}
+//     auto baton = stmt->Bind<EachBaton>(info, 0, last);
+//     if (!baton->bound) {
+//         Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
+//         return env.Null();
+//     }
+//     else {
+//         baton->completed.Reset(completed, 1);
+//         stmt->Schedule(Work_BeginEach, baton);
+//         return info.This();
+//     }
+//     return baton->deferred.Promise();
+// }
 
-void Statement::Work_BeginEach(Baton* baton) {
-    // Only create the Async object when we're actually going into
-    // the event loop. This prevents dangling events.
-    auto* each_baton = static_cast<EachBaton*>(baton);
-    each_baton->async = new Async(each_baton->stmt, reinterpret_cast<uv_async_cb>(AsyncEach));
-    each_baton->async->item_cb.Reset(each_baton->callback.Value(), 1);
-    each_baton->async->completed_cb.Reset(each_baton->completed.Value(), 1);
+// TODO: Implement as async generator
+// void Statement::Work_BeginEach(Baton* baton) {
+//     // Only create the Async object when we're actually going into
+//     // the event loop. This prevents dangling events.
+//     auto* each_baton = static_cast<EachBaton*>(baton);
+//     each_baton->async = new Async(each_baton->stmt, reinterpret_cast<uv_async_cb>(AsyncEach));
+//     each_baton->async->item_cb.Reset(each_baton->callback.Value(), 1);
+//     each_baton->async->completed_cb.Reset(each_baton->completed.Value(), 1);
 
-    STATEMENT_BEGIN(Each);
-}
+//     STATEMENT_BEGIN(Each);
+// }
 
-void Statement::Work_Each(napi_env e, void* data) {
-    STATEMENT_INIT(EachBaton);
+// void Statement::Work_Each(napi_env e, void* data) {
+//     STATEMENT_INIT(EachBaton);
 
-    auto* async = baton->async;
+//     auto* async = baton->async;
 
-    STATEMENT_MUTEX(mtx);
+//     STATEMENT_MUTEX(mtx);
 
-    // Make sure that we also reset when there are no parameters.
-    if (!baton->parameters.size()) {
-        sqlite3_reset(stmt->_handle);
-    }
+//     // Make sure that we also reset when there are no parameters.
+//     if (!baton->parameters.size()) {
+//         sqlite3_reset(stmt->_handle);
+//     }
 
-    if (stmt->Bind(baton->parameters)) {
-        while (true) {
-            sqlite3_mutex_enter(mtx);
-            stmt->status = sqlite3_step(stmt->_handle);
-            if (stmt->status == SQLITE_ROW) {
-                sqlite3_mutex_leave(mtx);
-                auto row = std::make_unique<Row>();
-                GetRow(row.get(), stmt->_handle);
-                NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
-                async->data.emplace_back(std::move(row));
-                NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
+//     if (stmt->Bind(baton->parameters)) {
+//         while (true) {
+//             sqlite3_mutex_enter(mtx);
+//             stmt->status = sqlite3_step(stmt->_handle);
+//             if (stmt->status == SQLITE_ROW) {
+//                 sqlite3_mutex_leave(mtx);
+//                 auto row = std::make_unique<Row>();
+//                 GetRow(row.get(), stmt->_handle);
+//                 NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
+//                 async->data.emplace_back(std::move(row));
+//                 NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
 
-                uv_async_send(&async->watcher);
-            }
-            else {
-                if (stmt->status != SQLITE_DONE) {
-                    stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
-                }
-                sqlite3_mutex_leave(mtx);
-                break;
-            }
-        }
-    }
+//                 uv_async_send(&async->watcher);
+//             }
+//             else {
+//                 if (stmt->status != SQLITE_DONE) {
+//                     stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
+//                 }
+//                 sqlite3_mutex_leave(mtx);
+//                 break;
+//             }
+//         }
+//     }
 
-    async->completed = true;
-    uv_async_send(&async->watcher);
-}
+//     async->completed = true;
+//     uv_async_send(&async->watcher);
+// }
 
-void Statement::CloseCallback(uv_handle_t* handle) {
-    assert(handle != NULL);
-    assert(handle->data != NULL);
-    auto* async = static_cast<Async*>(handle->data);
-    delete async;
-}
+// void Statement::CloseCallback(uv_handle_t* handle) {
+//     assert(handle != NULL);
+//     assert(handle->data != NULL);
+//     auto* async = static_cast<Async*>(handle->data);
+//     delete async;
+// }
 
-void Statement::AsyncEach(uv_async_t* handle) {
-    auto* async = static_cast<Async*>(handle->data);
+// void Statement::AsyncEach(uv_async_t* handle) {
+//     auto* async = static_cast<Async*>(handle->data);
 
-    auto env = async->stmt->Env();
-    Napi::HandleScope scope(env);
+//     auto env = async->stmt->Env();
+//     Napi::HandleScope scope(env);
 
-    while (true) {
-        // Get the contents out of the data cache for us to process in the JS callback.
-        Rows rows;
-        NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
-        rows.swap(async->data);
-        NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
+//     while (true) {
+//         // Get the contents out of the data cache for us to process in the JS callback.
+//         Rows rows;
+//         NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
+//         rows.swap(async->data);
+//         NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
 
-        if (rows.empty()) {
-            break;
-        }
+//         if (rows.empty()) {
+//             break;
+//         }
 
-        Napi::Function cb = async->item_cb.Value();
-        if (IS_FUNCTION(cb)) {
-            Napi::Value argv[2];
-            argv[0] = env.Null();
+//         Napi::Function cb = async->item_cb.Value();
+//         if (IS_FUNCTION(cb)) {
+//             Napi::Value argv[2];
+//             argv[0] = env.Null();
 
-            for(auto& row : rows) {
-                argv[1] = RowToJS(env,row.get());
-                async->retrieved++;
-                TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
-            }
-        }
-    }
+//             for(auto& row : rows) {
+//                 argv[1] = RowToJS(env,row.get());
+//                 async->retrieved++;
+//                 TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
+//             }
+//         }
+//     }
 
-    Napi::Function cb = async->completed_cb.Value();
-    if (async->completed) {
-        if (!cb.IsEmpty() &&
-                cb.IsFunction()) {
-            Napi::Value argv[] = {
-                env.Null(),
-                Napi::Number::New(env, async->retrieved)
-            };
-            TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
-        }
-        uv_close(reinterpret_cast<uv_handle_t*>(handle), CloseCallback);
-    }
-}
+//     Napi::Function cb = async->completed_cb.Value();
+//     if (async->completed) {
+//         if (!cb.IsEmpty() &&
+//                 cb.IsFunction()) {
+//             Napi::Value argv[] = {
+//                 env.Null(),
+//                 Napi::Number::New(env, async->retrieved)
+//             };
+//             TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
+//         }
+//         uv_close(reinterpret_cast<uv_handle_t*>(handle), CloseCallback);
+//     }
+// }
 
-void Statement::Work_AfterEach(napi_env e, napi_status status, void* data) {
-    std::unique_ptr<EachBaton> baton(static_cast<EachBaton*>(data));
-    auto* stmt = baton->stmt;
+// void Statement::Work_AfterEach(napi_env e, napi_status status, void* data) {
+//     std::unique_ptr<EachBaton> baton(static_cast<EachBaton*>(data));
+//     auto* stmt = baton->stmt;
 
-    auto env = stmt->Env();
-    Napi::HandleScope scope(env);
+//     auto env = stmt->Env();
+//     Napi::HandleScope scope(env);
 
-    if (stmt->status != SQLITE_DONE) {
-        Error(baton.get());
-    }
+//     if (stmt->status != SQLITE_DONE) {
+//         Error(baton.get());
+//     }
 
-    STATEMENT_END();
-}
+//     STATEMENT_END();
+// }
 
 Napi::Value Statement::Reset(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     Statement* stmt = this;
 
-    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
-
-    auto* baton = new Baton(stmt, callback);
+    auto* baton = new Baton(stmt);
     stmt->Schedule(Work_BeginReset, baton);
 
-    return info.This();
+    return baton->deferred.Promise();
 }
 
 void Statement::Work_BeginReset(Baton* baton) {
@@ -777,12 +745,7 @@ void Statement::Work_AfterReset(napi_env e, napi_status status, void* data) {
     auto env = stmt->Env();
     Napi::HandleScope scope(env);
 
-    // Fire callbacks.
-    Napi::Function cb = baton->callback.Value();
-    if (IS_FUNCTION(cb)) {
-        Napi::Value argv[] = { env.Null() };
-        TRY_CATCH_CALL(stmt->Value(), cb, 1, argv);
-    }
+    baton->deferred.Resolve(stmt->Value());
 
     STATEMENT_END();
 }
@@ -861,12 +824,11 @@ void Statement::GetRow(Row* row, sqlite3_stmt* stmt) {
 Napi::Value Statement::Finalize_(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     Statement* stmt = this;
-    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
-    auto *baton = new Baton(stmt, callback);
+    auto *baton = new Baton(stmt);
     stmt->Schedule(Finalize_, baton);
 
-    return stmt->db->Value();
+    return baton->deferred.Promise();
 }
 
 void Statement::Finalize_(Baton* b) {
@@ -876,11 +838,7 @@ void Statement::Finalize_(Baton* b) {
 
     baton->stmt->Finalize_();
 
-    // Fire callback in case there was one.
-    Napi::Function cb = baton->callback.Value();
-    if (IS_FUNCTION(cb)) {
-        TRY_CATCH_CALL(baton->stmt->Value(), cb, 0, NULL);
-    }
+    baton->deferred.Resolve(baton->stmt->db->Value());
 }
 
 void Statement::Finalize_() {
@@ -903,7 +861,6 @@ void Statement::CleanQueue() {
         // Fire error for all remaining items in the queue.
         EXCEPTION(Napi::String::New(env, "Statement is already finalized"), SQLITE_MISUSE, exception);
         Napi::Value argv[] = { exception };
-        bool called = false;
 
         // Clear out the queue so that this object can get GC'ed.
         while (!queue.empty()) {
@@ -911,20 +868,7 @@ void Statement::CleanQueue() {
             queue.pop();
 
             auto baton = std::unique_ptr<Baton>(call->baton);
-            Napi::Function cb = baton->callback.Value();
-
-            if (prepared && !cb.IsEmpty() &&
-                cb.IsFunction()) {
-                TRY_CATCH_CALL(Value(), cb, 1, argv);
-                called = true;
-            }
-        }
-
-        // When we couldn't call a callback function, emit an error on the
-        // Statement object.
-        if (!called) {
-            Napi::Value info[] = { Napi::String::New(env, "error"), exception };
-            EMIT_EVENT(Value(), 2, info);
+            baton->deferred.Reject(exception);
         }
     }
     else while (!queue.empty()) {

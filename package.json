@@ -68,7 +68,8 @@
   "scripts": {
     "install": "prebuild-install -r napi || node-gyp rebuild",
     "prebuild": "prebuild --runtime napi --all --verbose",
-    "rebuild": "node-gyp rebuild",
+    "rebuild": "node-gyp -j $(nproc) rebuild",
+    "rebuild:dev": "node-gyp -j $(nproc) rebuild --debug",
     "upload": "prebuild --verbose --prerelease",
     "test": "node test/support/createdb.js && mocha -R spec --timeout 480000"
   },

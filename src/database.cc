@@ -17,6 +17,7 @@ Napi::Object Database::Init(Napi::Env env, Napi::Object exports) {
     auto napi_default_method = static_cast<napi_property_attributes>(napi_writable | napi_configurable); 
 
     auto t = DefineClass(env, "Database", {
+        InstanceMethod("connect", &Database::Connect, napi_default_method),
         InstanceMethod("close", &Database::Close, napi_default_method),
         InstanceMethod("exec", &Database::Exec, napi_default_method),
         InstanceMethod("wait", &Database::Wait, napi_default_method),
@@ -48,25 +49,14 @@ void Database::Process() {
     if (!open && locked && !queue.empty()) {
         EXCEPTION(Napi::String::New(env, "Database handle is closed"), SQLITE_MISUSE, exception);
         Napi::Value argv[] = { exception };
-        bool called = false;
 
         // Call all callbacks with the error object.
         while (!queue.empty()) {
             auto call = std::unique_ptr<Call>(queue.front());
             queue.pop();
-            auto baton = std::unique_ptr<Baton>(call->baton);
-            Napi::Function cb = baton->callback.Value();
-            if (IS_FUNCTION(cb)) {
-                TRY_CATCH_CALL(this->Value(), cb, 1, argv);
-                called = true;
-            }
-        }
 
-        // When we couldn't call a callback function, emit an error on the
-        // Database object.
-        if (!called) {
-            Napi::Value info[] = { Napi::String::New(env, "error"), exception };
-            EMIT_EVENT(Value(), 2, info);
+            auto baton = std::unique_ptr<Baton>(call->baton);
+            baton->deferred.Reject(exception);
         }
         return;
     }
@@ -93,18 +83,11 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
 
     if (!open && locked) {
         EXCEPTION(Napi::String::New(env, "Database is closed"), SQLITE_MISUSE, exception);
-        Napi::Function cb = baton->callback.Value();
+        auto deferred = baton->deferred;
         // We don't call the actual callback, so we have to make sure that
         // the baton gets destroyed.
         delete baton;
-        if (IS_FUNCTION(cb)) {
-            Napi::Value argv[] = { exception };
-            TRY_CATCH_CALL(Value(), cb, 1, argv);
-        }
-        else {
-            Napi::Value argv[] = { Napi::String::New(env, "error"), exception };
-            EMIT_EVENT(Value(), 2, argv);
-        }
+        deferred.Reject(exception);
         return;
     }
 
@@ -124,29 +107,25 @@ Database::Database(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Database>(
         Napi::TypeError::New(env, "String expected").ThrowAsJavaScriptException();
         return;
     }
-    auto filename = info[0].As<Napi::String>().Utf8Value();
+    this->filename = info[0].As<Napi::String>().Utf8Value();
 
-    unsigned int pos = 1;
-
-    int mode;
-    if (info.Length() >= pos && info[pos].IsNumber() && OtherIsInt(info[pos].As<Napi::Number>())) {
-        mode = info[pos++].As<Napi::Number>().Int32Value();
+    if (info.Length() >= 1 && info[1].IsNumber() && OtherIsInt(info[1].As<Napi::Number>())) {
+        this->mode = info[1].As<Napi::Number>().Int32Value();
     }
     else {
-        mode = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX;
-    }
-
-    Napi::Function callback;
-    if (info.Length() >= pos && info[pos].IsFunction()) {
-        callback = info[pos++].As<Napi::Function>();
+        this->mode = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX;
     }
 
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filename", info[0].As<Napi::String>(), napi_default));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("mode", Napi::Number::New(env, mode), napi_default));
+}
 
-    // Start opening the database.
-    auto* baton = new OpenBaton(this, callback, filename.c_str(), mode);
+Napi::Value Database::Connect(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    auto deferred = Napi::Promise::Deferred::New(env);
+    auto* baton = new OpenBaton(this, deferred, filename.c_str(), mode);
     Work_BeginOpen(baton);
+    return deferred.Promise();
 }
 
 void Database::Work_BeginOpen(Baton* baton) {
@@ -187,21 +166,11 @@ void Database::Work_AfterOpen(napi_env e, napi_status status, void* data) {
     Napi::Value argv[1];
     if (baton->status != SQLITE_OK) {
         EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
-        argv[0] = exception;
+        baton->deferred.Reject(exception);
+        return;
     }
     else {
         db->open = true;
-        argv[0] = env.Null();
-    }
-
-    Napi::Function cb = baton->callback.Value();
-
-    if (IS_FUNCTION(cb)) {
-        TRY_CATCH_CALL(db->Value(), cb, 1, argv);
-    }
-    else if (!db->open) {
-        Napi::Value info[] = { Napi::String::New(env, "error"), argv[0] };
-        EMIT_EVENT(db->Value(), 2, info);
     }
 
     if (db->open) {
@@ -209,6 +178,7 @@ void Database::Work_AfterOpen(napi_env e, napi_status status, void* data) {
         EMIT_EVENT(db->Value(), 1, info);
         db->Process();
     }
+    baton->deferred.Resolve(db->Value());
 }
 
 Napi::Value Database::Open(const Napi::CallbackInfo& info) {
@@ -220,12 +190,12 @@ Napi::Value Database::Open(const Napi::CallbackInfo& info) {
 Napi::Value Database::Close(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     auto* db = this;
-    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
-   auto* baton = new Baton(db, callback);
+    auto deferred = Napi::Promise::Deferred::New(env);
+    auto* baton = new Baton(db, deferred);
     db->Schedule(Work_BeginClose, baton, true);
 
-    return info.This();
+    return deferred.Promise();
 }
 
 void Database::Work_BeginClose(Baton* baton) {
@@ -270,24 +240,11 @@ void Database::Work_AfterClose(napi_env e, napi_status status, void* data) {
     Napi::Value argv[1];
     if (baton->status != SQLITE_OK) {
         EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
-        argv[0] = exception;
+        baton->deferred.Reject(exception);
+        return;
     }
     else {
         db->open = false;
-        // Leave db->locked to indicate that this db object has reached
-        // the end of its life.
-        argv[0] = env.Null();
-    }
-
-    Napi::Function cb = baton->callback.Value();
-
-    // Fire callbacks.
-    if (IS_FUNCTION(cb)) {
-        TRY_CATCH_CALL(db->Value(), cb, 1, argv);
-    }
-    else if (db->open) {
-        Napi::Value info[] = { Napi::String::New(env, "error"), argv[0] };
-        EMIT_EVENT(db->Value(), 2, info);
     }
 
     if (!db->open) {
@@ -295,42 +252,70 @@ void Database::Work_AfterClose(napi_env e, napi_status status, void* data) {
         EMIT_EVENT(db->Value(), 1, info);
         db->Process();
     }
+    baton->deferred.Resolve(env.Undefined());
 }
+
 
 Napi::Value Database::Serialize(const Napi::CallbackInfo& info) {
     auto env = this->Env();
     auto* db = this;
-    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
+    auto callback = info[0].As<Napi::Function>(); 
+
+    auto deferred = Napi::Promise::Deferred::New(env);
     bool before = db->serialize;
     db->serialize = true;
 
     if (!callback.IsEmpty() && callback.IsFunction()) {
-        TRY_CATCH_CALL(info.This(), callback, 0, NULL, info.This());
-        db->serialize = before;
+        auto result = callback.Call(Napi::Value(info.This()), {});
+        if (!result.IsPromise()) {
+            return deferred.Promise();
+        }
+
+        auto promise = result.As<Napi::Promise>();
+        auto then = promise.Get("then").As<Napi::Function>();
+        auto join_promise = [db, deferred, before](const Napi::CallbackInfo& info) {
+            auto result = info[0];
+            db->serialize = before;
+            db->Process();
+            deferred.Resolve(result);
+        };
+        auto callback = Napi::Function::New(env, join_promise, "native_joinPromise");
+        then.Call(promise, {callback});
     }
 
-    db->Process();
-
-    return info.This();
+    return deferred.Promise();
 }
 
 Napi::Value Database::Parallelize(const Napi::CallbackInfo& info) {
     auto env = this->Env();
     auto* db = this;
-    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
-    auto before = db->serialize;
+    auto callback = info[0].As<Napi::Function>(); 
+
+    auto deferred = Napi::Promise::Deferred::New(env);
+    bool before = db->serialize;
     db->serialize = false;
 
     if (!callback.IsEmpty() && callback.IsFunction()) {
-        TRY_CATCH_CALL(info.This(), callback, 0, NULL, info.This());
-        db->serialize = before;
+        auto result = callback.Call(Napi::Value(info.This()), {});
+        if (!result.IsPromise()) {
+            return deferred.Promise();
+        }
+
+        auto promise = result.As<Napi::Promise>();
+        auto then = promise.Get("then").As<Napi::Function>();
+        auto join_promise = [db, deferred, before](const Napi::CallbackInfo& info) {
+            auto result = info[0];
+            db->serialize = before;
+            db->Process();
+            deferred.Resolve(result);
+        };
+        auto callback = Napi::Function::New(env, join_promise, "native_joinPromise");
+        then.Call(promise, {callback});
     }
 
-    db->Process();
-
-    return info.This();
+    return deferred.Promise();
 }
 
 Napi::Value Database::Configure(const Napi::CallbackInfo& info) {
@@ -339,13 +324,13 @@ Napi::Value Database::Configure(const Napi::CallbackInfo& info) {
 
     REQUIRE_ARGUMENTS(2);
 
-    Napi::Function handle;
+    auto deferred = Napi::Promise::Deferred::New(env);
     if (info[0].StrictEquals( Napi::String::New(env, "trace"))) {    
-       auto* baton = new Baton(db, handle);
+        auto* baton = new Baton(db, deferred);
         db->Schedule(RegisterTraceCallback, baton);
     }
     else if (info[0].StrictEquals( Napi::String::New(env, "profile"))) {
-       auto* baton = new Baton(db, handle);
+        auto* baton = new Baton(db, deferred);
         db->Schedule(RegisterProfileCallback, baton);
     }
     else if (info[0].StrictEquals( Napi::String::New(env, "busyTimeout"))) {
@@ -353,7 +338,7 @@ Napi::Value Database::Configure(const Napi::CallbackInfo& info) {
             Napi::TypeError::New(env, "Value must be an integer").ThrowAsJavaScriptException();
             return env.Null();
         }
-       auto* baton = new Baton(db, handle);
+        auto* baton = new Baton(db, deferred);
         baton->status = info[1].As<Napi::Number>().Int32Value();
         db->Schedule(SetBusyTimeout, baton);
     }
@@ -369,11 +354,11 @@ Napi::Value Database::Configure(const Napi::CallbackInfo& info) {
         }
         int id = info[1].As<Napi::Number>().Int32Value();
         int value = info[2].As<Napi::Number>().Int32Value();
-        Baton* baton = new LimitBaton(db, handle, id, value);
+        Baton* baton = new LimitBaton(db, deferred, id, value);
         db->Schedule(SetLimit, baton);
     }
     else if (info[0].StrictEquals(Napi::String::New(env, "change"))) {
-       auto* baton = new Baton(db, handle);
+        auto* baton = new Baton(db, deferred);
         db->Schedule(RegisterUpdateCallback, baton);
     }
     else {
@@ -561,10 +546,11 @@ Napi::Value Database::Exec(const Napi::CallbackInfo& info) {
     REQUIRE_ARGUMENT_STRING(0, sql);
     OPTIONAL_ARGUMENT_FUNCTION(1, callback);
 
-    Baton* baton = new ExecBaton(db, callback, sql.c_str());
+    auto deferred = Napi::Promise::Deferred::New(env);
+    Baton* baton = new ExecBaton(db, deferred, sql.c_str());
     db->Schedule(Work_BeginExec, baton, true);
 
-    return info.This();
+    return deferred.Promise();
 }
 
 void Database::Work_BeginExec(Baton* baton) {
@@ -605,23 +591,12 @@ void Database::Work_AfterExec(napi_env e, napi_status status, void* data) {
     auto env = db->Env();
     Napi::HandleScope scope(env);
 
-    Napi::Function cb = baton->callback.Value();
-
     if (baton->status != SQLITE_OK) {
         EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
-
-        if (IS_FUNCTION(cb)) {
-            Napi::Value argv[] = { exception };
-            TRY_CATCH_CALL(db->Value(), cb, 1, argv);
-        }
-        else {
-            Napi::Value info[] = { Napi::String::New(env, "error"), exception };
-            EMIT_EVENT(db->Value(), 2, info);
-        }
+        baton->deferred.Reject(exception);
     }
-    else if (IS_FUNCTION(cb)) {
-        Napi::Value argv[] = { env.Null() };
-        TRY_CATCH_CALL(db->Value(), cb, 1, argv);
+    else {
+        baton->deferred.Resolve(db->Value());
     }
 
     db->Process();
@@ -631,12 +606,11 @@ Napi::Value Database::Wait(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     auto* db = this;
 
-    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
-
-   auto* baton = new Baton(db, callback);
+    auto deferred = Napi::Promise::Deferred::New(env);
+    auto* baton = new Baton(db, deferred);
     db->Schedule(Work_Wait, baton, true);
 
-    return info.This();
+    return deferred.Promise();
 }
 
 void Database::Work_Wait(Baton* b) {
@@ -650,13 +624,9 @@ void Database::Work_Wait(Baton* b) {
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
 
-    Napi::Function cb = baton->callback.Value();
-    if (IS_FUNCTION(cb)) {
-        Napi::Value argv[] = { env.Null() };
-        TRY_CATCH_CALL(baton->db->Value(), cb, 1, argv);
-    }
-
     baton->db->Process();
+
+    baton->deferred.Resolve(baton->db->Value());
 }
 
 Napi::Value Database::LoadExtension(const Napi::CallbackInfo& info) {
@@ -664,12 +634,12 @@ Napi::Value Database::LoadExtension(const Napi::CallbackInfo& info) {
     auto* db = this;
 
     REQUIRE_ARGUMENT_STRING(0, filename);
-    OPTIONAL_ARGUMENT_FUNCTION(1, callback);
 
-    Baton* baton = new LoadExtensionBaton(db, callback, filename.c_str());
+    auto deferred = Napi::Promise::Deferred::New(env);
+    Baton* baton = new LoadExtensionBaton(db, deferred, filename.c_str());
     db->Schedule(Work_BeginLoadExtension, baton, true);
 
-    return info.This();
+    return deferred.Promise();
 }
 
 void Database::Work_BeginLoadExtension(Baton* baton) {
@@ -713,26 +683,15 @@ void Database::Work_AfterLoadExtension(napi_env e, napi_status status, void* dat
     auto env = db->Env();
     Napi::HandleScope scope(env);
 
-    Napi::Function cb = baton->callback.Value();
-
     if (baton->status != SQLITE_OK) {
         EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
 
-        if (IS_FUNCTION(cb)) {
-            Napi::Value argv[] = { exception };
-            TRY_CATCH_CALL(db->Value(), cb, 1, argv);
-        }
-        else {
-            Napi::Value info[] = { Napi::String::New(env, "error"), exception };
-            EMIT_EVENT(db->Value(), 2, info);
-        }
-    }
-    else if (IS_FUNCTION(cb)) {
-        Napi::Value argv[] = { env.Null() };
-        TRY_CATCH_CALL(db->Value(), cb, 1, argv);
+        baton->deferred.Reject(exception);
     }
 
     db->Process();
+
+    baton->deferred.Resolve(db->Value());
 }
 
 void Database::RemoveCallbacks() {
