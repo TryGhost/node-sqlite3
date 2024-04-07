@@ -84,12 +84,9 @@ export class Statement extends events.EventEmitter {
 
     get<T>(...params: any[]): T;
 
-    all<T>(params?: any, callback?: (this: RunResult, err: Error | null, rows: T[]) => void): Promise<T[]>;
+    all<T>(...params: any): Promise<T[]>;
 
-    // TODO: Async generator!
-    // each<T>(callback?: (err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
-    // each<T>(params: any, callback?: (this: RunResult, err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
-    // each(...params: any[]): this;
+    each<T>(...params: any[]): AsyncIterable<T>;
 }
 
 export class Database extends events.EventEmitter {
@@ -106,9 +103,7 @@ export class Database extends events.EventEmitter {
 
     all<T>(sql: string, ...params: any[]): Promise<T[]>;
 
-    // each<T>(sql: string, callback?: (this: Statement, err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
-    // each<T>(sql: string, params: any, callback?: (this: Statement, err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
-    // each(sql: string, ...params: any[]): this;
+    each<T>(sql: string, ...params: any[]): Promise<AsyncIterable<T>>;
 
     exec(sql: string): Promise<Database>;
 

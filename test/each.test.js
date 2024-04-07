@@ -2,28 +2,25 @@ var sqlite3 = require('..');
 var assert = require('assert');
 
 describe('each', function() {
-    var db;
-    before(function(done) {
-        db = new sqlite3.Database('test/support/big.db', sqlite3.OPEN_READONLY, done);
+    /** @type {sqlite3.Database} */
+    let db;
+    before(async function() {
+        db = await sqlite3.Database.create('test/support/big.db', sqlite3.OPEN_READONLY);
     });
 
-    it('retrieve 100,000 rows with Statement#each', function(done) {
+    it('retrieve 100,000 rows with Statement#each', async function() {
         var total = 100000;
+        // var total = 10;
         var retrieved = 0;
         
-
-        db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
-            if (err) throw err;
-            retrieved++;
-            
-            if(retrieved === total) {
-                assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
-                done();
-            }
-        });
+        const iterable = await db.each('SELECT id, txt FROM foo LIMIT 0, ?', total)
+        for await (const row of iterable) {
+            retrieved++
+        }
+        assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
     });
 
-    it('Statement#each with complete callback', function(done) {
+    it.skip('Statement#each with complete callback', function(done) {
         var total = 10000;
         var retrieved = 0;
 

@@ -260,7 +260,7 @@ Napi::Value Database::Serialize(const Napi::CallbackInfo& info) {
     auto env = this->Env();
     auto* db = this;
 
-    auto callback = info[0].As<Napi::Function>(); 
+    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     auto deferred = Napi::Promise::Deferred::New(env);
     bool before = db->serialize;
@@ -291,7 +291,7 @@ Napi::Value Database::Parallelize(const Napi::CallbackInfo& info) {
     auto env = this->Env();
     auto* db = this;
 
-    auto callback = info[0].As<Napi::Function>(); 
+    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
 
     auto deferred = Napi::Promise::Deferred::New(env);
     bool before = db->serialize;

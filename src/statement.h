@@ -69,9 +69,9 @@ namespace Values {
     typedef Field Null;
 }
 
-typedef std::vector<std::unique_ptr<Values::Field> > Row;
-typedef std::vector<std::unique_ptr<Row> > Rows;
-typedef Row Parameters;
+typedef std::vector<std::unique_ptr<Values::Field>> Row;
+typedef std::deque<std::unique_ptr<Row>> Rows;
+typedef std::vector<std::shared_ptr<Values::Field>> Parameters;
 
 
 
@@ -80,10 +80,18 @@ public:
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
     static Napi::Value New(const Napi::CallbackInfo& info);
 
+    struct ParamsBaton {
+        Parameters parameters;
+
+        ParamsBaton() {}
+        virtual ~ParamsBaton() {}
+    };
+
     struct Baton {
         napi_async_work request = NULL;
         Statement* stmt;
         Napi::Promise::Deferred deferred;
+        // TODO: get rid of this (unused)?
         Napi::Reference<Napi::Promise> promise;
         Parameters parameters;
         bool bound = false;
@@ -142,14 +150,11 @@ public:
     struct Async;
 
     struct EachBaton : Baton {
-        Napi::FunctionReference completed;
         Async* async; // Isn't deleted when the baton is deleted.
 
         EachBaton(Statement* stmt_) :
             Baton(stmt_) {}
-        virtual ~EachBaton() override {
-            completed.Reset();
-        }
+        virtual ~EachBaton() override = default;
     };
 
     struct PrepareBaton : Database::Baton {
@@ -181,6 +186,7 @@ public:
         uv_async_t watcher;
         Statement* stmt;
         Rows data;
+        std::deque<std::shared_ptr<Napi::Promise::Deferred>> deferreds;
         NODE_SQLITE3_MUTEX_t;
         bool completed;
         int retrieved;
@@ -218,8 +224,10 @@ public:
     WORK_DEFINITION(Get)
     WORK_DEFINITION(Run)
     WORK_DEFINITION(All)
-    // WORK_DEFINITION(Each)
+    WORK_DEFINITION(Each)
     WORK_DEFINITION(Reset)
+
+    static void StepEach(Baton* baton);
 
     Napi::Value Finalize_(const Napi::CallbackInfo& info);
 
@@ -229,13 +237,15 @@ protected:
     static void Work_Prepare(napi_env env, void* data);
     static void Work_AfterPrepare(napi_env env, napi_status status, void* data);
 
+    Napi::Value InitEachIterator(EachBaton* baton);
     static void AsyncEach(uv_async_t* handle);
     static void CloseCallback(uv_handle_t* handle);
 
     static void Finalize_(Baton* baton);
     void Finalize_();
 
-    template <class T> inline std::unique_ptr<Values::Field> BindParameter(const Napi::Value source, T pos);
+    bool BindParameters(const Napi::CallbackInfo& info, Parameters& parameters);
+    template <class T> inline std::shared_ptr<Values::Field> BindParameter(const Napi::Value source, T pos);
     template <class T> T* Bind(const Napi::CallbackInfo& info);
     bool Bind(const Parameters &parameters);
 

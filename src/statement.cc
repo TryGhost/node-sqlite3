@@ -1,3 +1,5 @@
+#include <iostream>
+#include <string>
 #include <cstring>
 #include <napi.h>
 #include <uv.h>
@@ -20,7 +22,7 @@ Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
       InstanceMethod("get", &Statement::Get, napi_default_method),
       InstanceMethod("run", &Statement::Run, napi_default_method),
       InstanceMethod("all", &Statement::All, napi_default_method),
-    //   InstanceMethod("each", &Statement::Each, napi_default_method),
+      InstanceMethod("each", &Statement::Each, napi_default_method),
       InstanceMethod("reset", &Statement::Reset, napi_default_method),
       InstanceMethod("finalize", &Statement::Finalize_, napi_default_method),
     });
@@ -171,35 +173,35 @@ void Statement::Work_AfterPrepare(napi_env e, napi_status status, void* data) {
     STATEMENT_END();
 }
 
-template <class T> std::unique_ptr<Values::Field>
+template <class T> std::shared_ptr<Values::Field>
                    Statement::BindParameter(const Napi::Value source, T pos) {
     if (source.IsString()) {
         std::string val = source.As<Napi::String>().Utf8Value();
-        return std::make_unique<Values::Text>(pos, val.length(), val.c_str());
+        return std::make_shared<Values::Text>(pos, val.length(), val.c_str());
     }
     else if (OtherInstanceOf(source.As<Object>(), "RegExp")) {
         std::string val = source.ToString().Utf8Value();
-        return std::make_unique<Values::Text>(pos, val.length(), val.c_str());
+        return std::make_shared<Values::Text>(pos, val.length(), val.c_str());
     }
     else if (source.IsNumber()) {
         if (OtherIsInt(source.As<Napi::Number>())) {
-            return std::make_unique<Values::Integer>(pos, source.As<Napi::Number>().Int32Value());
+            return std::make_shared<Values::Integer>(pos, source.As<Napi::Number>().Int32Value());
         } else {
-            return std::make_unique<Values::Float>(pos, source.As<Napi::Number>().DoubleValue());
+            return std::make_shared<Values::Float>(pos, source.As<Napi::Number>().DoubleValue());
         }
     }
     else if (source.IsBoolean()) {
-        return std::make_unique<Values::Integer>(pos, source.As<Napi::Boolean>().Value() ? 1 : 0);
+        return std::make_shared<Values::Integer>(pos, source.As<Napi::Boolean>().Value() ? 1 : 0);
     }
     else if (source.IsNull()) {
-        return std::make_unique<Values::Null>(pos);
+        return std::make_shared<Values::Null>(pos);
     }
     else if (source.IsBuffer()) {
         Napi::Buffer<char> buffer = source.As<Napi::Buffer<char>>();
-        return std::make_unique<Values::Blob>(pos, buffer.Length(), buffer.Data());
+        return std::make_shared<Values::Blob>(pos, buffer.Length(), buffer.Data());
     }
     else if (OtherInstanceOf(source.As<Object>(), "Date")) {
-        return std::make_unique<Values::Float>(pos, source.ToNumber().DoubleValue());
+        return std::make_shared<Values::Float>(pos, source.ToNumber().DoubleValue());
     }
     else if (source.IsObject()) {
         auto napiVal = Napi::String::New(source.Env(), "[object Object]");
@@ -209,11 +211,57 @@ template <class T> std::unique_ptr<Values::Field>
         }
 
         std::string val = napiVal.Utf8Value();
-        return std::make_unique<Values::Text>(pos, val.length(), val.c_str());
+        return std::make_shared<Values::Text>(pos, val.length(), val.c_str());
     }
     else {
         return NULL;
     }
+}
+
+bool Statement::BindParameters(const Napi::CallbackInfo& info, Parameters& parameters) {
+    auto start = 0;
+    auto last = info.Length();
+
+    if (start < last) {
+        if (info[start].IsArray()) {
+            auto array = info[start].As<Napi::Array>();
+            int length = array.Length();
+            // Note: bind parameters start with 1.
+            for (int i = 0, pos = 1; i < length; i++, pos++) {
+                parameters.emplace_back(BindParameter((array).Get(i), i + 1));
+            }
+        }
+        else if (!info[start].IsObject() || OtherInstanceOf(info[start].As<Object>(), "RegExp") 
+                || OtherInstanceOf(info[start].As<Object>(), "Date") || info[start].IsBuffer()) {
+            // Parameters directly in array.
+            // Note: bind parameters start with 1.
+            for (int i = start, pos = 1; i < last; i++, pos++) {
+                parameters.emplace_back(BindParameter(info[i], pos));
+            }
+        }
+        else if (info[start].IsObject()) {
+            auto object = info[start].As<Napi::Object>();
+            auto array = object.GetPropertyNames();
+            int length = array.Length();
+            for (int i = 0; i < length; i++) {
+                Napi::Value name = (array).Get(i);
+                Napi::Number num = name.ToNumber();
+
+                if (num.Int32Value() == num.DoubleValue()) {
+                    parameters.emplace_back(
+                        BindParameter((object).Get(name), num.Int32Value()));
+                }
+                else {
+                    parameters.emplace_back(BindParameter((object).Get(name),
+                        name.As<Napi::String>().Utf8Value().c_str()));
+                }
+            }
+        }
+        else {
+            return false;
+        }
+    }
+    return true;
 }
 
 template <class T> T* Statement::Bind(const Napi::CallbackInfo& info) {
@@ -221,50 +269,9 @@ template <class T> T* Statement::Bind(const Napi::CallbackInfo& info) {
     
     // Napi::HandleScope scope(env);
     auto *baton = new T(this);
+    bool bound = this->BindParameters(info, baton->parameters);
 
-    auto start = 0;
-    auto last = info.Length();
-
-
-    if (info[start].IsArray()) {
-        auto array = info[start].As<Napi::Array>();
-        int length = array.Length();
-        // Note: bind parameters start with 1.
-        for (int i = 0, pos = 1; i < length; i++, pos++) {
-            baton->parameters.emplace_back(BindParameter((array).Get(i), i + 1));
-        }
-    }
-    else if (!info[start].IsObject() || OtherInstanceOf(info[start].As<Object>(), "RegExp") 
-            || OtherInstanceOf(info[start].As<Object>(), "Date") || info[start].IsBuffer()) {
-        // Parameters directly in array.
-        // Note: bind parameters start with 1.
-        for (int i = start, pos = 1; i < last; i++, pos++) {
-            baton->parameters.emplace_back(BindParameter(info[i], pos));
-        }
-    }
-    else if (info[start].IsObject()) {
-        auto object = info[start].As<Napi::Object>();
-        auto array = object.GetPropertyNames();
-        int length = array.Length();
-        for (int i = 0; i < length; i++) {
-            Napi::Value name = (array).Get(i);
-            Napi::Number num = name.ToNumber();
-
-            if (num.Int32Value() == num.DoubleValue()) {
-                baton->parameters.emplace_back(
-                    BindParameter((object).Get(name), num.Int32Value()));
-            }
-            else {
-                baton->parameters.emplace_back(BindParameter((object).Get(name),
-                    name.As<Napi::String>().Utf8Value().c_str()));
-            }
-        }
-    }
-    else {
-        return baton;
-    }
-
-    baton->bound = true;
+    baton->bound = bound;
     return baton;
 }
 
@@ -576,146 +583,167 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
     STATEMENT_END();
 }
 
-// Napi::Value Statement::Each(const Napi::CallbackInfo& info) {
-//     auto env = info.Env();
-//     Statement* stmt = this;
+Napi::Value Statement::InitEachIterator(EachBaton* eachBaton) {
+    Statement* stmt = this;
+    auto env = stmt->Env();
+    auto iterable = Napi::Object::New(env);
 
-//     int last = info.Length();
+    iterable.Set(Napi::Symbol::WellKnown(env, "asyncIterator"), Napi::Function::New(env, [=](const Napi::CallbackInfo& info) {
+        auto iteratorObject = Napi::Object::New(env);
 
-//     Napi::Function completed;
-//     if (last >= 2 && info[last - 1].IsFunction() && info[last - 2].IsFunction()) {
-//         completed = info[--last].As<Napi::Function>();
-//     }
+        stmt->Schedule(Work_BeginEach, eachBaton);
 
-//     auto baton = stmt->Bind<EachBaton>(info, 0, last);
-//     if (!baton->bound) {
-//         Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
-//         return env.Null();
-//     }
-//     else {
-//         baton->completed.Reset(completed, 1);
-//         stmt->Schedule(Work_BeginEach, baton);
-//         return info.This();
-//     }
-//     return baton->deferred.Promise();
-// }
+        auto next = Napi::Function::New(env, [=](const Napi::CallbackInfo& info) {
+            auto deferred = std::make_shared<Napi::Promise::Deferred>(Napi::Promise::Deferred::New(env));
+            NODE_SQLITE3_MUTEX_LOCK(&eachBaton->async->mutex)
+            if (!eachBaton->async->data.empty()) {
+                auto row = std::move(eachBaton->async->data.front());
+                eachBaton->async->data.pop_front();
+                auto result = Napi::Object::New(env);
+                result["done"] = Napi::Boolean::New(env, false);
+                result["value"] = RowToJS(env, row.get());
+                deferred.get()->Resolve(result);
+            } else if (eachBaton->async->completed) {
+                auto result = Napi::Object::New(env);
+                result["done"] = Napi::Boolean::New(env, true);
+                deferred.get()->Resolve(result);
+            } else {
+                eachBaton->async->deferreds.emplace_back(deferred);
+            }
+            NODE_SQLITE3_MUTEX_UNLOCK(&eachBaton->async->mutex)
+            return deferred->Promise();
+        });
+
+        iteratorObject["next"] = next.Get("bind").As<Napi::Function>().Call(next, {iteratorObject});
+        return iteratorObject;
+    }));
+
+    return iterable;
+}
+
+Napi::Value Statement::Each(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    Statement* stmt = this;
+
+    auto* baton = stmt->Bind<EachBaton>(info);
+    if (!baton->bound) {
+        Napi::Error::New(env, "Data type is not supported").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    return Statement::InitEachIterator(baton);
+}
 
 // TODO: Implement as async generator
-// void Statement::Work_BeginEach(Baton* baton) {
-//     // Only create the Async object when we're actually going into
-//     // the event loop. This prevents dangling events.
-//     auto* each_baton = static_cast<EachBaton*>(baton);
-//     each_baton->async = new Async(each_baton->stmt, reinterpret_cast<uv_async_cb>(AsyncEach));
-//     each_baton->async->item_cb.Reset(each_baton->callback.Value(), 1);
-//     each_baton->async->completed_cb.Reset(each_baton->completed.Value(), 1);
+void Statement::Work_BeginEach(Baton* baton) {
+    // Only create the Async object when we're actually going into
+    // the event loop. This prevents dangling events.
+    auto* each_baton = static_cast<EachBaton*>(baton);
+    each_baton->async = new Async(each_baton->stmt, reinterpret_cast<uv_async_cb>(AsyncEach));
 
-//     STATEMENT_BEGIN(Each);
-// }
+    STATEMENT_BEGIN(Each);
+}
 
-// void Statement::Work_Each(napi_env e, void* data) {
-//     STATEMENT_INIT(EachBaton);
+void Statement::Work_Each(napi_env e, void* data) {
+    STATEMENT_INIT(EachBaton);
 
-//     auto* async = baton->async;
+    auto* async = baton->async;
 
-//     STATEMENT_MUTEX(mtx);
+    STATEMENT_MUTEX(mtx);
 
-//     // Make sure that we also reset when there are no parameters.
-//     if (!baton->parameters.size()) {
-//         sqlite3_reset(stmt->_handle);
-//     }
+    // Make sure that we also reset when there are no parameters.
+    if (!baton->parameters.size()) {
+        sqlite3_reset(stmt->_handle);
+    }
 
-//     if (stmt->Bind(baton->parameters)) {
-//         while (true) {
-//             sqlite3_mutex_enter(mtx);
-//             stmt->status = sqlite3_step(stmt->_handle);
-//             if (stmt->status == SQLITE_ROW) {
-//                 sqlite3_mutex_leave(mtx);
-//                 auto row = std::make_unique<Row>();
-//                 GetRow(row.get(), stmt->_handle);
-//                 NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
-//                 async->data.emplace_back(std::move(row));
-//                 NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
+    if (stmt->Bind(baton->parameters)) {
+        while (true) {
+            sqlite3_mutex_enter(mtx);
+            stmt->status = sqlite3_step(stmt->_handle);
+            if (stmt->status == SQLITE_ROW) {
+                sqlite3_mutex_leave(mtx);
+                auto row = std::make_unique<Row>();
+                GetRow(row.get(), stmt->_handle);
+                NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
+                async->data.emplace_back(std::move(row));
+                NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
+                uv_async_send(&async->watcher);
+            }
+            else {
+                if (stmt->status != SQLITE_DONE) {
+                    stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
+                }
+                sqlite3_mutex_leave(mtx);
+                break;
+            }
+        }
+    }
 
-//                 uv_async_send(&async->watcher);
-//             }
-//             else {
-//                 if (stmt->status != SQLITE_DONE) {
-//                     stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
-//                 }
-//                 sqlite3_mutex_leave(mtx);
-//                 break;
-//             }
-//         }
-//     }
+    async->completed = true;
+    uv_async_send(&async->watcher);
+}
 
-//     async->completed = true;
-//     uv_async_send(&async->watcher);
-// }
+void Statement::CloseCallback(uv_handle_t* handle) {
+    assert(handle != NULL);
+    assert(handle->data != NULL);
+    auto* async = static_cast<Async*>(handle->data);
+    delete async;
+}
 
-// void Statement::CloseCallback(uv_handle_t* handle) {
-//     assert(handle != NULL);
-//     assert(handle->data != NULL);
-//     auto* async = static_cast<Async*>(handle->data);
-//     delete async;
-// }
+void Statement::AsyncEach(uv_async_t* handle) {
+    auto* async = static_cast<Async*>(handle->data);
 
-// void Statement::AsyncEach(uv_async_t* handle) {
-//     auto* async = static_cast<Async*>(handle->data);
+    auto env = async->stmt->Env();
+    Napi::HandleScope scope(env);
 
-//     auto env = async->stmt->Env();
-//     Napi::HandleScope scope(env);
+    NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
+    while (!async->deferreds.empty() && !async->data.empty()) {
+        auto deferred = std::move(async->deferreds.front());
+        async->deferreds.pop_front();
+        auto row = std::move(async->data.front());
+        async->data.pop_front();
+        auto result = Napi::Object::New(env);
+        result["done"] = Napi::Boolean::New(env, false);
+        result["value"] = RowToJS(env, row.get());
+        deferred.get()->Resolve(result);
+    }
 
-//     while (true) {
-//         // Get the contents out of the data cache for us to process in the JS callback.
-//         Rows rows;
-//         NODE_SQLITE3_MUTEX_LOCK(&async->mutex)
-//         rows.swap(async->data);
-//         NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
+    if (async->completed) {
+        if (!async->deferreds.empty()) {
+            auto deferred = std::move(async->deferreds.front());
+            async->deferreds.pop_front();
+            auto result = Napi::Object::New(env);
+            result["done"] = Napi::Boolean::New(env, true);
+            deferred.get()->Resolve(result);
+        }
+        uv_close(reinterpret_cast<uv_handle_t*>(handle), CloseCallback);
+    }
+    NODE_SQLITE3_MUTEX_UNLOCK(&async->mutex)
+}
 
-//         if (rows.empty()) {
-//             break;
-//         }
+void Statement::Work_AfterEach(napi_env e, napi_status status, void* data) {
+    std::unique_ptr<RowBaton> baton(static_cast<RowBaton*>(data));
+    auto* stmt = baton->stmt;
 
-//         Napi::Function cb = async->item_cb.Value();
-//         if (IS_FUNCTION(cb)) {
-//             Napi::Value argv[2];
-//             argv[0] = env.Null();
+    // auto env = stmt->Env();
+    // Napi::HandleScope scope(env);
 
-//             for(auto& row : rows) {
-//                 argv[1] = RowToJS(env,row.get());
-//                 async->retrieved++;
-//                 TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
-//             }
-//         }
-//     }
+    // if (stmt->status == SQLITE_DONE) {
+    //     auto result = Napi::Object::New(e);
+    //     result["done"] = Napi::Boolean::New(e, true);
+    //     baton->deferred.Resolve(result);
+    // } else {
+    //     auto result = Napi::Object::New(e);
+    //     result["done"] = Napi::Boolean::New(e, false);
+    //     result["value"] = RowToJS(env, &baton->row).As<Napi::Object>();
+    //     Napi::Object json = env.Global().Get("JSON").As<Napi::Object>();
+    //     Napi::Function stringify = json.Get("stringify").As<Napi::Function>();
+    //     auto resultString = stringify.Call(json, {result}).As<Napi::String>().Utf8Value();
+    //     baton->deferred.Resolve(result);
+    // }
 
-//     Napi::Function cb = async->completed_cb.Value();
-//     if (async->completed) {
-//         if (!cb.IsEmpty() &&
-//                 cb.IsFunction()) {
-//             Napi::Value argv[] = {
-//                 env.Null(),
-//                 Napi::Number::New(env, async->retrieved)
-//             };
-//             TRY_CATCH_CALL(async->stmt->Value(), cb, 2, argv);
-//         }
-//         uv_close(reinterpret_cast<uv_handle_t*>(handle), CloseCallback);
-//     }
-// }
-
-// void Statement::Work_AfterEach(napi_env e, napi_status status, void* data) {
-//     std::unique_ptr<EachBaton> baton(static_cast<EachBaton*>(data));
-//     auto* stmt = baton->stmt;
-
-//     auto env = stmt->Env();
-//     Napi::HandleScope scope(env);
-
-//     if (stmt->status != SQLITE_DONE) {
-//         Error(baton.get());
-//     }
-
-//     STATEMENT_END();
-// }
+    STATEMENT_END();
+}
 
 Napi::Value Statement::Reset(const Napi::CallbackInfo& info) {
     auto env = info.Env();
