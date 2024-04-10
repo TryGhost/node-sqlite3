@@ -1,6 +1,6 @@
-var sqlite3 = require('..');
-var assert = require('assert');
-var exists = require('fs').existsSync || require('path').existsSync;
+// let sqlite3 = require('..');
+// let assert = require('assert');
+// let exists = require('fs').existsSync || require('path').existsSync;
 
 /*
 

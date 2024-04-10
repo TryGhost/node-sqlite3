@@ -1,427 +1,395 @@
-var sqlite3 = require('..');
-var assert = require('assert');
+const sqlite3 = require('..');
+const assert = require('assert');
 
 describe('prepare', function() {
     describe('invalid SQL', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create(':memory:');
+        });
 
-        var stmt;
-        it('should fail preparing a statement with invalid SQL', function(done) {
-            stmt = db.prepare('CRATE TALE foo text bar)', function(err, statement) {
-                if (err && err.errno == sqlite3.ERROR &&
-                    err.message === 'SQLITE_ERROR: near "CRATE": syntax error') {
-                    done();
-                }
-                else throw err;
+        it('should fail preparing a statement with invalid SQL', async function() {
+            await assert.rejects(db.prepare('CRATE TALE foo text bar)'), (err) => {
+                assert.strictEqual(err.errno, sqlite3.ERROR);
+                assert.strictEqual(err.message, 'SQLITE_ERROR: near "CRATE": syntax error');
+                return true;
             });
         });
 
-        after(function(done) { db.close(done); });
+        after(async function() {
+            await db.close();
+        });
     });
 
     describe('simple prepared statement', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
-
-        it('should prepare, run and finalize the statement', function(done) {
-            db.prepare("CREATE TABLE foo (text bar)")
-                .run()
-                .finalize(done);
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create(':memory:');
         });
 
-        after(function(done) { db.close(done); });
+        it('should prepare, run and finalize the statement', async function() {
+            await db.prepare("CREATE TABLE foo (text bar)")
+                .then((statement) => statement.run())
+                .then((statement) => statement.finalize());
+        });
+
+        after(async function() {
+            db.close();
+        });
     });
 
     describe('inserting and retrieving rows', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create(':memory:');
+        });
 
-        var inserted = 0;
-        var retrieved = 0;
+        let inserted = 0;
+        let retrieved = 0;
 
         // We insert and retrieve that many rows.
-        var count = 1000;
+        const count = 1000;
+        
+        it('should prepare a statement and run it ' + (count + 5) + ' times', async function() {
+            const statement = await db.prepare("CREATE TABLE foo (txt text, num int, flt float, blb blob)");
+            await statement.run();
+            await statement.finalize();
 
-        it('should create the table', function(done) {
-            db.prepare("CREATE TABLE foo (txt text, num int, flt float, blb blob)").run().finalize(done);
-        });
-
-        it('should insert ' + count + ' rows', function(done) {
-            for (var i = 0; i < count; i++) {
-                db.prepare("INSERT INTO foo VALUES(?, ?, ?, ?)").run(
-                    'String ' + i,
-                    i,
-                    i * Math.PI,
-                    // null (SQLite sets this implicitly)
-                    function(err) {
-                        if (err) throw err;
-                        inserted++;
-                    }
-                ).finalize(function(err) {
-                    if (err) throw err;
-                    if (inserted == count) done();
-                });
+            for (let i = 0; i < count; i++) {
+                const statement = await db.prepare("INSERT INTO foo VALUES(?, ?, ?, ?)");
+                await statement.run('String ' + i, i, i * Math.PI);
+                inserted++;
+                await statement.finalize();
             }
-        });
+            assert.strictEqual(inserted, count);
+            const stmt = await db.prepare("SELECT txt, num, flt, blb FROM foo ORDER BY num");
+            assert.equal(stmt.sql, 'SELECT txt, num, flt, blb FROM foo ORDER BY num');
 
-        it('should prepare a statement and run it ' + (count + 5) + ' times', function(done) {
-            var stmt = db.prepare("SELECT txt, num, flt, blb FROM foo ORDER BY num", function(err) {
-                if (err) throw err;
-                assert.equal(stmt.sql, 'SELECT txt, num, flt, blb FROM foo ORDER BY num');
-            });
+            for (let i = 0; i < count; i++)  {
+                const row = await stmt.get();
+                assert.equal(row.txt, 'String ' + i);
+                assert.equal(row.num, i);
+                assert.equal(row.flt, i * Math.PI);
+                assert.equal(row.blb, null);
 
-            for (var i = 0; i < count + 5; i++) (function(i) {
-                stmt.get(function(err, row) {
-                    if (err) throw err;
+                retrieved++;
+            }
+            
+            for (let i = count; i < count + 5; i++)  {
+                const row = await stmt.get();
+                assert.equal(row, undefined);
 
-                    if (retrieved >= 1000) {
-                        assert.equal(row, undefined);
-                    } else {
-                        assert.equal(row.txt, 'String ' + i);
-                        assert.equal(row.num, i);
-                        assert.equal(row.flt, i * Math.PI);
-                        assert.equal(row.blb, null);
-                    }
+                retrieved++;
+            }
 
-                    retrieved++;
-                });
-            })(i);
-
-            stmt.finalize(done);
-        });
-
-        it('should have retrieved ' + (count + 5) + ' rows', function() {
+            await stmt.finalize();
             assert.equal(count + 5, retrieved, "Didn't retrieve all rows");
         });
 
 
-        after(function(done) { db.close(done); });
+        after(async function() {
+            db.close();
+        });
     });
 
     describe('inserting with accidental undefined', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
-
-        var inserted = 0;
-        var retrieved = 0;
-
-        it('should create the table', function(done) {
-            db.prepare("CREATE TABLE foo (num int)").run().finalize(done);
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create(':memory:');
         });
 
-        it('should insert two rows', function(done) {
-            db.prepare('INSERT INTO foo VALUES(4)').run(function(err) {
-                if (err) throw err;
-                inserted++;
-            }).run(undefined, function (err) {
+        let retrieved = 0;
+        
+        it('should retrieve the data', async function() {
+            await db.prepare("CREATE TABLE foo (num int)")
+                .then((statement) => statement.run())
+                .then((statement) => statement.finalize());
+
+            await db.prepare('INSERT INTO foo VALUES(4)')
+                .then((statement) => statement.run())
                 // The second time we pass undefined as a parameter. This is
                 // a mistake, but it should either throw an error or be ignored,
                 // not silently fail to run the statement.
-                if (err) throw err;
-                inserted++;
-            }).finalize(function(err) {
-                if (err) throw err;
-                if (inserted == 2) done();
-            });
-        });
+                .then((statement) => statement.run(undefined))
+                .then((statement) => statement.finalize());
 
-        it('should retrieve the data', function(done) {
-            var stmt = db.prepare("SELECT num FROM foo", function(err) {
-                if (err) throw err;
-            });
+            const stmt = await db.prepare("SELECT num FROM foo");
 
-            for (var i = 0; i < 2; i++) (function(i) {
-                stmt.get(function(err, row) {
-                    if (err) throw err;
-                    assert(row);
-                    assert.equal(row.num, 4);
-                    retrieved++;
-                });
-            })(i);
+            for (let i = 0; i < 2; i++) {
+                const row = await stmt.get();
+                assert(row);
+                assert.equal(row.num, 4);
+                retrieved++;
+            }
 
-            stmt.finalize(done);
-        });
-
-        it('should have retrieved two rows', function() {
+            await stmt.finalize();
             assert.equal(2, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        after(async function() {
+            await db.close();
+        });
     });
 
     describe('retrieving reset() function', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
-
-        var retrieved = 0;
-
-        it('should retrieve the same row over and over again', function(done) {
-            var stmt = db.prepare("SELECT txt, num, flt, blb FROM foo ORDER BY num");
-            for (var i = 0; i < 10; i++) {
-                stmt.reset();
-                stmt.get(function(err, row) {
-                    if (err) throw err;
-                    assert.equal(row.txt, 'String 0');
-                    assert.equal(row.num, 0);
-                    assert.equal(row.flt, 0.0);
-                    assert.equal(row.blb, null);
-                    retrieved++;
-                });
-            }
-            stmt.finalize(done);
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create('test/support/prepare.db', sqlite3.OPEN_READONLY);
         });
 
-        it('should have retrieved 10 rows', function() {
+        let retrieved = 0;
+
+        it('should retrieve the same row over and over again', async function() {
+            const stmt = await db.prepare("SELECT txt, num, flt, blb FROM foo ORDER BY num");
+            for (let i = 0; i < 10; i++) {
+                await stmt.reset();
+                const row = await stmt.get();
+                assert.equal(row.txt, 'String 0');
+                assert.equal(row.num, 0);
+                assert.equal(row.flt, 0.0);
+                assert.equal(row.blb, null);
+                retrieved++;
+            }
+            await stmt.finalize();
             assert.equal(10, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        after(async function() {
+            await db.close();
+        });
     });
 
     describe('multiple get() parameter binding', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
-
-        var retrieved = 0;
-
-        it('should retrieve particular rows', function(done) {
-            var stmt = db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num = ?");
-
-            for (var i = 0; i < 10; i++) (function(i) {
-                stmt.get(i * 10 + 1, function(err, row) {
-                    if (err) throw err;
-                    var val = i * 10 + 1;
-                    assert.equal(row.txt, 'String ' + val);
-                    assert.equal(row.num, val);
-                    assert.equal(row.flt, val * Math.PI);
-                    assert.equal(row.blb, null);
-                    retrieved++;
-                });
-            })(i);
-
-            stmt.finalize(done);
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create('test/support/prepare.db', sqlite3.OPEN_READONLY);
         });
 
-        it('should have retrieved 10 rows', function() {
+        let retrieved = 0;
+
+        it('should retrieve particular rows', async function() {
+            const stmt = await db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num = ?");
+
+            for (let i = 0; i < 10; i++) {
+                const row = await stmt.get(i * 10 + 1);
+                const val = i * 10 + 1;
+                assert.equal(row.txt, 'String ' + val);
+                assert.equal(row.num, val);
+                assert.equal(row.flt, val * Math.PI);
+                assert.equal(row.blb, null);
+                retrieved++;
+            }
+
+            await stmt.finalize();
             assert.equal(10, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        after(async function() {
+            await db.close();
+        });
     });
 
     describe('prepare() parameter binding', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
-
-        var retrieved = 0;
-
-        it('should retrieve particular rows', function(done) {
-            db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?", 10, 'String 10')
-                .get(function(err, row) {
-                    if (err) throw err;
-                    assert.equal(row.txt, 'String 10');
-                    assert.equal(row.num, 10);
-                    assert.equal(row.flt, 10 * Math.PI);
-                    assert.equal(row.blb, null);
-                    retrieved++;
-                })
-                .finalize(done);
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create('test/support/prepare.db', sqlite3.OPEN_READONLY);
         });
 
-        it('should have retrieved 1 row', function() {
-            assert.equal(1, retrieved, "Didn't retrieve all rows");
+        it('should retrieve particular rows', async function() {
+            const statement = await db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?", 10, 'String 10');
+            const row = await statement.get();
+            await statement.finalize();
+            assert.equal(row.txt, 'String 10');
+            assert.equal(row.num, 10);
+            assert.equal(row.flt, 10 * Math.PI);
+            assert.equal(row.blb, null);
         });
 
-        after(function(done) { db.close(done); });
+        after(async function() {
+            await db.close();
+        });
     });
 
     describe('all()', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
-
-        var retrieved = 0;
-        var count = 1000;
-
-        it('should retrieve particular rows', function(done) {
-            db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num < ? ORDER BY num", count)
-                .all(function(err, rows) {
-                    if (err) throw err;
-                    for (var i = 0; i < rows.length; i++) {
-                        assert.equal(rows[i].txt, 'String ' + i);
-                        assert.equal(rows[i].num, i);
-                        assert.equal(rows[i].flt, i * Math.PI);
-                        assert.equal(rows[i].blb, null);
-                        retrieved++;
-                    }
-                })
-                .finalize(done);
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create('test/support/prepare.db', sqlite3.OPEN_READONLY);
         });
 
-        it('should have retrieved all rows', function() {
+        let retrieved = 0;
+        const count = 1000;
+
+        it('should retrieve particular rows', async function() {
+            const statement = await db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num < ? ORDER BY num", count);
+            const rows = await statement.all();
+            await statement.finalize();
+            for (let i = 0; i < rows.length; i++) {
+                assert.equal(rows[i].txt, 'String ' + i);
+                assert.equal(rows[i].num, i);
+                assert.equal(rows[i].flt, i * Math.PI);
+                assert.equal(rows[i].blb, null);
+                retrieved++;
+            }
             assert.equal(count, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        after(async function() {
+            await db.close();
+        });
     });
 
     describe('all()', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
-
-        it('should retrieve particular rows', function(done) {
-            db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num > 5000")
-                .all(function(err, rows) {
-                    if (err) throw err;
-                    assert.ok(rows.length === 0);
-                })
-                .finalize(done);
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create('test/support/prepare.db', sqlite3.OPEN_READONLY);
         });
 
-        after(function(done) { db.close(done); });
+        it('should retrieve particular rows', async function() {
+            const statement = await db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num > 5000");
+            const rows = await statement.all();
+            await statement.finalize();
+            assert.ok(rows.length === 0);
+        });
+
+        after(async function() { 
+            await db.close();
+        });
     });
 
     describe('high concurrency', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create(':memory:');
+        });
 
         function randomString() {
-            var str = '';
-            for (var i = Math.random() * 300; i > 0; i--) {
+            let str = '';
+            for (let i = Math.random() * 300; i > 0; i--) {
                 str += String.fromCharCode(Math.floor(Math.random() * 256));
             }
             return str;
         }
 
         // Generate random data.
-        var data = [];
-        var length = Math.floor(Math.random() * 1000) + 200;
-        for (var i = 0; i < length; i++) {
+        const data = [];
+        const length = Math.floor(Math.random() * 1000) + 200;
+        for (let i = 0; i < length; i++) {
             data.push([ randomString(), i, i * Math.random(), null ]);
         }
 
-        var inserted = 0;
-        var retrieved = 0;
+        let inserted = 0;
+        let retrieved = 0;
+        
+        it('should retrieve all values', async function() {
+            await db.prepare("CREATE TABLE foo (txt text, num int, flt float, blb blob)")
+                .then((statement) => statement.run())
+                .then((statement) => statement.finalize());
 
-        it('should create the table', function(done) {
-            db.prepare("CREATE TABLE foo (txt text, num int, flt float, blb blob)").run().finalize(done);
-        });
-
-        it('should insert all values', function(done) {
-            for (var i = 0; i < data.length; i++) {
-                var stmt = db.prepare("INSERT INTO foo VALUES(?, ?, ?, ?)");
-                stmt.run(data[i][0], data[i][1], data[i][2], data[i][3], function(err) {
-                    if (err) throw err;
-                    inserted++;
-                }).finalize(function(err) {
-                    if (err) throw err;
-                    if (inserted == data.length) done();
-                });
+            for (let i = 0; i < data.length; i++) {
+                const stmt = await db.prepare("INSERT INTO foo VALUES(?, ?, ?, ?)");
+                await stmt.run(data[i][0], data[i][1], data[i][2], data[i][3]);
+                await stmt.finalize();
+                inserted++;
             }
+
+            const statement = await db.prepare("SELECT txt, num, flt, blb FROM foo");
+            const rows = await statement.all();
+            await statement.finalize();
+
+            for (let i = 0; i < rows.length; i++) {
+                assert.ok(data[rows[i].num] !== true);
+
+                assert.equal(rows[i].txt, data[rows[i].num][0]);
+                assert.equal(rows[i].num, data[rows[i].num][1]);
+                assert.equal(rows[i].flt, data[rows[i].num][2]);
+                assert.equal(rows[i].blb, data[rows[i].num][3]);
+
+                // Mark the data row as already retrieved.
+                data[rows[i].num] = true;
+                retrieved++;
+            }
+
+            assert.equal(retrieved, data.length);
+            assert.equal(retrieved, inserted);
         });
 
-        it('should retrieve all values', function(done) {
-            db.prepare("SELECT txt, num, flt, blb FROM foo")
-                .all(function(err, rows) {
-                    if (err) throw err;
-
-                    for (var i = 0; i < rows.length; i++) {
-                        assert.ok(data[rows[i].num] !== true);
-
-                        assert.equal(rows[i].txt, data[rows[i].num][0]);
-                        assert.equal(rows[i].num, data[rows[i].num][1]);
-                        assert.equal(rows[i].flt, data[rows[i].num][2]);
-                        assert.equal(rows[i].blb, data[rows[i].num][3]);
-
-                        // Mark the data row as already retrieved.
-                        data[rows[i].num] = true;
-                        retrieved++;
-
-                    }
-
-                    assert.equal(retrieved, data.length);
-                    assert.equal(retrieved, inserted);
-                })
-                .finalize(done);
+        after(async function() {
+            await db.close();
         });
-
-        after(function(done) { db.close(done); });
     });
 
 
     describe('test Database#get()', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done); });
-
-        var retrieved = 0;
-
-        it('should get a row', function(done) {
-            db.get("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?", 10, 'String 10', function(err, row) {
-                if (err) throw err;
-                assert.equal(row.txt, 'String 10');
-                assert.equal(row.num, 10);
-                assert.equal(row.flt, 10 * Math.PI);
-                assert.equal(row.blb, null);
-                retrieved++;
-                done();
-            });
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create('test/support/prepare.db', sqlite3.OPEN_READONLY);
         });
 
-        it('should have retrieved all rows', function() {
+        let retrieved = 0;
+
+        it('should get a row', async function() {
+            const row = await db.get("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?", 10, 'String 10');
+            assert.equal(row.txt, 'String 10');
+            assert.equal(row.num, 10);
+            assert.equal(row.flt, 10 * Math.PI);
+            assert.equal(row.blb, null);
+            retrieved++;
             assert.equal(1, retrieved, "Didn't retrieve all rows");
         });
 
-        after(function(done) { db.close(done); });
+        after(async function() { 
+            await db.close();
+        });
     });
 
     describe('Database#run() and Database#all()', function() {
-        var db;
-        before(function(done) { db = new sqlite3.Database(':memory:', done); });
+        /** @type {sqlite3.Database} */
+        let db;
+        before(async function() {
+            db = await sqlite3.Database.create(':memory:');
+        });
 
-        var inserted = 0;
-        var retrieved = 0;
+        let inserted = 0;
+        let retrieved = 0;
 
         // We insert and retrieve that many rows.
-        var count = 1000;
-
-        it('should create the table', function(done) {
-            db.run("CREATE TABLE foo (txt text, num int, flt float, blb blob)", done);
-        });
-
-        it('should insert ' + count + ' rows', function(done) {
-            for (var i = 0; i < count; i++) {
-                db.run("INSERT INTO foo VALUES(?, ?, ?, ?)",
-                    'String ' + i,
-                    i,
-                    i * Math.PI,
-                    // null (SQLite sets this implicitly)
-                    function(err) {
-                        if (err) throw err;
-                        inserted++;
-                        if (inserted == count) done();
-                    }
-                );
+        const count = 1000;
+        
+        it('should retrieve all rows', async function() {
+            await db.run("CREATE TABLE foo (txt text, num int, flt float, blb blob)");
+    
+            for (let i = 0; i < count; i++) {
+                await db.run("INSERT INTO foo VALUES(?, ?, ?, ?)", 'String ' + i, i, i * Math.PI);
+                inserted++;
             }
+
+            const rows = await db.all("SELECT txt, num, flt, blb FROM foo ORDER BY num");
+
+            for (let i = 0; i < rows.length; i++) {
+                assert.equal(rows[i].txt, 'String ' + i);
+                assert.equal(rows[i].num, i);
+                assert.equal(rows[i].flt, i * Math.PI);
+                assert.equal(rows[i].blb, null);
+                retrieved++;
+            }
+
+            assert.equal(retrieved, count);
+            assert.equal(retrieved, inserted);
         });
 
-        it('should retrieve all rows', function(done) {
-            db.all("SELECT txt, num, flt, blb FROM foo ORDER BY num", function(err, rows) {
-                if (err) throw err;
-                for (var i = 0; i < rows.length; i++) {
-                    assert.equal(rows[i].txt, 'String ' + i);
-                    assert.equal(rows[i].num, i);
-                    assert.equal(rows[i].flt, i * Math.PI);
-                    assert.equal(rows[i].blb, null);
-                    retrieved++;
-                }
-
-                assert.equal(retrieved, count);
-                assert.equal(retrieved, inserted);
-
-                done();
-            });
+        after(async function() {
+            await db.close();
         });
-
-        after(function(done) { db.close(done); });
     });
 });

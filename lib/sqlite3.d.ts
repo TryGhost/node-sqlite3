@@ -70,8 +70,9 @@ export interface RunResult extends Statement {
 }
 
 export class Statement extends events.EventEmitter {
-    lastID: number;
-    changes: number;
+    readonly lastID: number;
+    readonly changes: number;
+    readonly sql: string;
     static create(database: Database, sql: string): Promise<Statement>;
     bind(): Promise<Statement>;
     bind(...params: any[]): Promise<Statement>;
@@ -111,6 +112,8 @@ export class Database extends events.EventEmitter {
 
     serialize<T>(callback?: () => Promise<T>): Promise<T>;
     parallelize<T>(callback?: () => Promise<T>): Promise<T>;
+
+    map<T>(sql: string, ...params: any[]): Promise<Record<string, T>>;
 
     on(event: "trace", listener: (sql: string) => void): this;
     on(event: "profile", listener: (sql: string, time: number) => void): this;

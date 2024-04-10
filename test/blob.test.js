@@ -1,10 +1,10 @@
-var sqlite3 = require('..'),
+const sqlite3 = require('..'),
     fs = require('fs'),
     assert = require('assert'),
     Buffer = require('buffer').Buffer;
 
 // lots of elmo
-var elmo = fs.readFileSync(__dirname + '/support/elmo.png');
+const elmo = fs.readFileSync(__dirname + '/support/elmo.png');
 
 describe('blob', function() {
     /** @type {sqlite3.Database} */
@@ -39,7 +39,7 @@ describe('blob', function() {
             assert.ok(Buffer.isBuffer(rows[i].image));
             assert.ok(elmo.length, rows[i].image);
 
-            for (var j = 0; j < elmo.length; j++) {
+            for (let j = 0; j < elmo.length; j++) {
                 if (elmo[j] !== rows[i].image[j]) {
                     assert.ok(false, "Wrong byte");
                 }

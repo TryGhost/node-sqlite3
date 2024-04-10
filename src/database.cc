@@ -86,7 +86,7 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
         auto deferred = baton->deferred;
         // We don't call the actual callback, so we have to make sure that
         // the baton gets destroyed.
-        delete baton;
+        // delete baton;
         deferred.Reject(exception);
         return;
     }
@@ -273,15 +273,26 @@ Napi::Value Database::Serialize(const Napi::CallbackInfo& info) {
         }
 
         auto promise = result.As<Napi::Promise>();
-        auto then = promise.Get("then").As<Napi::Function>();
-        auto join_promise = [db, deferred, before](const Napi::CallbackInfo& info) {
+        auto thenFn = promise.Get("then").As<Napi::Function>();
+        auto catchFn = promise.Get("catch").As<Napi::Function>();
+        auto joinPromise = [db, deferred, before](const Napi::CallbackInfo& info) {
             auto result = info[0];
             db->serialize = before;
             db->Process();
             deferred.Resolve(result);
         };
-        auto callback = Napi::Function::New(env, join_promise, "native_joinPromise");
-        then.Call(promise, {callback});
+        auto joinPromiseCatch = [db, deferred, before](const Napi::CallbackInfo& info) {
+            auto error = info[0];
+            db->serialize = before;
+            db->Process();
+            deferred.Reject(error);
+        };
+        auto thenCallback = Napi::Function::New(env, joinPromise, "native_joinPromise");
+        auto catchCallback = Napi::Function::New(env, joinPromiseCatch, "native_joinPromiseCatche");
+        thenFn.Call(promise, {thenCallback});
+        catchFn.Call(promise, {catchCallback});
+    } else {
+        deferred.Resolve(env.Undefined());
     }
 
     return deferred.Promise();
@@ -304,15 +315,26 @@ Napi::Value Database::Parallelize(const Napi::CallbackInfo& info) {
         }
 
         auto promise = result.As<Napi::Promise>();
-        auto then = promise.Get("then").As<Napi::Function>();
-        auto join_promise = [db, deferred, before](const Napi::CallbackInfo& info) {
+        auto thenFn = promise.Get("then").As<Napi::Function>();
+        auto catchFn = promise.Get("catch").As<Napi::Function>();
+        auto joinPromise = [db, deferred, before](const Napi::CallbackInfo& info) {
             auto result = info[0];
             db->serialize = before;
             db->Process();
             deferred.Resolve(result);
         };
-        auto callback = Napi::Function::New(env, join_promise, "native_joinPromise");
-        then.Call(promise, {callback});
+        auto joinPromiseCatch = [db, deferred, before](const Napi::CallbackInfo& info) {
+            auto error = info[0];
+            db->serialize = before;
+            db->Process();
+            deferred.Reject(error);
+        };
+        auto thenCallback = Napi::Function::New(env, joinPromise, "native_joinPromise");
+        auto catchCallback = Napi::Function::New(env, joinPromiseCatch, "native_joinPromiseCatche");
+        thenFn.Call(promise, {thenCallback});
+        catchFn.Call(promise, {catchCallback});
+    } else {
+        deferred.Resolve(env.Undefined());
     }
 
     return deferred.Promise();

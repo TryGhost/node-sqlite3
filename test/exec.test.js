@@ -1,6 +1,6 @@
-var sqlite3 = require('..');
-var assert = require('assert');
-var fs = require('fs');
+const sqlite3 = require('..');
+const assert = require('assert');
+const fs = require('fs');
 
 describe('exec', function() {
     /** @type {sqlite3.Database} */
@@ -10,7 +10,7 @@ describe('exec', function() {
     });
 
     it('Database#exec', async function() {
-        var sql = fs.readFileSync('test/support/script.sql', 'utf8');
+        const sql = fs.readFileSync('test/support/script.sql', 'utf8');
         await db.exec(sql);
     });
 

@@ -79,7 +79,6 @@ template <class T> void Statement::Error(T* baton) {
     EXCEPTION(Napi::String::New(env, stmt->message.c_str()), stmt->status, exception);
 
     baton->deferred.Reject(exception);
-    return;
 }
 
 // { Database db, String sql, Array params, Function callback }
@@ -436,7 +435,7 @@ void Statement::Work_AfterGet(napi_env e, napi_status status, void* data) {
             Napi::Value result = RowToJS(env, &baton->row);
             deferred.Resolve(result);
         } else {
-            deferred.Resolve(stmt->Value());
+            deferred.Resolve(env.Undefined());
         }
     }
 
@@ -604,9 +603,14 @@ Napi::Value Statement::InitEachIterator(EachBaton* eachBaton) {
                 result["value"] = RowToJS(env, row.get());
                 deferred.get()->Resolve(result);
             } else if (eachBaton->async->completed) {
-                auto result = Napi::Object::New(env);
-                result["done"] = Napi::Boolean::New(env, true);
-                deferred.get()->Resolve(result);
+                if (stmt->status != SQLITE_DONE) {
+                    EXCEPTION(Napi::String::New(env, stmt->message.c_str()), stmt->status, exception);
+                    deferred.get()->Reject(exception);
+                } else {
+                    auto result = Napi::Object::New(env);
+                    result["done"] = Napi::Boolean::New(env, true);
+                    deferred.get()->Resolve(result);
+                }
             } else {
                 eachBaton->async->deferreds.emplace_back(deferred);
             }
@@ -656,7 +660,8 @@ void Statement::Work_Each(napi_env e, void* data) {
         sqlite3_reset(stmt->_handle);
     }
 
-    if (stmt->Bind(baton->parameters)) {
+    auto bound = stmt->Bind(baton->parameters);
+    if (bound) {
         while (true) {
             sqlite3_mutex_enter(mtx);
             stmt->status = sqlite3_step(stmt->_handle);
@@ -712,9 +717,14 @@ void Statement::AsyncEach(uv_async_t* handle) {
         if (!async->deferreds.empty()) {
             auto deferred = std::move(async->deferreds.front());
             async->deferreds.pop_front();
-            auto result = Napi::Object::New(env);
-            result["done"] = Napi::Boolean::New(env, true);
-            deferred.get()->Resolve(result);
+            if (async->stmt->status != SQLITE_DONE) {
+                EXCEPTION(Napi::String::New(env, async->stmt->message.c_str()), async->stmt->status, exception);
+                deferred.get()->Reject(exception);
+            } else {
+                auto result = Napi::Object::New(env);
+                result["done"] = Napi::Boolean::New(env, true);
+                deferred.get()->Resolve(result);
+            }
         }
         uv_close(reinterpret_cast<uv_handle_t*>(handle), CloseCallback);
     }

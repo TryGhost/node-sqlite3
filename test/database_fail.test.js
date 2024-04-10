@@ -1,5 +1,5 @@
-var sqlite3 = require('..');
-var assert = require('assert');
+const sqlite3 = require('..');
+const assert = require('assert');
 
 describe('error handling', function() {
     /** @type {sqlite3.Database} */
@@ -10,10 +10,12 @@ describe('error handling', function() {
 
     it('throw when calling Database() without new', function() {
         assert.throws(function() {
+            // @ts-expect-error Calling private constructor for test
             sqlite3.Database(':memory:');
         }, (/Class constructors cannot be invoked without 'new'/));
 
         assert.throws(function() {
+            // @ts-expect-error Calling private constructor for test
             sqlite3.Statement();
         }, (/Class constructors cannot be invoked without 'new'/));
     });
@@ -52,32 +54,21 @@ describe('error handling', function() {
         new Error('Completed query without error, but expected error');
     });
 
-    // TODO: DB.each
-    it.skip('Database#each prepare fail', function() {
-        db.each('SELECT id, txt FROM foo', function(err, row) {
-            assert.ok(false, "this should not be called");
-        }, function(err, num) {
-            if (err) {
-                assert.equal(err.message, 'SQLITE_ERROR: no such table: foo');
-                assert.equal(err.errno, sqlite3.ERROR);
-                assert.equal(err.code, 'SQLITE_ERROR');
-                done();
-            } else {
-                done(new Error('Completed query without error, but expected error'));
-            }
+    it('Database#each prepare fail', async function() {
+        await assert.rejects(db.each('SELECT id, text FROM foo'), (err) => {
+            assert.equal(err.message, 'SQLITE_ERROR: no such table: foo');
+            assert.equal(err.errno, sqlite3.ERROR);
+            assert.equal(err.code, 'SQLITE_ERROR');
+            return true;
         });
     });
 
-    it.skip('Database#each prepare fail without completion handler', function() {
-        db.each('SELECT id, txt FROM foo', function(err, row) {
-            if (err) {
-                assert.equal(err.message, 'SQLITE_ERROR: no such table: foo');
-                assert.equal(err.errno, sqlite3.ERROR);
-                assert.equal(err.code, 'SQLITE_ERROR');
-                done();
-            } else {
-                done(new Error('Completed query without error, but expected error'));
-            }
+    it('Database#each prepare fail without completion handler', async function() {
+        await assert.rejects(db.each('SELECT id, txt FROM foo'), (err) => {
+            assert.equal(err.message, 'SQLITE_ERROR: no such table: foo');
+            assert.equal(err.errno, sqlite3.ERROR);
+            assert.equal(err.code, 'SQLITE_ERROR');
+            return true;
         });
     });
 
@@ -114,31 +105,25 @@ describe('error handling', function() {
         new Error('Completed query without error, but expected error');
     });
 
-    it.skip('Database#each prepare fail with param binding', function() {
-        db.each('SELECT id, txt FROM foo WHERE id = ?', 1, function(err, row) {
-            assert.ok(false, "this should not be called");
-        }, function(err, num) {
-            if (err) {
-                assert.equal(err.message, 'SQLITE_ERROR: no such table: foo');
-                assert.equal(err.errno, sqlite3.ERROR);
-                assert.equal(err.code, 'SQLITE_ERROR');
-                done();
-            } else {
-                done(new Error('Completed query without error, but expected error'));
-            }
+    it('Database#each prepare fail with param binding', async function() {
+        await assert.rejects(db.each('SELECT id, txt FROM foo WHERE id = ?', 1), (err) => {
+            assert.equal(err.message, 'SQLITE_ERROR: no such table: foo');
+            assert.equal(err.errno, sqlite3.ERROR);
+            assert.equal(err.code, 'SQLITE_ERROR');
+            return true;
         });
     });
 
-    it.skip('Database#each prepare fail with param binding without completion handler', function() {
-        db.each('SELECT id, txt FROM foo WHERE id = ?', 1, function(err, row) {
-            if (err) {
-                assert.equal(err.message, 'SQLITE_ERROR: no such table: foo');
-                assert.equal(err.errno, sqlite3.ERROR);
-                assert.equal(err.code, 'SQLITE_ERROR');
-                done();
-            } else {
-                done(new Error('Completed query without error, but expected error'));
-            }
+    it('Database#each prepare fail with param binding without completion handler', async function() {
+        assert.rejects(db.each('SELECT id, txt FROM foo WHERE id = ?', 1), (err) => {
+            assert.equal(err.message, 'SQLITE_ERROR: no such table: foo');
+            assert.equal(err.errno, sqlite3.ERROR);
+            assert.equal(err.code, 'SQLITE_ERROR');
+            return true;
         });
+    });
+
+    after(async function() {
+        await db.close();
     });
 });

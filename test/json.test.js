@@ -1,4 +1,4 @@
-var sqlite3 = require('..');
+const sqlite3 = require('..');
 
 if( process.env.NODE_SQLITE3_JSON1 === 'no' ){
     describe('json', function() {
@@ -9,14 +9,15 @@ if( process.env.NODE_SQLITE3_JSON1 === 'no' ){
     });
 } else {
     describe('json', function() {
-        var db;
+        /** @type {sqlite3.Database} */
+        let db;
 
-        before(function(done) {
-            db = new sqlite3.Database(':memory:', done);
+        before(async function() {
+            db = await sqlite3.Database.create(':memory:');
         });
 
-        it('should select JSON', function(done) {
-            db.run('SELECT json(?)', JSON.stringify({ok:true}), done);
+        it('should select JSON', async function() {
+            await db.run('SELECT json(?)', JSON.stringify({ok:true}));
         });
     });
 }

@@ -1,28 +1,23 @@
-var sqlite3 = require('..'),
-    assert = require('assert');
+const sqlite3 = require('..');
 
 describe('buffer', function() {
-    var db;
+    /** @type {sqlite3.Database} */
+    let db;
     // before(function() {
     // });
 
-    it('should insert blobs', function(done) {
-        db = new sqlite3.Database(':memory:');
-        db.serialize(function () {
+    it('should insert blobs', async function() {
+        db = await sqlite3.Database.create(':memory:');
+        await db.serialize(async function () {
 
-            db.run("CREATE TABLE lorem (info BLOB)");
-            var stmt = db.prepare("INSERT INTO lorem VALUES (?)");
+            await db.run("CREATE TABLE lorem (info BLOB)");
+            const stmt = await db.prepare("INSERT INTO lorem VALUES (?)");
 
-            stmt.on('error', function (err) {
-                throw err;
-            });
-
-            var buff = Buffer.alloc(2);
-            stmt.run(buff);
-            stmt.finalize();
+            const buff = Buffer.alloc(2);
+            await stmt.run(buff);
+            await stmt.finalize();
         });
 
-        db.close(done);
-
+        await db.close();
     });
 });

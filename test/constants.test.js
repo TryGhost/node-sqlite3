@@ -1,5 +1,5 @@
-var sqlite3 = require('..');
-var assert = require('assert');
+const sqlite3 = require('..');
+const assert = require('assert');
 
 describe('constants', function() {
     it('should have the right OPEN_* flags', function() {

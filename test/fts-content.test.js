@@ -1,4 +1,4 @@
-var sqlite3 = require('..');
+const sqlite3 = require('..');
 
 describe('fts', function() {
     /** @type {sqlite3.Database} */

@@ -1,6 +1,6 @@
-var sqlite3 = require('..');
-var assert = require('assert');
-var helper = require('./support/helper');
+const sqlite3 = require('..');
+const assert = require('assert');
+const helper = require('./support/helper');
 
 describe('cache', function() {
     before(function() {
@@ -17,7 +17,7 @@ describe('cache', function() {
 
     // TODO: Does this still make sense? Is this correctly implemented now?
     it('should cache Database objects after they are open', function(done) {
-        var filename = 'test/tmp/test_cache2.db';
+        const filename = 'test/tmp/test_cache2.db';
         helper.deleteFile(filename);
         sqlite3.cached.Database.create(filename).then((db1) => {
             process.nextTick(function() {

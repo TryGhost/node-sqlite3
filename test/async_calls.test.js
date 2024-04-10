@@ -1,6 +1,6 @@
 "use strict";
 
-var sqlite3 = require('..');
+const sqlite3 = require('..');
 const assert = require("assert");
 const { createHook, executionAsyncId } = require("async_hooks");
 
