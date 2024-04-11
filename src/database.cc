@@ -709,6 +709,7 @@ void Database::Work_AfterLoadExtension(napi_env e, napi_status status, void* dat
         EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
 
         baton->deferred.Reject(exception);
+        return;
     }
 
     db->Process();

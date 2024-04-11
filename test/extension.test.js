@@ -1,26 +1,21 @@
-// let sqlite3 = require('..');
-// let assert = require('assert');
-// let exists = require('fs').existsSync || require('path').existsSync;
+const { join } = require('node:path');
+const sqlite3 = require('..');
+const { cwd } = require('node:process');
+const { exec: execCb } = require('node:child_process');
+const {promisify} = require('node:util');
 
-/*
+const exec = promisify(execCb);
 
-// disabled because this is not a generically safe test to run on all systems
+const uuidExtension = join(cwd(), 'test', 'support', 'uuid.c');
 
-var spatialite_ext = '/usr/local/lib/libspatialite.dylib';
 
-describe('loadExtension', function(done) {
-    var db;
-    before(function(done) {
-        db = new sqlite3.Database(':memory:', done);
+describe('loadExtension', function() {
+    before(async function() {
+        await exec(`gcc -g -fPIC -shared ${uuidExtension} -o ${uuidExtension}.so`);
     });
 
-    if (exists(spatialite_ext)) {
-        it('libspatialite', function(done) {
-            db.loadExtension(spatialite_ext, done);
-        });
-    } else {
-        it('libspatialite');
-    }
+    it('can load the uuid extension', async function() {
+        const db = await sqlite3.Database.create(':memory:');
+        await db.loadExtension(uuidExtension);
+    });
 });
-
-*/
