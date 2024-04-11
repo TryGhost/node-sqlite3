@@ -1,39 +1,32 @@
-var sqlite3 = require('..');
-var assert = require('assert');
+const sqlite3 = require('..');
+const assert = require('assert');
 
 describe('each', function() {
-    var db;
-    before(function(done) {
-        db = new sqlite3.Database('test/support/big.db', sqlite3.OPEN_READONLY, done);
+    /** @type {sqlite3.Database} */
+    let db;
+    before(async function() {
+        db = await sqlite3.Database.create('test/support/big.db', sqlite3.OPEN_READONLY);
     });
 
-    it('retrieve 100,000 rows with Statement#each', function(done) {
-        var total = 100000;
-        var retrieved = 0;
+    it('retrieve 100,000 rows with Statement#each', async function() {
+        const total = 100000;
+        // var total = 10;
+        let retrieved = 0;
         
-
-        db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
-            if (err) throw err;
+        const iterable = await db.each('SELECT id, txt FROM foo LIMIT 0, ?', total);
+        for await (const _row of iterable) {
             retrieved++;
-            
-            if(retrieved === total) {
-                assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
-                done();
-            }
-        });
+        }
+        assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
     });
+ 
+    it('Statement#each with complete callback', async function() {
+        const total = 10000;
+        let retrieved = 0;
 
-    it('Statement#each with complete callback', function(done) {
-        var total = 10000;
-        var retrieved = 0;
-
-        db.each('SELECT id, txt FROM foo LIMIT 0, ?', total, function(err, row) {
-            if (err) throw err;
+        for await (const _row of await db.each('SELECT id, txt FROM foo LIMIT 0, ?', total)) {
             retrieved++;
-        }, function(err, num) {
-            assert.equal(retrieved, num);
-            assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
-            done();
-        });
+        }
+        assert.equal(retrieved, total, "Only retrieved " + retrieved + " out of " + total + " rows.");
     });
 });

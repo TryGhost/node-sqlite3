@@ -1,16 +1,17 @@
-var sqlite3 = require('..');
-var assert = require('assert');
+const sqlite3 = require('..');
+const assert = require('assert');
 
 describe('unicode', function() {
-    var first_values = [],
-        trailing_values = [],
-        chars = [],
-        subranges = new Array(2),
-        len = subranges.length,
-        db,
-        i;
+    const first_values = [];
+    const trailing_values = [];
+    const subranges = new Array(2);
+    const len = subranges.length;
+    let db;
+    let i;
 
-    before(function(done) { db = new sqlite3.Database(':memory:', done); });
+    before(async function() {
+        db = await sqlite3.Database.create(':memory:');
+    });
 
     for (i = 0x20; i < 0x80; i++) {
         first_values.push(i);
@@ -41,7 +42,7 @@ describe('unicode', function() {
     }
 
     function random_utf8() {
-        var first = random_choice(first_values);
+        const first = random_choice(first_values);
 
         if (first < 0x80) {
             return String.fromCharCode(first);
@@ -57,8 +58,8 @@ describe('unicode', function() {
     }
 
     function randomString() {
-        var str = '',
-            i;
+        let str = '';
+        let i;
 
         for (i = Math.random() * 300; i > 0; i--) {
             str += random_utf8();
@@ -69,46 +70,35 @@ describe('unicode', function() {
 
 
     // Generate random data.
-    var data = [];
-    var length = Math.floor(Math.random() * 1000) + 200;
-    for (var i = 0; i < length; i++) {
+    const data = [];
+    const length = Math.floor(Math.random() * 1000) + 200;
+    for (let i = 0; i < length; i++) {
         data.push(randomString());
     }
 
-    var inserted = 0;
-    var retrieved = 0;
-
-    it('should create the table', function(done) {
-        db.run("CREATE TABLE foo (id int, txt text)", done);
-    });
-
-    it('should insert all values', function(done) {
-        var stmt = db.prepare("INSERT INTO foo VALUES(?, ?)");
-        for (var i = 0; i < data.length; i++) {
-            stmt.run(i, data[i], function(err) {
-                if (err) throw err;
-                inserted++;
-            });
+    let inserted = 0;
+    let retrieved = 0;
+    
+    it('should retrieve all values', async function() {
+        await db.run("CREATE TABLE foo (id int, txt text)");
+        const stmt = await db.prepare("INSERT INTO foo VALUES(?, ?)");
+        for (let i = 0; i < data.length; i++) {
+            await stmt.run(i, data[i]);
+            inserted++;
         }
-        stmt.finalize(done);
-    });
+        await stmt.finalize();
 
-    it('should retrieve all values', function(done) {
-        db.all("SELECT txt FROM foo ORDER BY id", function(err, rows) {
-            if (err) throw err;
+        const rows = await db.all("SELECT txt FROM foo ORDER BY id");
 
-            for (var i = 0; i < rows.length; i++) {
-                assert.equal(rows[i].txt, data[i]);
-                retrieved++;
-            }
-            done();
-        });
-    });
-
-    it('should have inserted and retrieved the correct amount', function() {
+        for (let i = 0; i < rows.length; i++) {
+            assert.equal(rows[i].txt, data[i]);
+            retrieved++;
+        }
         assert.equal(inserted, length);
         assert.equal(retrieved, length);
     });
 
-    after(function(done) { db.close(done); });
+    after(async function() {
+        await db.close();
+    });
 });

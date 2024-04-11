@@ -1,28 +1,32 @@
-var sqlite3 = require('..');
+const sqlite3 = require('..');
+const assert = require('node:assert');
 
 describe('limit', function() {
-    var db;
+    /** @type {sqlite3.Database} */
+    let db;
 
-    before(function(done) {
-        db = new sqlite3.Database(':memory:', done);
+    before(async function() {
+        db = await sqlite3.Database.create(':memory:');
     });
 
-    it('should support applying limits via configure', function(done) {
+    it('should support applying limits via configure', async function() {
         db.configure('limit', sqlite3.LIMIT_ATTACHED, 0);
-        db.exec("ATTACH 'test/support/prepare.db' AS zing", function(err) {
-            if (!err) {
-                throw new Error('ATTACH should not succeed');
-            }
-            if (err.errno === sqlite3.ERROR &&
-                err.message === 'SQLITE_ERROR: too many attached databases - max 0') {
-                db.configure('limit', sqlite3.LIMIT_ATTACHED, 1);
-                db.exec("ATTACH 'test/support/prepare.db' AS zing", function(err) {
-                    if (err) throw err;
-                    db.close(done);
-                });
-            } else {
-                throw err;
-            }
-        });
+        let caught;
+        try {
+            await db.exec("ATTACH 'test/support/prepare.db' AS zing");
+        } catch (err) {
+            caught = err;
+        }
+
+        if (!caught) {
+            await db.close();
+            throw new Error('ATTACH should not succeed');
+        }
+
+        assert.strictEqual(caught.errno, sqlite3.ERROR);
+        assert.strictEqual(caught.message, 'SQLITE_ERROR: too many attached databases - max 0');
+        db.configure('limit', sqlite3.LIMIT_ATTACHED, 1);
+        await db.exec("ATTACH 'test/support/prepare.db' AS zing");
+        await db.close();
     });
 });
