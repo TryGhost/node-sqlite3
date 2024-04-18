@@ -73,7 +73,7 @@ template <class T> void Statement::Error(T* baton) {
 
     // Fail hard on logic errors.
     assert(stmt->status != 0);
-    EXCEPTION(Napi::String::New(env, stmt->message.c_str()), stmt->status, exception);
+    EXCEPTION_WITH_OFFSET(Napi::String::New(env, stmt->message.c_str()), stmt->status, stmt->offset, exception);
 
     Napi::Function cb = baton->callback.Value();
 
@@ -146,6 +146,7 @@ void Statement::Work_Prepare(napi_env e, void* data) {
 
     if (stmt->status != SQLITE_OK) {
         stmt->message = std::string(sqlite3_errmsg(baton->db->_handle));
+        stmt->offset = sqlite3_error_offset(baton->db->_handle);
         stmt->_handle = NULL;
     }
 
@@ -412,6 +413,7 @@ void Statement::Work_Get(napi_env e, void* data) {
 
             if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
                 stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
+                stmt->offset = sqlite3_error_offset(stmt->db->_handle);
             }
         }
 
@@ -488,6 +490,7 @@ void Statement::Work_Run(napi_env e, void* data) {
 
         if (!(stmt->status == SQLITE_ROW || stmt->status == SQLITE_DONE)) {
             stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
+            stmt->offset = sqlite3_error_offset(stmt->db->_handle);
         }
         else {
             baton->inserted_id = sqlite3_last_insert_rowid(stmt->db->_handle);
@@ -562,6 +565,7 @@ void Statement::Work_All(napi_env e, void* data) {
 
         if (stmt->status != SQLITE_DONE) {
             stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
+            stmt->offset = sqlite3_error_offset(stmt->db->_handle);
         }
     }
 
@@ -671,6 +675,7 @@ void Statement::Work_Each(napi_env e, void* data) {
             else {
                 if (stmt->status != SQLITE_DONE) {
                     stmt->message = std::string(sqlite3_errmsg(stmt->db->_handle));
+                    stmt->offset = sqlite3_error_offset(stmt->db->_handle);
                 }
                 sqlite3_mutex_leave(mtx);
                 break;

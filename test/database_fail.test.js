@@ -30,6 +30,17 @@ describe('error handling', function() {
         });
     });
 
+    it('should should provide an offset in the error object', function(done) {
+        db.get('SELECT id, txt ROM foo', function(err, row) {
+            if (err) {
+                assert.equal(err.offset, 'SELECT id, txt ROM '.length);
+                done();
+            } else {
+                done(new Error('Completed query without error, but expected error'));
+            }
+        });
+    });
+
     it('Database#all prepare fail', function(done) {
         db.all('SELECT id, txt FROM foo', function(err, row) {
             if (err) {

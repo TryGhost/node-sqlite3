@@ -237,6 +237,7 @@ protected:
 
     std::queue<Call*> queue;
     std::string message;
+    int offset = -1;
 };
 
 }

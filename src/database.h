@@ -45,6 +45,7 @@ public:
         Database* db;
         Napi::FunctionReference callback;
         int status;
+        int offset;
         std::string message;
 
         Baton(Database* db_, Napi::Function cb_) :

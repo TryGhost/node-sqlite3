@@ -113,6 +113,22 @@ inline bool OtherIsInt(Napi::Number source) {
     (name ##_obj).Set( Napi::String::New(env, "code"),                         \
         Napi::String::New(env, sqlite_code_string(errno)));
 
+#define EXCEPTION_WITH_OFFSET(msg, errno, offset, name)                        \
+    Napi::Value name = Napi::Error::New(env,                                   \
+        StringConcat(                                                          \
+            StringConcat(                                                      \
+                Napi::String::New(env, sqlite_code_string(errno)),             \
+                Napi::String::New(env, ": ")                                   \
+            ),                                                                 \
+            (msg)                                                              \
+        ).Utf8Value()                                                          \
+    ).Value();                                                                 \
+    Napi::Object name ##_obj = name.As<Napi::Object>();                        \
+    (name ##_obj).Set( Napi::String::New(env, "errno"), Napi::Number::New(env, errno)); \
+    (name ##_obj).Set( Napi::String::New(env, "offset"), Napi::Number::New(env, offset)); \
+    (name ##_obj).Set( Napi::String::New(env, "code"),                         \
+        Napi::String::New(env, sqlite_code_string(errno)));
+
 
 #define EMIT_EVENT(obj, argc, argv)                                            \
     TRY_CATCH_CALL((obj),                                                      \
