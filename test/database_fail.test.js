@@ -30,7 +30,7 @@ describe('error handling', function() {
         });
     });
 
-    it('should should provide an offset in the error object', function(done) {
+    it('should provide an offset in the error object', function(done) {
         db.get('SELECT id, txt ROM foo', function(err, row) {
             if (err) {
                 assert.equal(err.offset, 'SELECT id, txt ROM '.length);
