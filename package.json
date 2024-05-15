@@ -52,10 +52,10 @@
   "devDependencies": {
     "eslint": "8.56.0",
     "mocha": "10.2.0",
-    "prebuild": "12.1.0"
+    "prebuild": "13.0.0"
   },
   "peerDependencies": {
-    "node-gyp": "8.x"
+    "node-gyp": "^10"
   },
   "peerDependenciesMeta": {
     "node-gyp": {
@@ -63,7 +63,7 @@
     }
   },
   "optionalDependencies": {
-    "node-gyp": "8.x"
+    "node-gyp": "^10"
   },
   "scripts": {
     "install": "prebuild-install -r napi || node-gyp rebuild",
