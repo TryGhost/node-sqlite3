@@ -33,7 +33,7 @@ jobs:
             node: 18
             host: x86
             target: x86
-          - os: macos-m1
+          - os: macos-latest
             node: 18
             host: arm64
             target: arm64
@@ -46,15 +46,11 @@ jobs:
           architecture: ${{ matrix.host }}
 
       - name: Add yarn (self-hosted)
-        if: matrix.os == 'macos-m1'
+        if: matrix.os == 'macos-latest'
         run: npm install -g yarn
 
-      - name: Add setuptools for Python 3.12 (temp)
-        if: matrix.os != 'macos-m1'
-        run: pip install setuptools
-
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.3
+        uses: microsoft/setup-msbuild@v2
         if: contains(matrix.os, 'windows')
         with:
           msbuild-architecture: ${{ matrix.target }}
