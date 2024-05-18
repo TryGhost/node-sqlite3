@@ -43,19 +43,22 @@
     "type": "git",
     "url": "https://github.com/TryGhost/node-sqlite3.git"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "bindings": "^1.5.0",
-    "node-addon-api": "^7.0.0",
+    "node-addon-api": "^8.0.0",
     "prebuild-install": "^7.1.1",
-    "tar": "^6.1.11"
+    "tar": "^7.0.0"
   },
   "devDependencies": {
     "eslint": "8.56.0",
-    "mocha": "10.2.0",
-    "prebuild": "12.1.0"
+    "mocha": "10.4.0",
+    "prebuild": "13.0.0"
   },
   "peerDependencies": {
-    "node-gyp": "8.x"
+    "node-gyp": "^10.x"
   },
   "peerDependenciesMeta": {
     "node-gyp": {
@@ -63,7 +66,7 @@
     }
   },
   "optionalDependencies": {
-    "node-gyp": "8.x"
+    "node-gyp": "^10.x"
   },
   "scripts": {
     "install": "prebuild-install -r napi || node-gyp rebuild",
