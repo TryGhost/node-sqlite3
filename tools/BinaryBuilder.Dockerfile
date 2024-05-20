@@ -10,7 +10,8 @@ RUN if case $VARIANT in "alpine"*) true;; *) false;; esac; then apk add build-ba
 WORKDIR /usr/src/build
 
 COPY . .
-RUN npm install --ignore-scripts
+
+RUN npm install --ignore-scripts --maxsockets=1
 
 ENV CFLAGS="${CFLAGS:-} -include ../src/gcc-preinclude.h"
 ENV CXXFLAGS="${CXXFLAGS:-} -include ../src/gcc-preinclude.h"
