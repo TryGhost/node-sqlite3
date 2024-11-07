@@ -15,7 +15,13 @@
         "MACOSX_DEPLOYMENT_TARGET": "10.7",
       },
       "msvs_settings": {
-        "VCCLCompilerTool": { "ExceptionHandling": 1 },
+        "VCCLCompilerTool": {
+          "ExceptionHandling": 1,
+          "AdditionalOptions": [
+            "/w34244",
+            "/w34267"
+          ]
+        },
       },
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")"],
