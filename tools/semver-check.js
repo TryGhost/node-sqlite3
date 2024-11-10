@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const semver = require('semver');
 
-const supportedVersions = '10.12.0';
+const supportedVersions = process.versions.node;
 
 function checkEngines(modulePath) {
     const packageJsonPath = path.join(modulePath, 'package.json');
@@ -30,4 +30,3 @@ for (const dependency of allDependencies) {
     const modulePath = path.join(__dirname, '..', 'node_modules', dependency);
     checkEngines(modulePath);
 }
-
