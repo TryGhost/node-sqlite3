@@ -1,28 +1,19 @@
-var sqlite3 = require('..');
-var assert = require('assert');
-var fs = require('fs');
-var helper = require('./support/helper');
+const sqlite3 = require('..');
+const assert = require('assert');
+const helper = require('./support/helper');
 
 // Check that the number of rows in two tables matches.
-function assertRowsMatchDb(db1, table1, db2, table2, done) {
-    db1.get("SELECT COUNT(*) as count FROM " + table1, function(err, row) {
-        if (err) throw err;
-        db2.get("SELECT COUNT(*) as count FROM " + table2, function(err, row2) {
-            if (err) throw err;
-            assert.equal(row.count, row2.count);
-            done();
-        });
-    });
+async function assertRowsMatchDb(db1, table1, db2, table2) {
+    const row = await db1.get("SELECT COUNT(*) as count FROM " + table1);
+    const row2 = await db2.get("SELECT COUNT(*) as count FROM " + table2);
+    assert.equal(row.count, row2.count);
 }
 
 // Check that the number of rows in the table "foo" is preserved in a backup.
-function assertRowsMatchFile(db, backupName, done) {
-    var db2 = new sqlite3.Database(backupName, sqlite3.OPEN_READONLY, function(err) {
-        if (err) throw err;
-        assertRowsMatchDb(db, 'foo', db2, 'foo', function() {
-            db2.close(done);
-        });
-    });
+async function assertRowsMatchFile(db, backupName) {
+    const db2 = await sqlite3.Database.create(backupName, sqlite3.OPEN_READONLY);
+    await assertRowsMatchDb(db, 'foo', db2, 'foo');
+    await db2.close();
 }
 
 describe('backup', function() {
@@ -30,250 +21,183 @@ describe('backup', function() {
         helper.ensureExists('test/tmp');
     });
 
-    var db;
-    beforeEach(function(done) {
+    /** @type {sqlite3.Database} */
+    let db;
+    beforeEach(async function() {
         helper.deleteFile('test/tmp/backup.db');
         helper.deleteFile('test/tmp/backup2.db');
-        db = new sqlite3.Database('test/support/prepare.db', sqlite3.OPEN_READONLY, done);
+        db = await sqlite3.Database.create('test/support/prepare.db', sqlite3.OPEN_READONLY);
     });
 
-    afterEach(function(done) {
-        if (!db) { done(); }
-        db.close(done);
+    afterEach(async function() {
+        await (db && db.close());
     });
 
-    it ('output db created once step is called', function(done) {
-        var backup = db.backup('test/tmp/backup.db', function(err) {
-            if (err) throw err;
-            backup.step(1, function(err) {
-                if (err) throw err;
-                assert.fileExists('test/tmp/backup.db');
-                backup.finish(done);
-            });
+    it('output db created once step is called', async function() {
+        const backup = await db.backup('test/tmp/backup.db');
+        await backup.step(1);
+        assert.fileExists('test/tmp/backup.db');
+        await backup.finish();
+    });
+
+    it('copies source fully with step(-1)', async function() {
+        const backup = await db.backup('test/tmp/backup.db');
+        await backup.step(-1);
+        assert.fileExists('test/tmp/backup.db');
+        await backup.finish();
+        await assertRowsMatchFile(db, 'test/tmp/backup.db');
+    });
+
+    it('backup db not created if finished immediately', async function() {
+        const backup = await db.backup('test/tmp/backup.db');
+        await backup.finish();
+        assert.fileDoesNotExist('test/tmp/backup.db');
+    });
+
+    it('error closing db if backup not finished', async function() {
+        const backup = await db.backup('test/tmp/backup.db');
+        try {
+            await db.close();
+        } catch (err) {
+            assert.equal(err.errno, sqlite3.BUSY);
+        } finally {
+            // Finish the backup so that the after hook succeeds
+            await backup.finish();
+        }
+    });
+
+    it('using the backup after finished is an error', async function() {
+        const backup = await db.backup('test/tmp/backup.db');
+        await backup.finish();
+        try {
+            await backup.step(1);
+            
+        } catch (err) {
+            assert.equal(err.errno, sqlite3.MISUSE);
+            assert.equal(err.message, 'SQLITE_MISUSE: Backup is already finished');
+        }
+    });
+
+    it('remaining/pageCount are available after call to step', async function() {
+        const backup = await db.backup('test/tmp/backup.db');
+        await backup.step(0);
+        assert.equal(typeof backup.pageCount, 'number');
+        assert.equal(typeof backup.remaining, 'number');
+        assert.equal(backup.remaining, backup.pageCount);
+        const prevRemaining = backup.remaining;
+        const prevPageCount = backup.pageCount;
+        await backup.step(1);
+        assert.notEqual(backup.remaining, prevRemaining);
+        assert.equal(backup.pageCount, prevPageCount);
+        await backup.finish();
+    });
+
+    it('backup works if database is modified half-way through', async function() {
+        const backup = await db.backup('test/tmp/backup.db');
+        await backup.step(-1);
+        await backup.finish();
+        const db2 = await sqlite3.Database.create('test/tmp/backup.db');
+        const backup2 = await db2.backup('test/tmp/backup2.db');
+        const completed = await backup2.step(1);
+        assert.equal(completed, false);  // Page size for the test db
+        // should not be raised to high.
+        await db2.exec("insert into foo(txt) values('hello')");
+        const completed2 = await backup2.step(-1);
+        assert.equal(completed2, true);
+        await assertRowsMatchFile(db2, 'test/tmp/backup2.db');
+        await backup2.finish();
+        await db2.close();
+    });
+
+    (sqlite3.VERSION_NUMBER < 3026000 ? it.skip : it) ('can backup from temp to main', async function() {
+        await db.exec("CREATE TEMP TABLE space (txt TEXT)");
+        await db.exec("INSERT INTO space(txt) VALUES('monkey')");
+        const backup = await db.backup('test/tmp/backup.db', 'temp', 'main', true);
+        await backup.step(-1);
+        await backup.finish();
+        const db2 = await sqlite3.Database.create('test/tmp/backup.db');
+        const row = await db2.get("SELECT * FROM space");
+        assert.equal(row.txt, 'monkey');
+        await db2.close();
+    });
+
+    (sqlite3.VERSION_NUMBER < 3026000 ? it.skip : it) ('can backup from main to temp', async function() {
+        const backup = await db.backup('test/support/prepare.db', 'main', 'temp', false);
+        await backup.step(-1);
+        await backup.finish();
+        await assertRowsMatchDb(db, 'temp.foo', db, 'main.foo');
+    });
+
+    it('cannot backup to a locked db', async function() {
+        const db2 = await sqlite3.Database.create('test/tmp/backup.db');
+        await db2.exec("PRAGMA locking_mode = EXCLUSIVE");
+        await db2.exec("BEGIN EXCLUSIVE");
+        const backup = await db.backup('test/tmp/backup.db');
+        try {
+            await backup.step(-1);
+        } catch (err) {
+            assert.equal(err.errno, sqlite3.BUSY);
+        } finally {
+            await backup.finish();
+        }
+    });
+
+    it('fuss-free incremental backups work', async function() {
+        const backup = await db.backup('test/tmp/backup.db');
+        let timer;
+        let resolve;
+        const promise = new Promise((res) => {
+            resolve = res;
         });
-    });
-
-    it ('copies source fully with step(-1)', function(done) {
-        var backup = db.backup('test/tmp/backup.db');
-        backup.step(-1, function(err) {
-            if (err) throw err;
-            assert.fileExists('test/tmp/backup.db');
-            backup.finish(function(err) {
-                if (err) throw err;
-                assertRowsMatchFile(db, 'test/tmp/backup.db', done);
-            });
-        });
-    });
-
-    it ('backup db not created if finished immediately', function(done) {
-        var backup = db.backup('test/tmp/backup.db');
-        backup.finish(function(err) {
-            if (err) throw err;
-            assert.fileDoesNotExist('test/tmp/backup.db');
-            done();
-        });
-    });
-
-    it ('error closing db if backup not finished', function(done) {
-        var backup = db.backup('test/tmp/backup.db');
-        db.close(function(err) {
-            db = null;
-            if (!err) throw new Error('should have an error');
-            if (err.errno == sqlite3.BUSY) {
-                done();
-            }
-            else throw err;
-        });
-    });
-
-    it ('using the backup after finished is an error', function(done) {
-        var backup = db.backup('test/tmp/backup.db');
-        backup.finish(function(err) {
-            if (err) throw err;
-            backup.step(1, function(err) {
-                if (!err) throw new Error('should have an error');
-                if (err.errno == sqlite3.MISUSE &&
-                    err.message === 'SQLITE_MISUSE: Backup is already finished') {
-                    done();
-                }
-                else throw err;
-            });
-        });
-    });
-
-    it ('remaining/pageCount are available after call to step', function(done) {
-        var backup = db.backup('test/tmp/backup.db');
-        backup.step(0, function(err) {
-            if (err) throw err;
-            assert.equal(typeof this.pageCount, 'number');
-            assert.equal(typeof this.remaining, 'number');
-            assert.equal(this.remaining, this.pageCount);
-            var prevRemaining = this.remaining;
-            var prevPageCount = this.pageCount;
-            backup.step(1, function(err) {
-                if (err) throw err;
-                assert.notEqual(this.remaining, prevRemaining);
-                assert.equal(this.pageCount, prevPageCount);
-                backup.finish(done);
-            });
-        });
-    });
-
-    it ('backup works if database is modified half-way through', function(done) {
-        var backup = db.backup('test/tmp/backup.db');
-        backup.step(-1, function(err) {
-            if (err) throw err;
-            backup.finish(function(err) {
-                if (err) throw err;
-                var db2 = new sqlite3.Database('test/tmp/backup.db', function(err) {
-                    if (err) throw err;
-                    var backup2 = db2.backup('test/tmp/backup2.db');
-                    backup2.step(1, function(err, completed) {
-                        if (err) throw err;
-                        assert.equal(completed, false);  // Page size for the test db
-                        // should not be raised to high.
-                        db2.exec("insert into foo(txt) values('hello')", function(err) {
-                            if (err) throw err;
-                            backup2.step(-1, function(err, completed) {
-                                if (err) throw err;
-                                assert.equal(completed, true);
-                                assertRowsMatchFile(db2, 'test/tmp/backup2.db', function() {
-                                    backup2.finish(function(err) {
-                                        if (err) throw err;
-                                        db2.close(done);
-                                    });
-                                });
-                            });
-                        });
-                    });
-                });
-            });
-        });
-    });
-
-    (sqlite3.VERSION_NUMBER < 3026000 ? it.skip : it) ('can backup from temp to main', function(done) {
-        db.exec("CREATE TEMP TABLE space (txt TEXT)", function(err) {
-            if (err) throw err;
-            db.exec("INSERT INTO space(txt) VALUES('monkey')", function(err) {
-                if (err) throw err;
-                var backup = db.backup('test/tmp/backup.db', 'temp', 'main', true, function(err) {
-                    if (err) throw err;
-                    backup.step(-1, function(err) {
-                        if (err) throw err;
-                        backup.finish(function(err) {
-                            if (err) throw err;
-                            var db2 = new sqlite3.Database('test/tmp/backup.db', function(err) {
-                                if (err) throw err;
-                                db2.get("SELECT * FROM space", function(err, row) {
-                                    if (err) throw err;
-                                    assert.equal(row.txt, 'monkey');
-                                    db2.close(done);
-                                });
-                            });
-                        });
-                    });
-                });
-            });
-        });
-    });
-
-    (sqlite3.VERSION_NUMBER < 3026000 ? it.skip : it) ('can backup from main to temp', function(done) {
-        var backup = db.backup('test/support/prepare.db', 'main', 'temp', false, function(err) {
-            if (err) throw err;
-            backup.step(-1, function(err) {
-                if (err) throw err;
-                backup.finish(function(err) {
-                    if (err) throw err;
-                    assertRowsMatchDb(db, 'temp.foo', db, 'main.foo', done);
-                });
-            });
-        });
-    });
-
-    it ('cannot backup to a locked db', function(done) {
-        var db2 = new sqlite3.Database('test/tmp/backup.db', function(err) {
-            db2.exec("PRAGMA locking_mode = EXCLUSIVE");
-            db2.exec("BEGIN EXCLUSIVE", function(err) {
-                if (err) throw err;
-                var backup = db.backup('test/tmp/backup.db');
-                backup.step(-1, function(stepErr) {
-                    db2.close(function(err) {
-                        if (err) throw err;
-                        if (stepErr.errno == sqlite3.BUSY) {
-                            backup.finish(done);
-                        }
-                        else throw stepErr;
-                    });
-                });
-            });
-        });
-    });
-
-    it ('fuss-free incremental backups work', function(done) {
-        var backup = db.backup('test/tmp/backup.db');
-        var timer;
-        function makeProgress() {
+        async function makeProgress() {
             if (backup.idle) {
-                backup.step(1);
+                await backup.step(1);
             }
             if (backup.completed || backup.failed) {
                 clearInterval(timer);
                 assert.equal(backup.completed, true);
                 assert.equal(backup.failed, false);
-                done();
+                resolve();
             }
         }
         timer = setInterval(makeProgress, 2);
+        await promise;
     });
 
-    it ('setting retryErrors to empty disables automatic finishing', function(done) {
-        var backup = db.backup('test/tmp/backup.db');
+    it('setting retryErrors to empty disables automatic finishing', async function() {
+        const backup = await db.backup('test/tmp/backup.db');
         backup.retryErrors = [];
-        backup.step(-1, function(err) {
-            if (err) throw err;
-            db.close(function(err) {
-                db = null;
-                if (!err) throw new Error('should have an error');
-                assert.equal(err.errno, sqlite3.BUSY);
-                done();
-            });
-        });
+        await backup.step(-1);
+        try {
+            await db.close();
+        } catch (err) {
+            assert.equal(err.errno, sqlite3.BUSY);
+        } finally {
+            await backup.finish();
+        }
     });
 
-    it ('setting retryErrors enables automatic finishing', function(done) {
-        var backup = db.backup('test/tmp/backup.db');
+    it('setting retryErrors enables automatic finishing', async function() {
+        const backup = await db.backup('test/tmp/backup.db');
         backup.retryErrors = [sqlite3.OK];
-        backup.step(-1, function(err) {
-            if (err) throw err;
-            db.close(function(err) {
-                if (err) throw err;
-                db = null;
-                done();
-            });
-        });
+        await backup.step(-1);
     });
 
-    it ('default retryErrors will retry on a locked/busy db', function(done) {
-        var db2 = new sqlite3.Database('test/tmp/backup.db', function(err) {
-            db2.exec("PRAGMA locking_mode = EXCLUSIVE");
-            db2.exec("BEGIN EXCLUSIVE", function(err) {
-                if (err) throw err;
-                var backup = db.backup('test/tmp/backup.db');
-                backup.step(-1, function(stepErr) {
-                    db2.close(function(err) {
-                        if (err) throw err;
-                        assert.equal(stepErr.errno, sqlite3.BUSY);
-                        assert.equal(backup.completed, false);
-                        assert.equal(backup.failed, false);
-                        backup.step(-1, function(err) {
-                            if (err) throw err;
-                            assert.equal(backup.completed, true);
-                            assert.equal(backup.failed, false);
-                            done();
-                        });
-                    });
-                });
-            });
-        });
+    it('default retryErrors will retry on a locked/busy db', async function() {
+        const db2 = await sqlite3.Database.create('test/tmp/backup.db');
+        await db2.exec("PRAGMA locking_mode = EXCLUSIVE");
+        await db2.exec("BEGIN EXCLUSIVE");
+        const backup = await db.backup('test/tmp/backup.db');
+        try {
+            await backup.step(-1);
+        } catch (err) {
+            assert.equal(err.errno, sqlite3.BUSY);
+        }
+        await db2.close();
+        assert.equal(backup.completed, false);
+        assert.equal(backup.failed, false);
+        await backup.step(-1);
+        assert.equal(backup.completed, true);
+        assert.equal(backup.failed, false);
     });
 });

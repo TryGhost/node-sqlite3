@@ -1,50 +1,36 @@
-var sqlite3 = require('..');
-var assert = require('assert');
+const sqlite3 = require('..');
+const assert = require('assert');
 
 describe('rerunning statements', function() {
-    var db;
-    before(function(done) { db = new sqlite3.Database(':memory:', done); });
+    /** @type {sqlite3.Database} */
+    let db;
+    const count = 10;
 
-    var count = 10;
-    var inserted = 0;
-    var retrieved = 0;
-
-    it('should create the table', function(done) {
-        db.run("CREATE TABLE foo (id int)", done);
-    });
-
-    it('should insert repeatedly, reusing the same statement', function(done) {
-        var stmt = db.prepare("INSERT INTO foo VALUES(?)");
-        for (var i = 5; i < count; i++) {
-            stmt.run(i, function(err) {
-                if (err) throw err;
-                inserted++;
-            });
+    before(async function() {
+        db = await sqlite3.Database.create(':memory:');
+        await db.run("CREATE TABLE foo (id int)");
+        
+        const stmt = await db.prepare("INSERT INTO foo VALUES(?)");
+        for (let i = 5; i < count; i++) {
+            await stmt.run(i);
         }
-        stmt.finalize(done);
+    
+        await stmt.finalize();
     });
 
-    it('should retrieve repeatedly, resuing the same statement', function(done) {
-        var collected = [];
-        var stmt = db.prepare("SELECT id FROM foo WHERE id = ?");
-        for (var i = 0; i < count; i++) {
-            stmt.get(i, function(err, row) {
-                if (err) throw err;
-                if (row) collected.push(row);
-            });
+    it('should retrieve repeatedly, resuing the same statement', async function() {
+        const collected = [];
+        const stmt = await db.prepare("SELECT id FROM foo WHERE id = ?");
+        for (let i = 0; i < count; i++) {
+            const row = await stmt.get(i);
+            if (row) collected.push(row);
         }
-        stmt.finalize(function(err) {
-            if (err) throw err;
-            retrieved += collected.length;
-            assert.deepEqual(collected, [ { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 } ]);
-            done();
-        });
+        await stmt.finalize();
+        assert.deepEqual(collected, [ { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 } ]);
+        assert.equal(collected.length, 5);
     });
 
-    it('should have inserted and retrieved the right amount', function() {
-        assert.equal(inserted, 5);
-        assert.equal(retrieved, 5);
+    after(async function() { 
+        await db.close();
     });
-
-    after(function(done) { db.close(done); });
 });

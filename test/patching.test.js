@@ -1,10 +1,11 @@
-var sqlite3 = require('..');
-var assert = require('assert');
+const sqlite3 = require('..');
+const assert = require('assert');
 
 describe('patching', function() {
     describe("Database", function() {
-        var db;
-        var originalFunctions = {};
+        /** @type {sqlite3.Database} */
+        let db;
+        const originalFunctions = {};
 
         before(function() {
             originalFunctions.close = sqlite3.Database.prototype.close;
@@ -17,48 +18,51 @@ describe('patching', function() {
             originalFunctions.interrupt = sqlite3.Database.prototype.interrupt;
         });
 
-        it('allow patching native functions', function() {
-            var myFun = function myFunction() {
+        it('allow patching native functions', async function() {
+            async function myAsyncFn() {
+                return "Success";
+            }
+            function myFn() {
                 return "Success";
             }
             
             assert.doesNotThrow(() => {
-                sqlite3.Database.prototype.close = myFun;
+                sqlite3.Database.prototype.close = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Database.prototype.exec = myFun;
+                sqlite3.Database.prototype.exec = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Database.prototype.wait = myFun;
+                sqlite3.Database.prototype.wait = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Database.prototype.loadExtension = myFun;
+                sqlite3.Database.prototype.loadExtension = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Database.prototype.serialize = myFun;
+                sqlite3.Database.prototype.serialize = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Database.prototype.parallelize = myFun;
+                sqlite3.Database.prototype.parallelize = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Database.prototype.configure = myFun;
+                sqlite3.Database.prototype.configure = myFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Database.prototype.interrupt = myFun;
+                sqlite3.Database.prototype.interrupt = myFn;
             });
 
-            db = new sqlite3.Database(':memory:');
-            assert.strictEqual(db.close(), "Success");
-            assert.strictEqual(db.exec(), "Success");
-            assert.strictEqual(db.wait(), "Success");
-            assert.strictEqual(db.loadExtension(), "Success");
-            assert.strictEqual(db.serialize(), "Success");
-            assert.strictEqual(db.parallelize(), "Success");
+            db = await sqlite3.Database.create(':memory:');
+            assert.strictEqual(await db.close(), "Success");
+            assert.strictEqual(await db.exec(), "Success");
+            assert.strictEqual(await db.wait(), "Success");
+            assert.strictEqual(await db.loadExtension(), "Success");
+            assert.strictEqual(await db.serialize(), "Success");
+            assert.strictEqual(await db.parallelize(), "Success");
             assert.strictEqual(db.configure(), "Success");
             assert.strictEqual(db.interrupt(), "Success");
         });
 
-        after(function() {
+        after(async function() {
             if(db != null) {
                 sqlite3.Database.prototype.close = originalFunctions.close;
                 sqlite3.Database.prototype.exec = originalFunctions.exec;
@@ -68,15 +72,17 @@ describe('patching', function() {
                 sqlite3.Database.prototype.parallelize = originalFunctions.parallelize;
                 sqlite3.Database.prototype.configure = originalFunctions.configure;
                 sqlite3.Database.prototype.interrupt = originalFunctions.interrupt;
-                db.close();
+                await db.close();
             }
         });
     });
 
     describe('Statement', function() {
-        var db;
-        var statement;
-        var originalFunctions = {};
+        /** @type {sqlite3.Database} */
+        let db;
+        /** @type {sqlite3.Statement} */
+        let statement;
+        const originalFunctions = {};
 
         before(function() {
             originalFunctions.bind = sqlite3.Statement.prototype.bind;
@@ -88,45 +94,49 @@ describe('patching', function() {
             originalFunctions.finalize = sqlite3.Statement.prototype.finalize;
         });
 
-        it('allow patching native functions', function() {
-            var myFun = function myFunction() {
+        it('allow patching native functions', async function() {
+            async function myAsyncFn() {
                 return "Success";
             }
+            async function* myGeneratorFn() {
+                yield "Success";
+            }
+
             
             assert.doesNotThrow(() => {
-                sqlite3.Statement.prototype.bind = myFun;
+                sqlite3.Statement.prototype.bind = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Statement.prototype.get = myFun;
+                sqlite3.Statement.prototype.get = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Statement.prototype.run = myFun;
+                sqlite3.Statement.prototype.run = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Statement.prototype.all = myFun;
+                sqlite3.Statement.prototype.all = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Statement.prototype.each = myFun;
+                sqlite3.Statement.prototype.each = myGeneratorFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Statement.prototype.reset = myFun;
+                sqlite3.Statement.prototype.reset = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Statement.prototype.finalize = myFun;
+                sqlite3.Statement.prototype.finalize = myAsyncFn;
             });
 
-            db = new sqlite3.Database(':memory:');
-            statement = db.prepare("");
-            assert.strictEqual(statement.bind(), "Success");
-            assert.strictEqual(statement.get(), "Success");
-            assert.strictEqual(statement.run(), "Success");
-            assert.strictEqual(statement.all(), "Success");
-            assert.strictEqual(statement.each(), "Success");
-            assert.strictEqual(statement.reset(), "Success");
-            assert.strictEqual(statement.finalize(), "Success");
+            db = await sqlite3.Database.create(':memory:');
+            statement = await db.prepare("");
+            assert.strictEqual(await statement.bind(), "Success");
+            assert.strictEqual(await statement.get(), "Success");
+            assert.strictEqual(await statement.run(), "Success");
+            assert.strictEqual(await statement.all(), "Success");
+            assert.strictEqual((await statement.each().next()).value, "Success");
+            assert.strictEqual(await statement.reset(), "Success");
+            assert.strictEqual(await statement.finalize(), "Success");
         });
 
-        after(function() {
+        after(async function() {
             if(statement != null) {
                 sqlite3.Statement.prototype.bind = originalFunctions.bind;
                 sqlite3.Statement.prototype.get = originalFunctions.get;
@@ -137,47 +147,49 @@ describe('patching', function() {
                 sqlite3.Statement.prototype.finalize = originalFunctions.finalize;
             }
             if(db != null) {
-                db.close();
+                await db.close();
             }
         });
     });
 
     describe('Backup', function() {
-        var db;
-        var backup;
-        var originalFunctions = {};
+        /** @type {sqlite3.Database} */
+        let db;
+        /** @type {sqlite3.Backup} */
+        let backup;
+        const originalFunctions = {};
 
         before(function() {
             originalFunctions.step = sqlite3.Backup.prototype.step;
             originalFunctions.finish = sqlite3.Backup.prototype.finish;
         });
 
-        it('allow patching native functions', function() {
-            var myFun = function myFunction() {
+        it('allow patching native functions', async function() {
+            async function myAsyncFn() {
                 return "Success";
             }
             
             assert.doesNotThrow(() => {
-                sqlite3.Backup.prototype.step = myFun;
+                sqlite3.Backup.prototype.step = myAsyncFn;
             });
             assert.doesNotThrow(() => {
-                sqlite3.Backup.prototype.finish = myFun;
+                sqlite3.Backup.prototype.finish = myAsyncFn;
             });
 
-            db = new sqlite3.Database(':memory:');
-            backup = db.backup("somefile", myFun);
-            assert.strictEqual(backup.step(), "Success");
-            assert.strictEqual(backup.finish(), "Success");
+            db = await sqlite3.Database.create(':memory:');
+            backup = await db.backup("somefile");
+            assert.strictEqual(await backup.step(), "Success");
+            assert.strictEqual(await backup.finish(), "Success");
         });
 
-        after(function() {
+        after(async function() {
             if(backup != null) {
                 sqlite3.Backup.prototype.step = originalFunctions.step;
                 sqlite3.Backup.prototype.finish = originalFunctions.finish;
-                backup.finish();
+                await backup.finish();
             }
             if(db != null) {
-                db.close();
+                await db.close();
             }
         });
     });

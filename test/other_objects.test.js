@@ -1,42 +1,33 @@
-var sqlite3 = require('..');
-var assert = require('assert');
+const sqlite3 = require('..');
+const assert = require('assert');
 
 describe('data types', function() {
-    var db;
-    before(function(done) {
-        db = new sqlite3.Database(':memory:');
-        db.run("CREATE TABLE txt_table (txt TEXT)");
-        db.run("CREATE TABLE int_table (int INTEGER)");
-        db.run("CREATE TABLE flt_table (flt FLOAT)");
-        db.wait(done);
+    /** @type {sqlite3.Database} */
+    let db;
+    before(async function() {
+        db = await sqlite3.Database.create(':memory:');
+        await db.run("CREATE TABLE txt_table (txt TEXT)");
+        await db.run("CREATE TABLE int_table (int INTEGER)");
+        await db.run("CREATE TABLE flt_table (flt FLOAT)");
+        await db.wait();
     });
 
-    beforeEach(function(done) {
-        db.exec('DELETE FROM txt_table; DELETE FROM int_table; DELETE FROM flt_table;', done);
+    beforeEach(async function() {
+        await db.exec('DELETE FROM txt_table; DELETE FROM int_table; DELETE FROM flt_table;');
     });
 
-    it('should serialize Date()', function(done) {
-        var date = new Date();
-        db.run("INSERT INTO int_table VALUES(?)", date, function (err) {
-            if (err) throw err;
-            db.get("SELECT int FROM int_table", function(err, row) {
-                if (err) throw err;
-                assert.equal(row.int, +date);
-                done();
-            });
-        });
+    it('should serialize Date()', async function() {
+        const date = new Date();
+        await db.run("INSERT INTO int_table VALUES(?)", date);
+        const row = await db.get("SELECT int FROM int_table");
+        assert.equal(row.int, +date);
     });
 
-    it('should serialize RegExp()', function(done) {
-        var regexp = /^f\noo/;
-        db.run("INSERT INTO txt_table VALUES(?)", regexp, function (err) {
-            if (err) throw err;
-            db.get("SELECT txt FROM txt_table", function(err, row) {
-                if (err) throw err;
-                assert.equal(row.txt, String(regexp));
-                done();
-            });
-        });
+    it('should serialize RegExp()', async function() {
+        const regexp = /^f\noo/;
+        await db.run("INSERT INTO txt_table VALUES(?)", regexp);
+        const row = await db.get("SELECT txt FROM txt_table");
+        assert.equal(row.txt, String(regexp));
     });
 
     [
@@ -52,15 +43,10 @@ describe('data types', function() {
         -2.3948728634826374e+83,
         -Infinity
     ].forEach(function(flt) {
-        it('should serialize float ' + flt, function(done) {
-            db.run("INSERT INTO flt_table VALUES(?)", flt, function (err) {
-                if (err) throw err;
-                db.get("SELECT flt FROM flt_table", function(err, row) {
-                    if (err) throw err;
-                    assert.equal(row.flt, flt);
-                    done();
-                });
-            });
+        it('should serialize float ' + flt, async function() {
+            await db.run("INSERT INTO flt_table VALUES(?)", flt);
+            const row = await db.get("SELECT flt FROM flt_table");
+            assert.equal(row.flt, flt);
         });
     });
 
@@ -75,40 +61,28 @@ describe('data types', function() {
         -2.3948728634826374e+83,
         -Infinity
     ].forEach(function(integer) {
-        it('should serialize integer ' + integer, function(done) {
-            db.run("INSERT INTO int_table VALUES(?)", integer, function (err) {
-                if (err) throw err;
-                db.get("SELECT int AS integer FROM int_table", function(err, row) {
-                    if (err) throw err;
-                    assert.equal(row.integer, integer);
-                    done();
-                });
-            });
+        it('should serialize integer ' + integer, async function() {
+            await db.run("INSERT INTO int_table VALUES(?)", integer);
+            const row = await db.get("SELECT int AS integer FROM int_table");
+            assert.equal(row.integer, integer);
         });
     });
 
-    it('should ignore faulty toString', function(done) {
+    it('should ignore faulty toString', async function() {
         const faulty = { toString: 23 };
-        db.run("INSERT INTO txt_table VALUES(?)", faulty, function (err) {
-            assert.notEqual(err, undefined);
-            done();
-        });
+        // TODO: This is the previous behavior, but it seems like maybe the
+        // test is labelled incorrectly?
+        await assert.rejects(db.run("INSERT INTO txt_table VALUES(?)", faulty));
     });
 
-    it('should ignore faulty toString in array', function(done) {
+    it('should ignore faulty toString in array', async function() {
         const faulty = [[{toString: null}], 1];
-        db.all('SELECT * FROM txt_table WHERE txt = ? LIMIT ?', faulty, function (err) {
-            assert.equal(err, null);
-            done();
-        });
+        await db.all('SELECT * FROM txt_table WHERE txt = ? LIMIT ?', faulty);
     });
 
-    it('should ignore faulty toString set to function', function(done) {
+    it('should ignore faulty toString set to function', async function() {
         const faulty = [[{toString: function () {console.log('oh no');}}], 1];
-        db.all('SELECT * FROM txt_table WHERE txt = ? LIMIT ?', faulty, function (err) {
-            assert.equal(err, undefined);
-            done();
-        });
+        await db.all('SELECT * FROM txt_table WHERE txt = ? LIMIT ?', faulty);
     });
 
 });
