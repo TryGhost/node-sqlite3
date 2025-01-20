@@ -932,8 +932,5 @@ void Statement::CleanQueue() {
         // preparing the statement failed.
         auto call = std::unique_ptr<Call>(queue.front());
         queue.pop();
-        // We don't call the actual callback, so we have to make sure that
-        // the baton gets destroyed.
-        delete call->baton;
     }
 }
