@@ -47,7 +47,7 @@
     "bindings": "^1.5.0",
     "node-addon-api": "^7.0.0",
     "prebuild-install": "^7.1.1",
-    "tar": "^6.1.11"
+    "tar": "^7.0.0"
   },
   "devDependencies": {
     "eslint": "8.56.0",
