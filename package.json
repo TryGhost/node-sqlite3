@@ -9,7 +9,6 @@
   },
   "binary": {
     "napi_versions": [
-      3,
       6
     ]
   },
