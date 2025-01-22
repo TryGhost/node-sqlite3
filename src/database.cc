@@ -167,6 +167,7 @@ void Database::Work_Open(napi_env e, void* data) {
 
     if (baton->status != SQLITE_OK) {
         baton->message = std::string(sqlite3_errmsg(db->_handle));
+        baton->offset = sqlite3_error_offset(db->_handle);
         sqlite3_close(db->_handle);
         db->_handle = NULL;
     }
@@ -186,7 +187,7 @@ void Database::Work_AfterOpen(napi_env e, napi_status status, void* data) {
 
     Napi::Value argv[1];
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
+        EXCEPTION_WITH_OFFSET(Napi::String::New(env, baton->message.c_str()), baton->status, baton->offset, exception);
         argv[0] = exception;
     }
     else {
@@ -250,6 +251,7 @@ void Database::Work_Close(napi_env e, void* data) {
 
     if (baton->status != SQLITE_OK) {
         baton->message = std::string(sqlite3_errmsg(db->_handle));
+        baton->offset = sqlite3_error_offset(db->_handle);
     }
     else {
         db->_handle = NULL;
@@ -269,7 +271,7 @@ void Database::Work_AfterClose(napi_env e, napi_status status, void* data) {
 
     Napi::Value argv[1];
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
+        EXCEPTION_WITH_OFFSET(Napi::String::New(env, baton->message.c_str()), baton->status, baton->offset, exception);
         argv[0] = exception;
     }
     else {
@@ -592,6 +594,7 @@ void Database::Work_Exec(napi_env e, void* data) {
 
     if (baton->status != SQLITE_OK && message != NULL) {
         baton->message = std::string(message);
+        baton->offset = sqlite3_error_offset(baton->db->_handle);
         sqlite3_free(message);
     }
 }
@@ -608,7 +611,7 @@ void Database::Work_AfterExec(napi_env e, napi_status status, void* data) {
     Napi::Function cb = baton->callback.Value();
 
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
+        EXCEPTION_WITH_OFFSET(Napi::String::New(env, baton->message.c_str()), baton->status, baton->offset, exception);
 
         if (IS_FUNCTION(cb)) {
             Napi::Value argv[] = { exception };
@@ -716,7 +719,7 @@ void Database::Work_AfterLoadExtension(napi_env e, napi_status status, void* dat
     Napi::Function cb = baton->callback.Value();
 
     if (baton->status != SQLITE_OK) {
-        EXCEPTION(Napi::String::New(env, baton->message.c_str()), baton->status, exception);
+        EXCEPTION_WITH_OFFSET(Napi::String::New(env, baton->message.c_str()), baton->status, baton->offset, exception);
 
         if (IS_FUNCTION(cb)) {
             Napi::Value argv[] = { exception };
