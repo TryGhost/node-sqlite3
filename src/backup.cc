@@ -13,6 +13,7 @@ Napi::Object Backup::Init(Napi::Env env, Napi::Object exports) {
     auto napi_default_method = static_cast<napi_property_attributes>(napi_writable | napi_configurable);
 
     auto t = DefineClass(env, "Backup", {
+        InstanceMethod("initialize", &Backup::Initialize, napi_default_method),
         InstanceMethod("step", &Backup::Step, napi_default_method),
         InstanceMethod("finish", &Backup::Finish, napi_default_method),
         InstanceAccessor("idle", &Backup::IdleGetter, nullptr),
@@ -62,16 +63,7 @@ template <class T> void Backup::Error(T* baton) {
     assert(backup->status != 0);
     EXCEPTION(Napi::String::New(env, backup->message), backup->status, exception);
 
-    Napi::Function cb = baton->callback.Value();
-
-    if (!cb.IsEmpty() && cb.IsFunction()) {
-        Napi::Value argv[] = { exception };
-        TRY_CATCH_CALL(backup->Value(), cb, 1, argv);
-    }
-    else {
-        Napi::Value argv[] = { Napi::String::New(env, "error"), exception };
-        EMIT_EVENT(backup->Value(), 2, argv);
-    }
+    baton->deferred.Reject(exception);
 }
 
 void Backup::CleanQueue() {
@@ -83,7 +75,6 @@ void Backup::CleanQueue() {
         // Fire error for all remaining items in the queue.
         EXCEPTION(Napi::String::New(env, "Backup is already finished"), SQLITE_MISUSE, exception);
         Napi::Value argv[] = { exception };
-        bool called = false;
 
         // Clear out the queue so that this object can get GC'ed.
         while (!queue.empty()) {
@@ -91,20 +82,7 @@ void Backup::CleanQueue() {
             queue.pop();
 
             std::unique_ptr<Baton> baton(call->baton);
-            Napi::Function cb = baton->callback.Value();
-
-            if (inited && !cb.IsEmpty() &&
-                cb.IsFunction()) {
-                TRY_CATCH_CALL(Value(), cb, 1, argv);
-                called = true;
-            }
-        }
-
-        // When we couldn't call a callback function, emit an error on the
-        // Backup object.
-        if (!called) {
-            Napi::Value info[] = { Napi::String::New(env, "error"), exception };
-            EMIT_EVENT(Value(), 2, info);
+            baton->deferred.Reject(exception);
         }
     }
     else while (!queue.empty()) {
@@ -161,18 +139,29 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
     auto destName = info[3].As<Napi::String>();
     auto filenameIsDest = info[4].As<Napi::Boolean>();
 
+    this->filename = filename.Utf8Value();
+    this->sourceName = sourceName.Utf8Value();
+    this->destName = destName.Utf8Value();
+    this->filenameIsDest = filenameIsDest.Value();
+
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filename", filename));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("sourceName", sourceName));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("destName", destName));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filenameIsDest", filenameIsDest));
+}
 
-    auto* baton = new InitializeBaton(this->db, info[5].As<Napi::Function>(), this);
-    baton->filename = filename.Utf8Value();
-    baton->sourceName = sourceName.Utf8Value();
-    baton->destName = destName.Utf8Value();
-    baton->filenameIsDest = filenameIsDest.Value();
+Napi::Value Backup::Initialize(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    auto deferred = Napi::Promise::Deferred::New(env);
+    auto* baton = new InitializeBaton(this->db, deferred, this);
+
+    baton->filename = filename;
+    baton->sourceName = sourceName;
+    baton->destName = destName;
+    baton->filenameIsDest = filenameIsDest;
 
     this->db->Schedule(Work_BeginInitialize, baton);
+    return deferred.Promise();
 }
 
 void Backup::Work_BeginInitialize(Database::Baton* baton) {
@@ -224,13 +213,13 @@ void Backup::Work_AfterInitialize(napi_env e, napi_status status, void* data) {
     }
     else {
         backup->inited = true;
-        Napi::Function cb = baton->callback.Value();
-        if (!cb.IsEmpty() && cb.IsFunction()) {
-            Napi::Value argv[] = { env.Null() };
-            TRY_CATCH_CALL(backup->Value(), cb, 1, argv);
-        }
     }
+
     BACKUP_END();
+
+    if (backup->inited) {
+        baton->deferred.Resolve(baton->backup->Value());
+    }
 }
 
 Napi::Value Backup::Step(const Napi::CallbackInfo& info) {
@@ -238,12 +227,11 @@ Napi::Value Backup::Step(const Napi::CallbackInfo& info) {
     auto env = backup->Env();
 
     REQUIRE_ARGUMENT_INTEGER(0, pages);
-    OPTIONAL_ARGUMENT_FUNCTION(1, callback);
 
-    auto* baton = new StepBaton(backup, callback, pages);
+    auto* baton = new StepBaton(backup, pages);
     backup->GetRetryErrors(baton->retryErrorsSet);
     backup->Schedule(Work_BeginStep, baton);
-    return info.This();
+    return baton->deferred.Promise();
 }
 
 void Backup::Work_BeginStep(Baton* baton) {
@@ -291,12 +279,12 @@ void Backup::Work_AfterStep(napi_env e, napi_status status, void* data) {
         Error(baton.get());
     }
     else {
-        // Fire callbacks.
-        Napi::Function cb = baton->callback.Value();
-        if (!cb.IsEmpty() && cb.IsFunction()) {
-            Napi::Value argv[] = { env.Null(), Napi::Boolean::New(env, backup->status == SQLITE_DONE) };
-            TRY_CATCH_CALL(backup->Value(), cb, 2, argv);
-        }
+        baton->deferred.Resolve(
+            Napi::Boolean::New(
+                env,
+                backup->status == SQLITE_DONE
+            )
+        );
     }
 
     BACKUP_END();
@@ -306,11 +294,9 @@ Napi::Value Backup::Finish(const Napi::CallbackInfo& info) {
     auto* backup = this;
     auto env = backup->Env();
 
-    OPTIONAL_ARGUMENT_FUNCTION(0, callback);
-
-    auto* baton = new Baton(backup, callback);
+    auto* baton = new Baton(backup);
     backup->Schedule(Work_BeginFinish, baton);
-    return info.This();
+    return baton->deferred.Promise();
 }
 
 void Backup::Work_BeginFinish(Baton* baton) {
@@ -331,13 +317,8 @@ void Backup::Work_AfterFinish(napi_env e, napi_status status, void* data) {
 
     backup->FinishAll();
 
-    // Fire callback in case there was one.
-    Napi::Function cb = baton->callback.Value();
-    if (!cb.IsEmpty() && cb.IsFunction()) {
-        TRY_CATCH_CALL(backup->Value(), cb, 0, NULL);
-    }
-
     BACKUP_END();
+    baton->deferred.Resolve(backup->Value());
 }
 
 void Backup::FinishAll() {

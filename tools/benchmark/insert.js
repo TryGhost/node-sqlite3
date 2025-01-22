@@ -1,68 +1,72 @@
-var sqlite3 = require('../../lib/sqlite3');
-var fs = require('fs');
+const sqlite3 = require('../../lib/sqlite3');
+const fs = require('fs');
 
-var iterations = 10000;
+const iterations = 10000;
 
 exports.compare = {
-    'insert literal file': function(finished) {
-        var db = new sqlite3.Database('');
-        var file = fs.readFileSync('benchmark/insert-transaction.sql', 'utf8');
-        db.exec(file);
-        db.close(finished);
+    'insert literal file': async function(finished) {
+        const db = await sqlite3.Database.create('');
+        const file = fs.readFileSync('benchmark/insert-transaction.sql', 'utf8');
+        await db.exec(file);
+        await db.close();
+        finished();
     },
 
-    'insert with transaction and two statements': function(finished) {
-        var db = new sqlite3.Database('');
+    'insert with transaction and two statements': async function(finished) {
+        const db = await sqlite3.Database.create('');
 
-        db.serialize(function() {
-            db.run("CREATE TABLE foo (id INT, txt TEXT)");
-            db.run("BEGIN");
+        await db.serialize(async function() {
+            await db.run("CREATE TABLE foo (id INT, txt TEXT)");
+            await db.run("BEGIN");
 
-            db.parallelize(function() {
-                var stmt1 = db.prepare("INSERT INTO foo VALUES (?, ?)");
-                var stmt2 = db.prepare("INSERT INTO foo VALUES (?, ?)");
-                for (var i = 0; i < iterations; i++) {
-                    stmt1.run(i, 'Row ' + i);
+            await db.parallelize(async function() {
+                const stmt1 = await db.prepare("INSERT INTO foo VALUES (?, ?)");
+                const stmt2 = await db.prepare("INSERT INTO foo VALUES (?, ?)");
+                for (let i = 0; i < iterations; i++) {
+                    await stmt1.run(i, 'Row ' + i);
                     i++;
-                    stmt2.run(i, 'Row ' + i);
+                    await stmt2.run(i, 'Row ' + i);
                 }
-                stmt1.finalize();
-                stmt2.finalize();
+                await stmt1.finalize();
+                await stmt2.finalize();
             });
 
-            db.run("COMMIT");
+            await db.run("COMMIT");
         });
 
-        db.close(finished);
+        await db.close();
+        finished();
     },
-    'insert with transaction': function(finished) {
-        var db = new sqlite3.Database('');
+    'insert with transaction': async function(finished) {
+        const db = await sqlite3.Database.create('');
 
-        db.serialize(function() {
-            db.run("CREATE TABLE foo (id INT, txt TEXT)");
-            db.run("BEGIN");
-            var stmt = db.prepare("INSERT INTO foo VALUES (?, ?)");
-            for (var i = 0; i < iterations; i++) {
-                stmt.run(i, 'Row ' + i);
+        await db.serialize(async function() {
+            await db.run("CREATE TABLE foo (id INT, txt TEXT)");
+            await db.run("BEGIN");
+            const stmt = await db.prepare("INSERT INTO foo VALUES (?, ?)");
+            for (let i = 0; i < iterations; i++) {
+                await stmt.run(i, 'Row ' + i);
             }
-            stmt.finalize();
-            db.run("COMMIT");
+            await stmt.finalize();
+            await db.run("COMMIT");
         });
 
-        db.close(finished);
+        await db.close();
+        finished();
     },
-    'insert without transaction': function(finished) {
-        var db = new sqlite3.Database('');
+    'insert without transaction': async function(finished) {
+        const db = await sqlite3.Database.create('');
 
-        db.serialize(function() {
-            db.run("CREATE TABLE foo (id INT, txt TEXT)");
-            var stmt = db.prepare("INSERT INTO foo VALUES (?, ?)");
-            for (var i = 0; i < iterations; i++) {
-                stmt.run(i, 'Row ' + i);
+        await db.serialize(async function() {
+            await db.run("CREATE TABLE foo (id INT, txt TEXT)");
+            const stmt = await db.prepare("INSERT INTO foo VALUES (?, ?)");
+            for (let i = 0; i < iterations; i++) {
+                await stmt.run(i, 'Row ' + i);
             }
-            stmt.finalize();
+            await stmt.finalize();
         });
 
-        db.close(finished);
+        await db.close();
+        finished();
     }
 };

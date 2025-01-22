@@ -1,8 +1,8 @@
 
-var {app} = require('electron');
-var createdb = require('./createdb.js');
+const {app} = require('electron');
+const createdb = require('./createdb.js');
 
-createdb(function () {
+createdb().then(() => {
     setTimeout(function () {
         app.quit();
     }, 20000);

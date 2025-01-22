@@ -1,13 +1,14 @@
-var sqlite3 = require('..');
-var assert = require('assert');
+const sqlite3 = require('..');
+const assert = require('assert');
 
 describe('profiling', function() {
-    var create = false;
-    var select = false;
+    let create = false;
+    let select = false;
 
-    var db;
-    before(function(done) {
-        db = new sqlite3.Database(':memory:', done);
+    /** @type {sqlite3.Database} */
+    let db;
+    before(async function() {
+        db = await sqlite3.Database.create(':memory:');
 
         db.on('profile', function(sql, nsecs) {
             assert.ok(typeof nsecs === "number");
@@ -29,9 +30,8 @@ describe('profiling', function() {
 
     it('should profile a create table', function(done) {
         assert.ok(!create);
-        db.run("CREATE TABLE foo (id int)", function(err) {
-            if (err) throw err;
-            setImmediate(function() {
+        db.run("CREATE TABLE foo (id int)").then(() => {
+            setImmediate(() => {
                 assert.ok(create);
                 done();
             });
@@ -41,16 +41,15 @@ describe('profiling', function() {
 
     it('should profile a select', function(done) {
         assert.ok(!select);
-        db.run("SELECT * FROM foo", function(err) {
-            if (err) throw err;
+        db.run("SELECT * FROM foo").then(() => {
             setImmediate(function() {
                 assert.ok(select);
                 done();
-            }, 0);
+            });
         });
     });
 
-    after(function(done) {
-        db.close(done);
+    after(async function() {
+        await db.close();
     });
 });

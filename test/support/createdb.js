@@ -1,42 +1,40 @@
 #!/usr/bin/env node
 
-function createdb(callback) {
-    var existsSync = require('fs').existsSync || require('path').existsSync;
-    var statSync   = require('fs').statSync || require('path').statSync;
-    var path = require('path');
+async function createdb() {
+    const existsSync = require('fs').existsSync || require('path').existsSync;
+    const statSync   = require('fs').statSync || require('path').statSync;
+    const path = require('path');
 
-    var sqlite3 = require('../../lib/sqlite3');
+    const sqlite3 = require('../../lib/sqlite3');
 
-    var count = 1000000;
-    var db_path = path.join(__dirname,'big.db');
+    const count = 1000000;
+    const dbPath = path.join(__dirname,'big.db');
 
     function randomString() {
-        var str = '';
-        var chars = 'abcdefghijklmnopqrstuvwxzyABCDEFGHIJKLMNOPQRSTUVWXZY0123456789  ';
-        for (var i = Math.random() * 100; i > 0; i--) {
+        let str = '';
+        const chars = 'abcdefghijklmnopqrstuvwxzyABCDEFGHIJKLMNOPQRSTUVWXZY0123456789  ';
+        for (let i = Math.random() * 100; i > 0; i--) {
             str += chars[Math.floor(Math.random() * chars.length)];
         }
         return str;
     }
 
-// Make sure the file exists and is also valid.
-    if (existsSync(db_path) && statSync(db_path).size !== 0) {
-        console.log('okay: database already created (' + db_path + ')');
-        if (callback) callback();
+    // Make sure the file exists and is also valid.
+    if (existsSync(dbPath) && statSync(dbPath).size !== 0) {
+        console.log('okay: database already created (' + dbPath + ')');
     } else {
         console.log("Creating test database... This may take several minutes.");
-        var db = new sqlite3.Database(db_path);
-        db.serialize(function() {
-            db.run("CREATE TABLE foo (id INT, txt TEXT)");
-            db.run("BEGIN TRANSACTION");
-            var stmt = db.prepare("INSERT INTO foo VALUES(?, ?)");
-            for (var i = 0; i < count; i++) {
-                stmt.run(i, randomString());
+        const db = await sqlite3.Database.create(dbPath);
+        await db.serialize(async function() {
+            await db.run("CREATE TABLE foo (id INT, txt TEXT)");
+            await db.run("BEGIN TRANSACTION");
+            const stmt = await db.prepare("INSERT INTO foo VALUES(?, ?)");
+            for (let i = 0; i < count; i++) {
+                await stmt.run(i, randomString());
             }
-            stmt.finalize();
-            db.run("COMMIT TRANSACTION", [], function () {
-                db.close(callback);
-            });
+            await stmt.finalize();
+            await db.run("COMMIT TRANSACTION", []);
+            await db.close();
         });
     }
 }
