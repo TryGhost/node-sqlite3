@@ -20,8 +20,8 @@ jobs:
       matrix:
         os:
           - macos-15
-          - ubuntu-20.04
-          - windows-latest
+          - ubuntu-24.04
+          - windows-2025
         host:
           - x64
         target:
@@ -29,11 +29,15 @@ jobs:
         node:
           - 18
         include:
-          - os: windows-latest
+          - os: windows-2025
             node: 18
             host: x86
             target: x86
           - os: macos-15
+            node: 18
+            host: arm64
+            target: arm64
+          - os: ubuntu-24.04-arm64
             node: 18
             host: arm64
             target: arm64
@@ -45,12 +49,7 @@ jobs:
           node-version: ${{ matrix.node }}
           architecture: ${{ matrix.host }}
 
-      - name: Add yarn (self-hosted)
-        if: matrix.os == 'macos-15'
-        run: npm install -g yarn
-
       - name: Add setuptools for Python 3.12 (temp)
-        if: matrix.os != 'macos-15'
         run: pip install setuptools
 
       - name: Add msbuild to PATH
@@ -101,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: matrix.node == 18
         with:
-          name: prebuilt-binaries
+          name: prebuilt-binaries-${{ matrix.os }}-${{ matrix.target }}
           path: prebuilds/*
           retention-days: 7
 
@@ -120,7 +119,6 @@ jobs:
         target:
           - linux/arm64
         variant:
-          - bullseye
           - alpine3.15
         include:
           # musl x64 builds
@@ -155,7 +153,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: matrix.node == 18
         with:
-          name: prebuilt-binaries
+          name: prebuilt-binaries-${{ matrix.variant }}
           path: prebuilds/*
           retention-days: 7
 
