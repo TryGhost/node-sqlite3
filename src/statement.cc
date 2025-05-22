@@ -105,29 +105,27 @@ Statement::Statement(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Statemen
         return;
     }
 
-    Database* db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    this->db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    this->db->Ref();
+
     auto sql = info[1].As<Napi::String>();
 
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("sql", sql, napi_default));
 
-    init(db);
+
     Statement* stmt = this;
 
-    auto* baton = new PrepareBaton(db, info[2].As<Napi::Function>(), stmt);
+    auto* baton = new PrepareBaton(this->db, info[2].As<Napi::Function>(), stmt);
     baton->sql = std::string(sql.As<Napi::String>().Utf8Value().c_str());
-    db->Schedule(Work_BeginPrepare, baton);
+    this->db->Schedule(Work_BeginPrepare, baton);
 }
 
 void Statement::Work_BeginPrepare(Database::Baton* baton) {
     assert(baton->db->open);
     baton->db->pending++;
+
     auto env = baton->db->Env();
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Statement.Prepare"),
-        Work_Prepare, Work_AfterPrepare, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Statement.Prepare", Work_Prepare, Work_AfterPrepare);
 }
 
 void Statement::Work_Prepare(napi_env e, void* data) {
@@ -818,7 +816,7 @@ Napi::Value Statement::RowToJS(Napi::Env env, Row* row) {
             } break;
         }
 
-        (result).Set(Napi::String::New(env, field->name.c_str()), value);
+        result.Set(field->name, value);
     }
 
     return scope.Escape(result);

@@ -17,7 +17,7 @@ Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js]
  - [Extension support](https://github.com/TryGhost/node-sqlite3/wiki/API#databaseloadextensionpath-callback), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html)
  - Big test suite
  - Written in modern C++ and tested for memory leaks
- - Bundles SQLite v3.42.0, or you can build using a local SQLite
+ - Bundles SQLite v3.45.0, or you can build using a local SQLite
 
 # Installing
 
@@ -35,32 +35,22 @@ yarn add sqlite3
 
 `sqlite3` v5+ was rewritten to use [Node-API](https://nodejs.org/api/n-api.html) so prebuilt binaries do not need to be built for specific Node versions. `sqlite3` currently builds for both Node-API v3 and v6. Check the [Node-API version matrix](https://nodejs.org/api/n-api.html#node-api-version-matrix) to ensure your Node version supports one of these. The prebuilt binaries should be supported on Node v10+.
 
-The module uses [node-pre-gyp](https://github.com/mapbox/node-pre-gyp) to download the prebuilt binary for your platform, if it exists. These binaries are hosted on GitHub Releases for `sqlite3` versions above 5.0.2, and they are hosted on S3 otherwise. The following targets are currently provided:
+The module uses [`prebuild-install`](https://github.com/prebuild/prebuild-install) to download the prebuilt binary for your platform, if it exists. These binaries are hosted on GitHub Releases for `sqlite3` versions above 5.0.2, and they are hosted on S3 otherwise. The following targets are currently provided:
 
-Format: `napi-v{napi_build_version}-{platform}-{libc}-{arch}`
+* `darwin-arm64`
+* `darwin-x64`
+* `linux-arm64`
+* `linux-x64`
+* `linuxmusl-arm64`
+* `linuxmusl-x64`
+* `win32-ia32`
+* `win32-x64`
 
-* `napi-v3-darwin-unknown-arm64`
-* `napi-v3-darwin-unknown-x64`
-* `napi-v3-linux-glibc-arm64`
-* `napi-v3-linux-glibc-x64`
-* `napi-v3-linux-musl-arm64`
-* `napi-v3-linux-musl-x64`
-* `napi-v3-win32-unknown-ia32`
-* `napi-v3-win32-unknown-x64`
-* `napi-v6-darwin-unknown-arm64`
-* `napi-v6-darwin-unknown-x64`
-* `napi-v6-linux-glibc-arm64`
-* `napi-v6-linux-glibc-x64`
-* `napi-v6-linux-musl-arm64`
-* `napi-v6-linux-musl-x64`
-* `napi-v6-win32-unknown-ia32`
-* `napi-v6-win32-unknown-x64`
-
-Unfortunately, [node-pre-gyp](https://github.com/mapbox/node-pre-gyp) cannot differentiate between `armv6` and `armv7`, and instead uses `arm` as the `{arch}`. Until that is fixed, you will still need to install `sqlite3` from [source](#source-install).
+Unfortunately, [prebuild](https://github.com/prebuild/prebuild/issues/174) cannot differentiate between `armv6` and `armv7`, and instead uses `arm` as the `{arch}`. Until that is fixed, you will still need to install `sqlite3` from [source](#source-install).
 
 Support for other platforms and architectures may be added in the future if CI supports building on them.
 
-If your environment isn't supported, it'll use `node-gyp` to build SQLite but you will need to install a C++ compiler and linker.
+If your environment isn't supported, it'll use `node-gyp` to build SQLite, but you will need to install a C++ compiler and linker.
 
 ### Other ways to install
 
@@ -147,8 +137,6 @@ To build `sqlite3` for node-webkit:
 NODE_WEBKIT_VERSION="0.8.6" # see latest version at https://github.com/rogerwang/node-webkit#downloads
 npm install sqlite3 --build-from-source --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
 ```
-
-This command internally calls out to [`node-pre-gyp`](https://github.com/mapbox/node-pre-gyp) which itself calls out to [`nw-gyp`](https://github.com/rogerwang/nw-gyp) when the `--runtime=node-webkit` option is passed.
 
 You can also run this command from within a `sqlite3` checkout:
 
@@ -254,7 +242,9 @@ This module was originally created by [Mapbox](https://mapbox.com/) & is now mai
 
 We use [GitHub releases](https://github.com/TryGhost/node-sqlite3/releases) for notes on the latest versions. See [CHANGELOG.md](https://github.com/TryGhost/node-sqlite3/blob/b05f4594cf8b0de64743561fcd2cfe6f4571754d/CHANGELOG.md) in git history for details on older versions.
 
-# License
+# Copyright & license
+
+Copyright (c) 2013-2025 Mapbox & Ghost Foundation
 
 `node-sqlite3` is [BSD licensed](https://github.com/tryghost/node-sqlite3/raw/master/LICENSE).
 

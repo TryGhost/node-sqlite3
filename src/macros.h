@@ -23,13 +23,6 @@ inline bool OtherIsInt(Napi::Number source) {
     }
 }
 
-#ifdef UNUSED
-#elif defined(__GNUC__) 
-# define UNUSED(x) UNUSED_ ## x __attribute__((unused)) 
-#else 
-# define UNUSED(x) x 
-#endif
-
 #define IS_FUNCTION(cb) \
     !cb.IsUndefined() && cb.IsFunction()
 
@@ -144,6 +137,19 @@ inline bool OtherIsInt(Napi::Number source) {
     static void Work_##name(napi_env env, void* data);                         \
     static void Work_After##name(napi_env env, napi_status status, void* data);
 
+#ifdef DEBUG
+    #define ASSERT_STATUS() assert(status == 0);
+#else
+    #define ASSERT_STATUS() (void)status;
+#endif
+
+#define CREATE_WORK(name, workerFn, afterFn)                                    \
+    int status = napi_create_async_work(env, NULL, Napi::String::New(env, name),\
+                             workerFn, afterFn, baton, &baton->request);        \
+                                                                                \
+    ASSERT_STATUS();                                                            \
+    napi_queue_async_work(env, baton->request);
+
 #define STATEMENT_BEGIN(type)                                                  \
     assert(baton);                                                             \
     assert(baton->stmt);                                                       \
@@ -153,12 +159,7 @@ inline bool OtherIsInt(Napi::Number source) {
     baton->stmt->locked = true;                                                \
     baton->stmt->db->pending++;                                                \
     auto env = baton->stmt->Env();                                             \
-    int UNUSED(status) = napi_create_async_work(                               \
-        env, NULL, Napi::String::New(env, "sqlite3.Statement."#type),          \
-        Work_##type, Work_After##type, baton, &baton->request                  \
-    );                                                                         \
-    assert(status == 0);                                                       \
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Statement."#type, Work_##type, Work_After##type);
 
 #define STATEMENT_INIT(type)                                                   \
     type* baton = static_cast<type*>(data);                                    \
@@ -189,12 +190,7 @@ inline bool OtherIsInt(Napi::Number source) {
     baton->backup->locked = true;                                              \
     baton->backup->db->pending++;                                              \
     auto env = baton->backup->Env();                                           \
-    int UNUSED(status) = napi_create_async_work(                               \
-        env, NULL, Napi::String::New(env, "sqlite3.Backup."#type),             \
-        Work_##type, Work_After##type, baton, &baton->request                  \
-    );                                                                         \
-    assert(status == 0);                                                       \
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Backup."#type, Work_##type, Work_After##type);
 
 #define BACKUP_INIT(type)                                                      \
     type* baton = static_cast<type*>(data);                                    \

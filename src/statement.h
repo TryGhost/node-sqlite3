@@ -69,8 +69,8 @@ namespace Values {
     typedef Field Null;
 }
 
-typedef std::vector<std::unique_ptr<Values::Field>> Row;
-typedef std::vector<std::unique_ptr<Row>> Rows;
+typedef std::vector<std::unique_ptr<Values::Field> > Row;
+typedef std::vector<std::unique_ptr<Row> > Rows;
 typedef Row Parameters;
 
 
@@ -189,16 +189,6 @@ public:
         }
     };
 
-    void init(Database* db_) {
-        db = db_;
-        _handle = NULL;
-        status = SQLITE_OK;
-        prepared = false;
-        locked = true;
-        finalized = false;
-        db->Ref();
-    }
-
     Statement(const Napi::CallbackInfo& info);
 
     ~Statement() {
@@ -239,14 +229,14 @@ protected:
 protected:
     Database* db;
 
-    sqlite3_stmt* _handle;
-    int status;
-    std::string message;
+    sqlite3_stmt* _handle = NULL;
+    int status = SQLITE_OK;
+    bool prepared = false;
+    bool locked = true;
+    bool finalized = false;
 
-    bool prepared;
-    bool locked;
-    bool finalized;
     std::queue<Call*> queue;
+    std::string message;
 };
 
 }

@@ -25,7 +25,7 @@ Napi::Object Database::Init(Napi::Env env, Napi::Object exports) {
         InstanceMethod("parallelize", &Database::Parallelize, napi_default_method),
         InstanceMethod("configure", &Database::Configure, napi_default_method),
         InstanceMethod("interrupt", &Database::Interrupt, napi_default_method),
-        InstanceAccessor("open", &Database::OpenGetter, nullptr)
+        InstanceAccessor("open", &Database::Open, nullptr)
     });
 
 #if NAPI_VERSION < 6
@@ -118,7 +118,6 @@ void Database::Schedule(Work_Callback callback, Baton* baton, bool exclusive) {
 }
 
 Database::Database(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Database>(info) {
-    init();
     auto env = info.Env();
 
     if (info.Length() <= 0 || !info[0].IsString()) {
@@ -152,12 +151,7 @@ Database::Database(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Database>(
 
 void Database::Work_BeginOpen(Baton* baton) {
     auto env = baton->db->Env();
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Database.Open"),
-        Work_Open, Work_AfterOpen, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Database.Open", Work_Open, Work_AfterOpen);
 }
 
 void Database::Work_Open(napi_env e, void* data) {
@@ -217,7 +211,7 @@ void Database::Work_AfterOpen(napi_env e, napi_status status, void* data) {
     }
 }
 
-Napi::Value Database::OpenGetter(const Napi::CallbackInfo& info) {
+Napi::Value Database::Open(const Napi::CallbackInfo& info) {
     auto env = this->Env();
     auto* db = this;
     return Napi::Boolean::New(env, db->open);
@@ -245,13 +239,7 @@ void Database::Work_BeginClose(Baton* baton) {
     baton->db->closing = true;
 
     auto env = baton->db->Env();
-
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Database.Close"),
-        Work_Close, Work_AfterClose, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Database.Close", Work_Close, Work_AfterClose);
 }
 
 void Database::Work_Close(napi_env e, void* data) {
@@ -303,7 +291,7 @@ void Database::Work_AfterClose(napi_env e, napi_status status, void* data) {
     }
 
     if (!db->open) {
-        Napi::Value info[] = { Napi::String::New(env, "close"), argv[0] };
+        Napi::Value info[] = { Napi::String::New(env, "close") };
         EMIT_EVENT(db->Value(), 1, info);
         db->Process();
     }
@@ -585,13 +573,9 @@ void Database::Work_BeginExec(Baton* baton) {
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
     baton->db->pending++;
+
     auto env = baton->db->Env();
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Database.Exec"),
-        Work_Exec, Work_AfterExec, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Database.Exec", Work_Exec, Work_AfterExec);
 }
 
 void Database::Work_Exec(napi_env e, void* data) {
@@ -694,13 +678,9 @@ void Database::Work_BeginLoadExtension(Baton* baton) {
     assert(baton->db->_handle);
     assert(baton->db->pending == 0);
     baton->db->pending++;
+
     auto env = baton->db->Env();
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Database.LoadExtension"),
-        Work_LoadExtension, Work_AfterLoadExtension, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Database.LoadExtension", Work_LoadExtension, Work_AfterLoadExtension);
 }
 
 void Database::Work_LoadExtension(napi_env e, void* data) {

@@ -153,7 +153,9 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
         return;
     }
 
-    auto* database = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    this->db = Napi::ObjectWrap<Database>::Unwrap(info[0].As<Napi::Object>());
+    this->db->Ref();
+
     auto filename = info[1].As<Napi::String>();
     auto sourceName = info[2].As<Napi::String>();
     auto destName = info[3].As<Napi::String>();
@@ -164,26 +166,20 @@ Backup::Backup(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Backup>(info) 
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("destName", destName));
     info.This().As<Napi::Object>().DefineProperty(Napi::PropertyDescriptor::Value("filenameIsDest", filenameIsDest));
 
-    init(database);
-
-    auto* baton = new InitializeBaton(database, info[5].As<Napi::Function>(), this);
+    auto* baton = new InitializeBaton(this->db, info[5].As<Napi::Function>(), this);
     baton->filename = filename.Utf8Value();
     baton->sourceName = sourceName.Utf8Value();
     baton->destName = destName.Utf8Value();
     baton->filenameIsDest = filenameIsDest.Value();
-    database->Schedule(Work_BeginInitialize, baton);
+
+    this->db->Schedule(Work_BeginInitialize, baton);
 }
 
 void Backup::Work_BeginInitialize(Database::Baton* baton) {
     assert(baton->db->open);
     baton->db->pending++;
     auto env = baton->db->Env();
-    int UNUSED(status) = napi_create_async_work(
-        env, NULL, Napi::String::New(env, "sqlite3.Backup.Initialize"),
-        Work_Initialize, Work_AfterInitialize, baton, &baton->request
-    );
-    assert(status == 0);
-    napi_queue_async_work(env, baton->request);
+    CREATE_WORK("sqlite3.Backup.Initialize", Work_Initialize, Work_AfterInitialize);
 }
 
 void Backup::Work_Initialize(napi_env e, void* data) {
