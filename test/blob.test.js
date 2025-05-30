@@ -51,4 +51,18 @@ describe('blob', function() {
             done();
         });
     });
+
+    it('should be able to select empty blobs', function(done) {
+        const empty = new sqlite3.Database(':memory:');
+        empty.serialize(function() {
+            empty.run("CREATE TABLE files (id INTEGER PRIMARY KEY, data BLOB)");
+            empty.run("INSERT INTO files (data) VALUES (X'')");
+        });
+        empty.get("SELECT data FROM files LIMIT 1", (err, row) => {
+            if (err) throw err;
+            assert.ok(Buffer.isBuffer(row.data));
+            assert.equal(row.data.length, 0);
+            empty.close(done);
+        });
+    })
 });
