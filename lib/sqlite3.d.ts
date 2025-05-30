@@ -1,5 +1,5 @@
 // Type definitions for sqlite3
-// Project: http://github.com/tryghost/node-sqlite3
+// Project: http://github.com/AppThreat/node-sqlite3
 
 /// <reference types="node" />
 

@@ -20,21 +20,27 @@ jobs:
       matrix:
         os:
           - macos-latest
-          - ubuntu-20.04
+          - macos-13
+          - ubuntu-22.04
+          - ubuntu-24.04
           - windows-latest
         host:
           - x64
         target:
           - x64
         node:
-          - 18
+          - 20
         include:
-          - os: windows-latest
-            node: 18
-            host: x86
-            target: x86
-          - os: macos-m1
-            node: 18
+          - os: ubuntu-22.04-arm
+            node: 20
+            host: arm64
+            target: arm64
+          - os: ubuntu-24.04-arm
+            node: 20
+            host: arm64
+            target: arm64
+          - os: windows-11-arm
+            node: 20
             host: arm64
             target: arm64
     name: ${{ matrix.os }} (host=${{ matrix.host }}, target=${{ matrix.target }})
@@ -44,15 +50,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           architecture: ${{ matrix.host }}
-
-      - name: Add yarn (self-hosted)
-        if: matrix.os == 'macos-m1'
+      - name: Add yarn
         run: npm install -g yarn
-
-      - name: Add setuptools for Python 3.12 (temp)
-        if: matrix.os != 'macos-m1'
-        run: pip install setuptools
-
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3
         if: contains(matrix.os, 'windows')
@@ -99,7 +102,7 @@ jobs:
 
       - name: Upload binaries to commit artifacts
         uses: actions/upload-artifact@v4
-        if: matrix.node == 18
+        if: matrix.node == 20
         with:
           name: prebuilt-binaries
           path: prebuilds/*
@@ -107,7 +110,7 @@ jobs:
 
       - name: Upload binaries to GitHub Release
         run: yarn upload --upload-all ${{ github.token }}
-        if: matrix.node == 18 && startsWith(github.ref, 'refs/tags/')
+        if: matrix.node == 20 && startsWith(github.ref, 'refs/tags/')
 
   build-qemu:
     runs-on: ubuntu-latest
@@ -116,17 +119,25 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - 18
+          - 20
         target:
           - linux/arm64
         variant:
-          - bullseye
+          - bookworm
           - alpine3.15
+          - alpine3.20
+          - alpine3.21
         include:
           # musl x64 builds
           - target: linux/amd64
             variant: alpine3.15
-            node: 18
+            node: 20
+          - target: linux/amd64
+            variant: alpine3.20
+            node: 20
+          - target: linux/amd64
+            variant: alpine3.21
+            node: 20
     name: ${{ matrix.variant }} (node=${{ matrix.node }}, target=${{ matrix.target }})
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
@@ -153,12 +164,12 @@ jobs:
 
       - name: Upload binaries to commit artifacts
         uses: actions/upload-artifact@v4
-        if: matrix.node == 18
+        if: matrix.node == 20
         with:
           name: prebuilt-binaries
           path: prebuilds/*
-          retention-days: 7
+          retention-days: 14
 
       - name: Upload binaries to GitHub Release
         run: yarn install --ignore-scripts && yarn upload --upload-all ${{ github.token }}
-        if: matrix.node == 18 && startsWith(github.ref, 'refs/tags/')
+        if: matrix.node == 20 && startsWith(github.ref, 'refs/tags/')

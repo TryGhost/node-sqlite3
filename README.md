@@ -1,10 +1,9 @@
 # ⚙️ node-sqlite3
 
-Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
+Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/). Forked from TryGhost/node-sqlite3.
 
-[![Latest release](https://img.shields.io/github/release/TryGhost/node-sqlite3.svg)](https://www.npmjs.com/package/sqlite3)
-![Build Status](https://github.com/TryGhost/node-sqlite3/workflows/CI/badge.svg?branch=master)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_shield)
+[![Latest release](https://img.shields.io/github/release/AppThreat/node-sqlite3.svg)](https://www.npmjs.com/package/sqlite3)
+![Build Status](https://github.com/AppThreat/node-sqlite3/workflows/CI/badge.svg?branch=master)
 [![N-API v3 Badge](https://img.shields.io/badge/N--API-v3-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
 [![N-API v6 Badge](https://img.shields.io/badge/N--API-v6-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
 
@@ -12,12 +11,12 @@ Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js]
 
  - Straightforward query and parameter binding interface
  - Full Buffer/Blob support
- - Extensive [debugging support](https://github.com/tryghost/node-sqlite3/wiki/Debugging)
- - [Query serialization](https://github.com/tryghost/node-sqlite3/wiki/Control-Flow) API
- - [Extension support](https://github.com/TryGhost/node-sqlite3/wiki/API#databaseloadextensionpath-callback), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html)
+ - Extensive [debugging support](https://github.com/AppThreat/node-sqlite3/wiki/Debugging)
+ - [Query serialization](https://github.com/AppThreat/node-sqlite3/wiki/Control-Flow) API
+ - [Extension support](https://github.com/AppThreat/node-sqlite3/wiki/API#databaseloadextensionpath-callback), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html)
  - Big test suite
  - Written in modern C++ and tested for memory leaks
- - Bundles SQLite v3.45.0, or you can build using a local SQLite
+ - Bundles SQLite v3.50.0, or you can build using a local SQLite
 
 # Installing
 
@@ -29,7 +28,7 @@ npm install sqlite3
 # or
 yarn add sqlite3
 ```
-* GitHub's `master` branch: `npm install https://github.com/tryghost/node-sqlite3/tarball/master`
+* GitHub's `master` branch: `npm install https://github.com/AppThreat/node-sqlite3/tarball/master`
 
 ### Prebuilt binaries
 
@@ -62,7 +61,7 @@ SQLite's [SQLCipher extension](https://github.com/sqlcipher/sqlcipher) is also 
 
 # API
 
-See the [API documentation](https://github.com/TryGhost/node-sqlite3/wiki/API) in the wiki.
+See the [API documentation](https://github.com/AppThreat/node-sqlite3/wiki/API) in the wiki.
 
 # Usage
 
@@ -240,12 +239,10 @@ This module was originally created by [Mapbox](https://mapbox.com/) & is now mai
 
 # Changelog
 
-We use [GitHub releases](https://github.com/TryGhost/node-sqlite3/releases) for notes on the latest versions. See [CHANGELOG.md](https://github.com/TryGhost/node-sqlite3/blob/b05f4594cf8b0de64743561fcd2cfe6f4571754d/CHANGELOG.md) in git history for details on older versions.
+We use [GitHub releases](https://github.com/AppThreat/node-sqlite3/releases) for notes on the latest versions. See [CHANGELOG.md](https://github.com/AppThreat/node-sqlite3/blob/b05f4594cf8b0de64743561fcd2cfe6f4571754d/CHANGELOG.md) in git history for details on older versions.
 
 # Copyright & license
 
 Copyright (c) 2013-2025 Mapbox & Ghost Foundation
 
-`node-sqlite3` is [BSD licensed](https://github.com/tryghost/node-sqlite3/raw/master/LICENSE).
-
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=large)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_large)
+`node-sqlite3` is [BSD licensed](https://github.com/AppThreat/node-sqlite3/raw/master/LICENSE).
