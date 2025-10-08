@@ -22,6 +22,7 @@ Napi::Object Statement::Init(Napi::Env env, Napi::Object exports) {
       InstanceMethod("each", &Statement::Each, napi_default_method),
       InstanceMethod("reset", &Statement::Reset, napi_default_method),
       InstanceMethod("finalize", &Statement::Finalize_, napi_default_method),
+      InstanceAccessor("expandedSql", &Statement::ExpandedSQLGetter, nullptr, napi_default_method),
     });
 
     exports.Set("Statement", t);
@@ -158,6 +159,7 @@ void Statement::Work_AfterPrepare(napi_env e, napi_status status, void* data) {
 
     auto env = stmt->Env();
     Napi::HandleScope scope(env);
+
 
     if (stmt->status != SQLITE_OK) {
         Error(baton.get());
@@ -364,6 +366,7 @@ void Statement::Work_AfterBind(napi_env e, napi_status status, void* data) {
     auto env = stmt->Env();
     Napi::HandleScope scope(env);
 
+
     if (stmt->status != SQLITE_OK) {
         Error(baton.get());
     }
@@ -430,6 +433,7 @@ void Statement::Work_AfterGet(napi_env e, napi_status status, void* data) {
 
     auto env = stmt->Env();
     Napi::HandleScope scope(env);
+
 
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton.get());
@@ -505,6 +509,7 @@ void Statement::Work_AfterRun(napi_env e, napi_status status, void* data) {
     auto env = stmt->Env();
     Napi::HandleScope scope(env);
 
+
     if (stmt->status != SQLITE_ROW && stmt->status != SQLITE_DONE) {
         Error(baton.get());
     }
@@ -574,6 +579,7 @@ void Statement::Work_AfterAll(napi_env e, napi_status status, void* data) {
 
     auto env = stmt->Env();
     Napi::HandleScope scope(env);
+
 
     if (stmt->status != SQLITE_DONE) {
         Error(baton.get());
@@ -740,10 +746,10 @@ void Statement::Work_AfterEach(napi_env e, napi_status status, void* data) {
     auto env = stmt->Env();
     Napi::HandleScope scope(env);
 
+
     if (stmt->status != SQLITE_DONE) {
         Error(baton.get());
     }
-
     STATEMENT_END();
 }
 
@@ -776,6 +782,7 @@ void Statement::Work_AfterReset(napi_env e, napi_status status, void* data) {
 
     auto env = stmt->Env();
     Napi::HandleScope scope(env);
+
 
     // Fire callbacks.
     Napi::Function cb = baton->callback.Value();
@@ -936,4 +943,26 @@ void Statement::CleanQueue() {
         // the baton gets destroyed.
         delete call->baton;
     }
+}
+
+Napi::Value Statement::ExpandedSQLGetter(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    
+    if (!_handle) {
+        return env.Undefined();
+    }
+    
+    // call SQLite's sqlite3_expanded_sql() to get the SQL with bound parameters
+    char* expanded = sqlite3_expanded_sql(_handle);
+    
+    // handle memory allocation failure
+    if (!expanded) {
+        return env.Undefined();
+    }
+    
+    // create JS string and free the C string
+    Napi::String result = Napi::String::New(env, expanded);
+    sqlite3_free(expanded);
+    
+    return result;
 }
