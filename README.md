@@ -1,5 +1,8 @@
-# ⚙️ node-sqlite3
+# :no_entry: [DEPRECATED] node-sqlite3
 
+**Note:** This repository is currently unmaintained. We will not update any of its issues or pull requests. 
+
+---
 Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
 [![Latest release](https://img.shields.io/github/release/TryGhost/node-sqlite3.svg)](https://www.npmjs.com/package/sqlite3)
