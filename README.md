@@ -247,7 +247,7 @@ We use [GitHub releases](https://github.com/TryGhost/node-sqlite3/releases) for 
 
 # Copyright & license
 
-Copyright (c) 2013-2025 Mapbox & Ghost Foundation
+Copyright (c) 2013-2026 Mapbox & Ghost Foundation
 
 `node-sqlite3` is [BSD licensed](https://github.com/tryghost/node-sqlite3/raw/master/LICENSE).
 
