@@ -63,7 +63,7 @@
     }
   },
   "optionalDependencies": {
-    "node-gyp": "8.x"
+    "node-gyp": "12.x"
   },
   "scripts": {
     "install": "prebuild-install -r napi || node-gyp rebuild",
