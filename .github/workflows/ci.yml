@@ -48,6 +48,18 @@ jobs:
             node: 24
             host: arm64
             target: arm64
+          - os: ubuntu-24.04-arm
+            node: 20
+            host: arm64
+            target: arm64
+          - os: ubuntu-24.04-arm
+            node: 22
+            host: arm64
+            target: arm64
+          - os: ubuntu-24.04-arm
+            node: 24
+            host: arm64
+            target: arm64
     name: ${{ matrix.os }} (node=${{ matrix.node }}, host=${{ matrix.host }}, target=${{ matrix.target }})
     steps:
       - uses: actions/checkout@v6
@@ -112,56 +124,42 @@ jobs:
         run: yarn upload --upload-all ${{ github.token }}
         if: matrix.node == 24 && startsWith(github.ref, 'refs/tags/')
 
-  build-qemu:
-    runs-on: ubuntu-latest
+  build-musl:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     strategy:
       fail-fast: false
       matrix:
-        node:
-          - 24
-        target:
-          - linux/arm64
-        variant:
-          - bookworm
-          - alpine3.20
         include:
-          # musl x64 builds
-          - target: linux/amd64
-            variant: alpine3.20
-            node: 24
-    name: ${{ matrix.variant }} (node=${{ matrix.node }}, target=${{ matrix.target }})
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            arch: arm64
+          - runner: ubuntu-24.04
+            platform: linux/amd64
+            arch: amd64
+    runs-on: ${{ matrix.runner }}
+    name: musl ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
       - name: Build binaries and test
         run: |
-          docker buildx build \
+          docker build \
             --file ./tools/BinaryBuilder.Dockerfile \
-            --load \
             --tag sqlite-builder \
-            --platform ${{ matrix.target }} \
             --no-cache \
-            --build-arg VARIANT=${{ matrix.variant }} \
-            --build-arg NODE_VERSION=${{ matrix.node }} \
+            --build-arg VARIANT=alpine3.20 \
+            --build-arg NODE_VERSION=24 \
             .
           CONTAINER_ID=$(docker create -it sqlite-builder)
           docker cp $CONTAINER_ID:/usr/src/build/prebuilds/ ./prebuilds
 
       - name: Upload binaries to commit artifacts
         uses: actions/upload-artifact@v7
-        if: matrix.node == 24
         with:
-          name: prebuilt-binaries-${{ matrix.variant }}-${{ matrix.target == 'linux/arm64' && 'linux-arm64' || 'linux-amd64' }}
+          name: prebuilt-binaries-musl-${{ matrix.arch }}
           path: prebuilds/*
           retention-days: 7
 
       - name: Upload binaries to GitHub Release
         run: yarn install --ignore-scripts && yarn upload --upload-all ${{ github.token }}
-        if: matrix.node == 24 && startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')

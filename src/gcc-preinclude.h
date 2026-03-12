@@ -4,9 +4,10 @@
 
 #define _GNU_SOURCE
 #include <features.h>
+#include <unistd.h>
 #undef _GNU_SOURCE
 
-#if defined(__USE_GNU)
+#if defined(__GLIBC__)
 
 #if defined(__x86_64__)
 __asm__(".symver memcpy,memcpy@GLIBC_2.2.5");
