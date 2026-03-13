@@ -203,6 +203,7 @@ public:
     WORK_DEFINITION(Reset)
 
     Napi::Value Finalize_(const Napi::CallbackInfo& info);
+    Napi::Value ExpandedSQLGetter(const Napi::CallbackInfo& info);
 
 protected:
     static void Work_BeginPrepare(Database::Baton* baton);
