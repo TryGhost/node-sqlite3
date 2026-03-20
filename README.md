@@ -6,7 +6,7 @@
 Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
 ![NPM Version](https://img.shields.io/npm/v/%40homeofthings%2Fsqlite3)
-[![Build Status](https://github.com/gms1/node-sqlite3/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/gms1/node-sqlite3/actions/workflows/build.yml)
+[![Build Status](https://github.com/gms1/node-sqlite3/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/gms1/node-sqlite3/actions/workflows/ci.yml)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_shield)
 [![N-API v3 Badge](https://img.shields.io/badge/N--API-v3-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
 [![N-API v6 Badge](https://img.shields.io/badge/N--API-v6-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
