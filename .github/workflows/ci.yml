@@ -11,31 +11,35 @@ env:
   FORCE_COLOR: 1
 jobs:
   verify-version:
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - name: Verify tag version matches package.json
         run: |
-          # Extract tag name from GITHUB_REF (e.g., refs/tags/v6.0.2 -> v6.0.2)
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
-          # Remove 'v' prefix if present to get the version number
-          TAG_VERSION="${TAG_NAME#v}"
+          # Check if we're running on a tag
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            # Extract tag name from GITHUB_REF (e.g., refs/tags/v6.0.2 -> v6.0.2)
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+            # Remove 'v' prefix if present to get the version number
+            TAG_VERSION="${TAG_NAME#v}"
 
-          # Get version from package.json
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+            # Get version from package.json
+            PACKAGE_VERSION=$(node -p "require('./package.json').version")
 
-          echo "Tag version: $TAG_VERSION"
-          echo "Package version: $PACKAGE_VERSION"
+            echo "Tag version: $TAG_VERSION"
+            echo "Package version: $PACKAGE_VERSION"
 
-          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
-            echo "ERROR: Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
-            echo "Please update package.json or create a new tag with the correct version"
-            echo "GitHub release will NOT be created."
-            exit 1
+            if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+              echo "ERROR: Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
+              echo "Please update package.json or create a new tag with the correct version"
+              echo "GitHub release will NOT be created."
+              exit 1
+            fi
+
+            echo "Version match verified!"
+          else
+            echo "Skipping version verification - not a tag event"
           fi
-
-          echo "Version match verified!"
 
   build:
     needs: [verify-version]
