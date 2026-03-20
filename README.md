@@ -1,12 +1,12 @@
-# :no_entry: node-sqlite3
+# gms1/node-sqlite3
 
 **Note:** This repository is forked from [TryGhost/node-sqlite3](https://github.com/TryGhost/node-sqlite3) which was marked as deprecated/unmaintained.
 
 ---
 Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
-[![Latest release](https://img.shields.io/github/release/gms1/node-sqlite3.svg)](https://www.npmjs.com/package/@homeofthings/sqlite3)
-![Build Status](https://github.com/gms1/node-sqlite3/workflows/CI/badge.svg?branch=ma)
+![NPM Version](https://img.shields.io/npm/v/%40homeofthings%2Fsqlite3)
+![Build Status](https://github.com/gms1/node-sqlite3/workflows/CI/badge.svg?branch=main)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_shield)
 [![N-API v3 Badge](https://img.shields.io/badge/N--API-v3-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
 [![N-API v6 Badge](https://img.shields.io/badge/N--API-v6-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
