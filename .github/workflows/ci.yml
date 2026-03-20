@@ -13,6 +13,33 @@ concurrency:
   group: ${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 jobs:
+  verify-version:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify tag version matches package.json
+        run: |
+          # Extract tag name from GITHUB_REF (e.g., refs/tags/v6.0.2 -> v6.0.2)
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          # Remove 'v' prefix if present to get the version number
+          TAG_VERSION="${TAG_NAME#v}"
+
+          # Get version from package.json
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+
+          echo "Tag version: $TAG_VERSION"
+          echo "Package version: $PACKAGE_VERSION"
+
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "ERROR: Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
+            echo "Please update package.json or create a new tag with the correct version"
+            echo "GitHub release will NOT be created."
+            exit 1
+          fi
+
+          echo "Version match verified!"
+
   build:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -163,3 +190,23 @@ jobs:
       - name: Upload binaries to GitHub Release
         run: yarn install --ignore-scripts && yarn upload --upload-all ${{ github.token }}
         if: startsWith(github.ref, 'refs/tags/')
+
+  publish-npm:
+    needs: [build, build-musl]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: yarn install --ignore-scripts
+
+      - name: Publish to npm
+        run: npm publish
