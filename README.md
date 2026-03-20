@@ -20,7 +20,7 @@ Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js]
  - [Extension support](https://github.com/gms1/node-sqlite3/wiki/API#databaseloadextensionpath-callback), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html)
  - Big test suite
  - Written in modern C++ and tested for memory leaks
- - Bundles SQLite v3.52.0, or you can build using a local SQLite
+ - Bundles SQLite v3.51.3, or you can build using a local SQLite
 
 # Installing
 
