@@ -1,12 +1,12 @@
-# :no_entry: [DEPRECATED] node-sqlite3
+# :no_entry: node-sqlite3
 
-**Note:** This repository is currently unmaintained. We will not update any of its issues or pull requests. 
+**Note:** This repository is forked from [TryGhost/node-sqlite3](https://github.com/TryGhost/node-sqlite3) which was marked as deprecated/unmaintained.
 
 ---
 Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
-[![Latest release](https://img.shields.io/github/release/TryGhost/node-sqlite3.svg)](https://www.npmjs.com/package/sqlite3)
-![Build Status](https://github.com/TryGhost/node-sqlite3/workflows/CI/badge.svg?branch=master)
+[![Latest release](https://img.shields.io/github/release/gms1/node-sqlite3.svg)](https://www.npmjs.com/package/sqlite3)
+![Build Status](https://github.com/gms1/node-sqlite3/workflows/CI/badge.svg?branch=ma)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_shield)
 [![N-API v3 Badge](https://img.shields.io/badge/N--API-v3-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
 [![N-API v6 Badge](https://img.shields.io/badge/N--API-v6-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
@@ -15,9 +15,9 @@ Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js]
 
  - Straightforward query and parameter binding interface
  - Full Buffer/Blob support
- - Extensive [debugging support](https://github.com/tryghost/node-sqlite3/wiki/Debugging)
- - [Query serialization](https://github.com/tryghost/node-sqlite3/wiki/Control-Flow) API
- - [Extension support](https://github.com/TryGhost/node-sqlite3/wiki/API#databaseloadextensionpath-callback), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html)
+ - Extensive [debugging support](https://github.com/gms1/node-sqlite3/wiki/Debugging)
+ - [Query serialization](https://github.com/gms1/node-sqlite3/wiki/Control-Flow) API
+ - [Extension support](https://github.com/gms1/node-sqlite3/wiki/API#databaseloadextensionpath-callback), including bundled support for the [json1 extension](https://www.sqlite.org/json1.html)
  - Big test suite
  - Written in modern C++ and tested for memory leaks
  - Bundles SQLite v3.52.0, or you can build using a local SQLite
@@ -32,7 +32,7 @@ npm install sqlite3
 # or
 yarn add sqlite3
 ```
-* GitHub's `master` branch: `npm install https://github.com/tryghost/node-sqlite3/tarball/master`
+* GitHub's `main` branch: `npm install https://github.com/gms1/node-sqlite3/tarball/main`
 
 ### Prebuilt binaries
 
@@ -64,7 +64,7 @@ SQLite's [SQLCipher extension](https://github.com/sqlcipher/sqlcipher) is also 
 
 # API
 
-See the [API documentation](https://github.com/TryGhost/node-sqlite3/wiki/API) in the wiki.
+See the [API documentation](https://github.com/gms1/node-sqlite3/wiki/API) in the wiki.
 
 # Usage
 
@@ -242,12 +242,12 @@ This module was originally created by [Mapbox](https://mapbox.com/) & is now mai
 
 # Changelog
 
-We use [GitHub releases](https://github.com/TryGhost/node-sqlite3/releases) for notes on the latest versions. See [CHANGELOG.md](https://github.com/TryGhost/node-sqlite3/blob/b05f4594cf8b0de64743561fcd2cfe6f4571754d/CHANGELOG.md) in git history for details on older versions.
+We use [GitHub releases](https://github.com/gms1/node-sqlite3/releases) for notes on the latest versions. See [CHANGELOG.md](https://github.com/gms1/node-sqlite3/blob/b05f4594cf8b0de64743561fcd2cfe6f4571754d/CHANGELOG.md) in git history for details on older versions.
 
 # Copyright & license
 
 Copyright (c) 2013-2026 Mapbox & Ghost Foundation
 
-`node-sqlite3` is [BSD licensed](https://github.com/tryghost/node-sqlite3/raw/master/LICENSE).
+`node-sqlite3` is [BSD licensed](https://github.com/gms1/node-sqlite3/raw/main/LICENSE).
 
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=large)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_large)

@@ -2,7 +2,7 @@
   "name": "sqlite3",
   "description": "Asynchronous, non-blocking SQLite3 bindings",
   "version": "6.0.1",
-  "homepage": "https://github.com/TryGhost/node-sqlite3",
+  "homepage": "https://github.com/gms1/node-sqlite3",
   "author": {
     "name": "Mapbox",
     "url": "https://mapbox.com/"
@@ -41,7 +41,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/TryGhost/node-sqlite3.git"
+    "url": "https://github.com/gms1/node-sqlite3.git"
   },
   "dependencies": {
     "bindings": "^1.5.0",
@@ -83,10 +83,5 @@
     "database"
   ],
   "main": "./lib/sqlite3",
-  "types": "./lib/sqlite3.d.ts",
-  "renovate": {
-    "extends": [
-      "@tryghost:base"
-    ]
-  }
+  "types": "./lib/sqlite3.d.ts"
 }

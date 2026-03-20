@@ -3,7 +3,7 @@ NODE_WEBKIT_VERSION=0.8.4
 all: app.nw
 
 node_modules/sqlite3:
-	npm install https://github.com/mapbox/node-sqlite3/tarball/master --build-from-source --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
+	npm install https://github.com/mapbox/node-sqlite3/tarball/main --build-from-source --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
 
 rebuild:
 	cd node_modules/sqlite3 && ./node_modules/.bin/node-pre-gyp rebuild --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
