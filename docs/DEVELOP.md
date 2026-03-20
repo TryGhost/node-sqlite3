@@ -26,6 +26,8 @@ This project uses [npm version](https://docs.npmjs.com/cli/v10/commands/npm-vers
    - Upload them as release assets
    - Publish the package to npm
 
+3. ** Create GitHub Release from tag
+
 ### Version format
 
 - Versions follow [SemVer](https://semver.org/) format
