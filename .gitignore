@@ -29,3 +29,5 @@ setup.sh
 *.tgz
 package-lock.json
 prebuilds
+.vscode
+.clinerules
