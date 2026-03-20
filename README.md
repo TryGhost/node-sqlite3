@@ -5,7 +5,7 @@
 ---
 Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js](http://nodejs.org/).
 
-[![Latest release](https://img.shields.io/github/release/gms1/node-sqlite3.svg)](https://www.npmjs.com/package/sqlite3)
+[![Latest release](https://img.shields.io/github/release/gms1/node-sqlite3.svg)](https://www.npmjs.com/package/@homeofthings/sqlite3)
 ![Build Status](https://github.com/gms1/node-sqlite3/workflows/CI/badge.svg?branch=ma)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fmapbox%2Fnode-sqlite3?ref=badge_shield)
 [![N-API v3 Badge](https://img.shields.io/badge/N--API-v3-green.svg)](https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api)
@@ -24,13 +24,13 @@ Asynchronous, non-blocking [SQLite3](https://sqlite.org/) bindings for [Node.js]
 
 # Installing
 
-You can use [`npm`](https://github.com/npm/cli) or [`yarn`](https://github.com/yarnpkg/yarn) to install `sqlite3`:
+You can use [`npm`](https://github.com/npm/cli) or [`yarn`](https://github.com/yarnpkg/yarn) to install `@homeofthings/sqlite3`:
 
 * (recommended) Latest published package:
 ```bash
-npm install sqlite3
+npm install @homeofthings/sqlite3
 # or
-yarn add sqlite3
+yarn add @homeofthings/sqlite3
 ```
 * GitHub's `main` branch: `npm install https://github.com/gms1/node-sqlite3/tarball/main`
 
@@ -71,7 +71,7 @@ See the [API documentation](https://github.com/gms1/node-sqlite3/wiki/API) in th
 **Note:** the module must be [installed](#installing) before use.
 
 ``` js
-const sqlite3 = require('sqlite3').verbose();
+const sqlite3 = require('@homeofthings/sqlite3').verbose();
 const db = new sqlite3.Database(':memory:');
 
 db.serialize(() => {
@@ -94,14 +94,6 @@ db.close();
 ## Source install
 
 To skip searching for pre-compiled binaries, and force a build from source, use
-
-```bash
-npm install --build-from-source
-```
-
-The sqlite3 module depends only on libsqlite3. However, by default, an internal/bundled copy of sqlite will be built and statically linked, so an externally installed sqlite3 is not required.
-
-If you wish to install against an external sqlite then you need to pass the `--sqlite` argument to `npm` wrapper:
 
 ```bash
 npm install --build-from-source --sqlite=/usr/local
@@ -137,10 +129,10 @@ To build `sqlite3` for node-webkit:
 
 ```bash
 NODE_WEBKIT_VERSION="0.8.6" # see latest version at https://github.com/rogerwang/node-webkit#downloads
-npm install sqlite3 --build-from-source --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
+npm install @homeofthings/sqlite3 --build-from-source --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
 ```
 
-You can also run this command from within a `sqlite3` checkout:
+You can also run this command from within a `@homeofthings/sqlite3` checkout:
 
 ```bash
 npm install --build-from-source --runtime=node-webkit --target_arch=ia32 --target=$(NODE_WEBKIT_VERSION)
@@ -162,9 +154,9 @@ For instructions on building SQLCipher, see [Building SQLCipher for Node.js](htt
 To run against SQLCipher, you need to compile `sqlite3` from source by passing build options like:
 
 ```bash
-npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/
+npm install @homeofthings/sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/
 
-node -e 'require("sqlite3")'
+node -e 'require("@homeofthings/sqlite3")'
 ```
 
 If your SQLCipher is installed in a custom location (if you compiled and installed it yourself), you'll need to set some environment variables:
@@ -176,9 +168,9 @@ Set the location where `brew` installed it:
 ```bash
 export LDFLAGS="-L`brew --prefix`/opt/sqlcipher/lib"
 export CPPFLAGS="-I`brew --prefix`/opt/sqlcipher/include/sqlcipher"
-npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix`
+npm install @homeofthings/sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix`
 
-node -e 'require("sqlite3")'
+node -e 'require("@homeofthings/sqlite3")'
 ```
 
 ### On most Linuxes (including Raspberry Pi)
@@ -189,23 +181,23 @@ Set the location where `make` installed it:
 export LDFLAGS="-L/usr/local/lib"
 export CPPFLAGS="-I/usr/local/include -I/usr/local/include/sqlcipher"
 export CXXFLAGS="$CPPFLAGS"
-npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/local --verbose
+npm install @homeofthings/sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=/usr/local --verbose
 
-node -e 'require("sqlite3")'
+node -e 'require("@homeofthings/sqlite3")'
 ```
 
 ### Custom builds and Electron
 
-Running `sqlite3` through [electron-rebuild](https://github.com/electron/electron-rebuild) does not preserve the SQLCipher extension, so some additional flags are needed to make this build Electron compatible. Your `npm install sqlite3 --build-from-source` command needs these additional flags (be sure to replace the target version with the current Electron version you are working with):
+Running `sqlite3` through [electron-rebuild](https://github.com/electron/electron-rebuild) does not preserve the SQLCipher extension, so some additional flags are needed to make this build Electron compatible. Your `npm install @homeofthings/sqlite3 --build-from-source` command needs these additional flags (be sure to replace the target version with the current Electron version you are working with):
 
 ```bash
---runtime=electron --target=18.2.1 --dist-url=https://electronjs.org/headers
+npm install @homeofthings/sqlite3 --build-from-source --runtime=electron --target=18.2.1 --dist-url=https://electronjs.org/headers
 ```
 
 In the case of MacOS with Homebrew, the command should look like the following:
 
 ```bash
-npm install sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix` --runtime=electron --target=18.2.1 --dist-url=https://electronjs.org/headers
+npm install @homeofthings/sqlite3 --build-from-source --sqlite_libname=sqlcipher --sqlite=`brew --prefix` --runtime=electron --target=18.2.1 --dist-url=https://electronjs.org/headers
 ```
 
 # Testing
