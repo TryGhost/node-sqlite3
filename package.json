@@ -74,6 +74,7 @@
     "prebuild": "prebuild --runtime napi --all --verbose",
     "rebuild": "node-gyp rebuild",
     "upload": "prebuild --verbose --prerelease",
+    "frozen-install": "yarn install --frozen-lockfile",
     "lint": "eslint lib/ test/ tools/",
     "test": "node test/support/createdb.js && mocha -R spec --timeout 480000"
   },
