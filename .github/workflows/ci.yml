@@ -41,8 +41,20 @@ jobs:
             echo "Skipping version verification - not a tag event"
           fi
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: yarn install --ignore-scripts
+      - name: Run lint
+        run: yarn lint
+
   build:
-    needs: [verify-version]
+    needs: [verify-version, lint]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
