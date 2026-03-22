@@ -8,6 +8,7 @@ module.exports = {
         "indent": ["error", 4],
         "linebreak-style": ["error", "unix"],
         "semi": ["error", "always"],
-        "no-cond-assign": ["error", "always"]
+      "no-cond-assign": ["error", "always"],
+      "no-inner-declarations": "off"
     }
 };

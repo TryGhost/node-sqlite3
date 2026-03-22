@@ -1,4 +1,4 @@
-"use strict"
+"use strict";
 
 var sqlite3 = require('..');
 const assert = require("assert");

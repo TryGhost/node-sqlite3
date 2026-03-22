@@ -50,6 +50,7 @@
     "tar": "^7.5.10"
   },
   "devDependencies": {
+    "benchmark": "^2.1.4",
     "eslint": "8.56.0",
     "mocha": "10.2.0",
     "prebuild": "13.0.1"
@@ -73,6 +74,7 @@
     "prebuild": "prebuild --runtime napi --all --verbose",
     "rebuild": "node-gyp rebuild",
     "upload": "prebuild --verbose --prerelease",
+    "lint": "eslint lib/ test/ tools/",
     "test": "node test/support/createdb.js && mocha -R spec --timeout 480000"
   },
   "license": "BSD-3-Clause",

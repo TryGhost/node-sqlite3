@@ -1,0 +1,4 @@
+# Mark SQLite database files as binary to prevent line ending conversions
+*.db binary
+*.sqlite binary
+*.sqlite3 binary

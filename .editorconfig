@@ -1,0 +1,53 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# Top-most EditorConfig file
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Matches multiple files with the same settings
+[*.js]
+indent_size = 2
+
+[*.json]
+indent_size = 2
+
+[*.yml]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+indent_size = 2
+
+[*.sql]
+indent_size = 2
+
+# C/C++ files
+[*.cc]
+indent_size = 2
+indent_style = tab
+max_line_length = 100
+
+[*.h]
+indent_size = 2
+indent_style = tab
+max_line_length = 100
+
+# Makefile and GYP files use tabs
+[{Makefile,*.gyp}]
+indent_style = tab
+
+# Dockerfiles
+[Dockerfile]
+indent_size = 2
+
+# YAML files
+[*.yaml]
+indent_size = 2

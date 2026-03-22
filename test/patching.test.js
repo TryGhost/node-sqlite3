@@ -1,5 +1,6 @@
 var sqlite3 = require('..');
 var assert = require('assert');
+var helper = require('./support/helper');
 
 describe('patching', function() {
     describe("Database", function() {
@@ -20,8 +21,8 @@ describe('patching', function() {
         it('allow patching native functions', function() {
             var myFun = function myFunction() {
                 return "Success";
-            }
-            
+            };
+
             assert.doesNotThrow(() => {
                 sqlite3.Database.prototype.close = myFun;
             });
@@ -91,8 +92,8 @@ describe('patching', function() {
         it('allow patching native functions', function() {
             var myFun = function myFunction() {
                 return "Success";
-            }
-            
+            };
+
             assert.doesNotThrow(() => {
                 sqlite3.Statement.prototype.bind = myFun;
             });
@@ -147,6 +148,10 @@ describe('patching', function() {
         var backup;
         var originalFunctions = {};
 
+        before(function () {
+            helper.ensureExists('test/tmp');
+        });
+
         before(function() {
             originalFunctions.step = sqlite3.Backup.prototype.step;
             originalFunctions.finish = sqlite3.Backup.prototype.finish;
@@ -155,8 +160,8 @@ describe('patching', function() {
         it('allow patching native functions', function() {
             var myFun = function myFunction() {
                 return "Success";
-            }
-            
+            };
+
             assert.doesNotThrow(() => {
                 sqlite3.Backup.prototype.step = myFun;
             });
@@ -165,7 +170,7 @@ describe('patching', function() {
             });
 
             db = new sqlite3.Database(':memory:');
-            backup = db.backup("somefile", myFun);
+            backup = db.backup("test/tmp/patching_backup.db", myFun);
             assert.strictEqual(backup.step(), "Success");
             assert.strictEqual(backup.finish(), "Success");
         });
@@ -176,6 +181,7 @@ describe('patching', function() {
                 sqlite3.Backup.prototype.finish = originalFunctions.finish;
                 backup.finish();
             }
+            helper.deleteFile('test/tmp/patching_backup.db');
             if(db != null) {
                 db.close();
             }

@@ -6,7 +6,7 @@ var iterations = 10000;
 exports.compare = {
     'insert literal file': function(finished) {
         var db = new sqlite3.Database('');
-        var file = fs.readFileSync('benchmark/insert-transaction.sql', 'utf8');
+        var file = fs.readFileSync(__dirname + '/insert-transaction.sql', 'utf8');
         db.exec(file);
         db.close(finished);
     },

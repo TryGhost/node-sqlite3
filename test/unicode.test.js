@@ -71,7 +71,7 @@ describe('unicode', function() {
     // Generate random data.
     var data = [];
     var length = Math.floor(Math.random() * 1000) + 200;
-    for (var i = 0; i < length; i++) {
+    for (i = 0; i < length; i++) {
         data.push(randomString());
     }
 

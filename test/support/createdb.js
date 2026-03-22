@@ -19,7 +19,7 @@ function createdb(callback) {
         return str;
     }
 
-// Make sure the file exists and is also valid.
+    // Make sure the file exists and is also valid.
     if (existsSync(db_path) && statSync(db_path).size !== 0) {
         console.log('okay: database already created (' + db_path + ')');
         if (callback) callback();
