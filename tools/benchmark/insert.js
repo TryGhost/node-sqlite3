@@ -1,68 +1,160 @@
-var sqlite3 = require('../../lib/sqlite3');
-var fs = require('fs');
+const sqlite3 = require('../../lib/sqlite3');
+const fs = require('fs');
 
-var iterations = 10000;
+const iterations = 10000;
 
-exports.compare = {
-    'insert literal file': function(finished) {
-        var db = new sqlite3.Database('');
-        var file = fs.readFileSync(__dirname + '/insert-transaction.sql', 'utf8');
-        db.exec(file);
-        db.close(finished);
-    },
-
-    'insert with transaction and two statements': function(finished) {
-        var db = new sqlite3.Database('');
-
-        db.serialize(function() {
-            db.run("CREATE TABLE foo (id INT, txt TEXT)");
-            db.run("BEGIN");
-
-            db.parallelize(function() {
-                var stmt1 = db.prepare("INSERT INTO foo VALUES (?, ?)");
-                var stmt2 = db.prepare("INSERT INTO foo VALUES (?, ?)");
-                for (var i = 0; i < iterations; i++) {
-                    stmt1.run(i, 'Row ' + i);
-                    i++;
-                    stmt2.run(i, 'Row ' + i);
-                }
-                stmt1.finalize();
-                stmt2.finalize();
-            });
-
-            db.run("COMMIT");
+/**
+ * Helper to promisify sqlite3 operations
+ */
+function promisifyRun(db, sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function (err) {
+            if (err) reject(err);
+            else resolve(this);
         });
+    });
+}
 
-        db.close(finished);
-    },
-    'insert with transaction': function(finished) {
-        var db = new sqlite3.Database('');
-
-        db.serialize(function() {
-            db.run("CREATE TABLE foo (id INT, txt TEXT)");
-            db.run("BEGIN");
-            var stmt = db.prepare("INSERT INTO foo VALUES (?, ?)");
-            for (var i = 0; i < iterations; i++) {
-                stmt.run(i, 'Row ' + i);
-            }
-            stmt.finalize();
-            db.run("COMMIT");
+function promisifyExec(db, sql) {
+    return new Promise((resolve, reject) => {
+        db.exec(sql, (err) => {
+            if (err) reject(err);
+            else resolve();
         });
+    });
+}
 
-        db.close(finished);
-    },
-    'insert without transaction': function(finished) {
-        var db = new sqlite3.Database('');
-
-        db.serialize(function() {
-            db.run("CREATE TABLE foo (id INT, txt TEXT)");
-            var stmt = db.prepare("INSERT INTO foo VALUES (?, ?)");
-            for (var i = 0; i < iterations; i++) {
-                stmt.run(i, 'Row ' + i);
-            }
-            stmt.finalize();
+function promisifyClose(db) {
+    return new Promise((resolve, reject) => {
+        db.close((err) => {
+            if (err) reject(err);
+            else resolve();
         });
+    });
+}
 
-        db.close(finished);
-    }
+/**
+ * Insert benchmarks with proper setup/teardown separation.
+ * Setup (create database, create table) and teardown (close database)
+ * are NOT measured - only the actual insert operations are measured.
+ */
+module.exports = {
+    benchmarks: {
+        'literal file': {
+            async beforeEach() {
+                // Setup: Create in-memory database - NOT measured
+                this.db = new sqlite3.Database(':memory:');
+                this.sqlFile = fs.readFileSync(__dirname + '/insert-transaction.sql', 'utf8');
+            },
+
+            async fn() {
+                // Benchmark: Execute SQL file - MEASURED
+                await promisifyExec(this.db, this.sqlFile);
+            },
+
+            async afterEach() {
+                // Teardown: Close database - NOT measured
+                await promisifyClose(this.db);
+            },
+        },
+
+        'transaction with two statements': {
+            async beforeEach() {
+                // Setup: Create database and table - NOT measured
+                this.db = new sqlite3.Database(':memory:');
+                await promisifyRun(this.db, 'CREATE TABLE foo (id INT, txt TEXT)');
+            },
+
+            async fn() {
+                // Benchmark: Insert with transaction and two parallel statements - MEASURED
+                const db = this.db;
+
+                await new Promise((resolve, reject) => {
+                    db.serialize(async () => {
+                        await promisifyRun(db, 'BEGIN');
+
+                        db.parallelize(() => {
+                            const stmt1 = db.prepare('INSERT INTO foo VALUES (?, ?)');
+                            const stmt2 = db.prepare('INSERT INTO foo VALUES (?, ?)');
+                            for (let i = 0; i < iterations; i++) {
+                                stmt1.run(i, 'Row ' + i);
+                                i++;
+                                stmt2.run(i, 'Row ' + i);
+                            }
+                            stmt1.finalize();
+                            stmt2.finalize();
+                        });
+
+                        await promisifyRun(db, 'COMMIT');
+                        resolve();
+                    });
+                });
+            },
+
+            async afterEach() {
+                // Teardown: Close database - NOT measured
+                await promisifyClose(this.db);
+            },
+        },
+
+        'with transaction': {
+            async beforeEach() {
+                // Setup: Create database and table - NOT measured
+                this.db = new sqlite3.Database(':memory:');
+                await promisifyRun(this.db, 'CREATE TABLE foo (id INT, txt TEXT)');
+            },
+
+            async fn() {
+                // Benchmark: Insert with transaction - MEASURED
+                const db = this.db;
+
+                await new Promise((resolve, reject) => {
+                    db.serialize(async () => {
+                        await promisifyRun(db, 'BEGIN');
+                        const stmt = db.prepare('INSERT INTO foo VALUES (?, ?)');
+                        for (let i = 0; i < iterations; i++) {
+                            stmt.run(i, 'Row ' + i);
+                        }
+                        stmt.finalize();
+                        await promisifyRun(db, 'COMMIT');
+                        resolve();
+                    });
+                });
+            },
+
+            async afterEach() {
+                // Teardown: Close database - NOT measured
+                await promisifyClose(this.db);
+            },
+        },
+
+        'without transaction': {
+            async beforeEach() {
+                // Setup: Create database and table - NOT measured
+                this.db = new sqlite3.Database(':memory:');
+                await promisifyRun(this.db, 'CREATE TABLE foo (id INT, txt TEXT)');
+            },
+
+            async fn() {
+                // Benchmark: Insert without transaction - MEASURED
+                const db = this.db;
+
+                await new Promise((resolve, reject) => {
+                    db.serialize(() => {
+                        const stmt = db.prepare('INSERT INTO foo VALUES (?, ?)');
+                        for (let i = 0; i < iterations; i++) {
+                            stmt.run(i, 'Row ' + i);
+                        }
+                        stmt.finalize();
+                        resolve();
+                    });
+                });
+            },
+
+            async afterEach() {
+                // Teardown: Close database - NOT measured
+                await promisifyClose(this.db);
+            },
+        },
+    },
 };
