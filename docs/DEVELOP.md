@@ -52,3 +52,23 @@ When you push a tag (e.g., `v6.0.2`), the CI workflow will:
 After releasing, you can verify:
 - GitHub Release with binaries: https://github.com/gms1/node-sqlite3/releases
 - npm package: https://www.npmjs.com/package/@homeofthings/sqlite3
+
+## Code Quality
+
+**IMPORTANT**: After making any code changes, always run:
+```bash
+yarn lint --fix
+yarn test
+```
+
+This ensures:
+- Code follows project style guidelines
+- No syntax errors are introduced
+- All tests pass before committing
+
+### Pre-commit Checklist
+
+Before committing changes:
+1. Run `yarn lint --fix` to fix code style issues
+2. Run `yarn test` to ensure all tests pass
+3. Review changes before pushing
