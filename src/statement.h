@@ -57,7 +57,9 @@ namespace Values {
                 Field(_name, SQLITE_BLOB), length(len) {
             value = new char[len];
             assert(value != nullptr);
-            memcpy(value, val, len);
+            if (len > 0) {
+                memcpy(value, val, len);
+            }
         }
         inline virtual ~Blob() override {
             delete[] value;
