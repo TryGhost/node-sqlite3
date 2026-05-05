@@ -291,18 +291,18 @@ aws4@^1.8.0:
   integrity sha512-lHe62zvbTB5eEABUVi/AwVh0ZKY9rMMDhmm+eeyuuUQbQ3+J+fONVQOZyj+DdrvD4BY33uYniyRJ4UJIaSKAfw==
 
 axios@^1.6.5:
-  version "1.15.2"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.15.2.tgz#eb8fb6d30349abace6ade5b4cb4d9e8a0dc23e5b"
-  integrity sha512-wLrXxPtcrPTsNlJmKjkPnNPK2Ihe0hn0wGSaTEiHRPxwjvJwT3hKmXF4dpqxmPO9SoNb2FsYXj/xEo0gHN+D5A==
+  version "1.16.0"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-1.16.0.tgz#f8e5dd931cef2a5f8c32216d5784eda2f8750eb7"
+  integrity sha512-6hp5CwvTPlN2A31g5dxnwAX0orzM7pmCRDLnZSX772mv8WDqICwFjowHuPs04Mc8deIld1+ejhtaMn5vp6b+1w==
   dependencies:
-    follow-redirects "^1.15.11"
+    follow-redirects "^1.16.0"
     form-data "^4.0.5"
     proxy-from-env "^2.1.0"
 
 b4a@^1.6.4:
-  version "1.8.0"
-  resolved "https://registry.yarnpkg.com/b4a/-/b4a-1.8.0.tgz#1ca3ba0edc9469aaabef5647e769a83d50180b1a"
-  integrity sha512-qRuSmNSkGQaHwNbM7J78Wwy+ghLEYF1zNrSeMxj4Kgw6y33O3mXcQ6Ie9fRvfU/YnxWkOchPXbaLb73TkIsfdg==
+  version "1.8.1"
+  resolved "https://registry.yarnpkg.com/b4a/-/b4a-1.8.1.tgz#7f16334ca80127aeb26064a28841acbf174840a4"
+  integrity sha512-aiqre1Nr0B/6DgE2N5vwTc+2/oQZ4Wh1t4NznYY4E00y8LCt6NqdRv81so00oo27D8MVKTpUa/MwUUtBLXCoDw==
 
 balanced-match@^1.0.0:
   version "1.0.2"
@@ -326,9 +326,9 @@ bare-fs@^4.5.5:
     fast-fifo "^1.3.2"
 
 bare-os@^3.0.1:
-  version "3.9.0"
-  resolved "https://registry.yarnpkg.com/bare-os/-/bare-os-3.9.0.tgz#59b1dd75c231067526f811c0e3d985257bd35747"
-  integrity sha512-JTjuZyNIDpw+GytMO4a6TK1VXdVKKJr6DRxEHasyuYyShV2deuiHJK/ahGZlebc+SG0/wJCB9XK8gprBGDFi/Q==
+  version "3.9.1"
+  resolved "https://registry.yarnpkg.com/bare-os/-/bare-os-3.9.1.tgz#660228ca7ffc47a72e96b6047cdd9d8342994e2f"
+  integrity sha512-6M5XjcnsygQNPMCMPXSK379xrJFiZ/AEMNBmFEmQW8d/789VQATvriyi5r0HYTL9TkQ26rn3kgdTG3aisbrXkQ==
 
 bare-path@^3.0.0:
   version "3.0.0"
@@ -338,9 +338,9 @@ bare-path@^3.0.0:
     bare-os "^3.0.1"
 
 bare-stream@^2.6.4:
-  version "2.13.0"
-  resolved "https://registry.yarnpkg.com/bare-stream/-/bare-stream-2.13.0.tgz#dea59458dcf2689e9387134efccec015dfdbe3cf"
-  integrity sha512-3zAJRZMDFGjdn+RVnNpF9kuELw+0Fl3lpndM4NcEOhb9zwtSo/deETfuIwMSE5BXanA0FrN1qVjffGwAg2Y7EA==
+  version "2.13.1"
+  resolved "https://registry.yarnpkg.com/bare-stream/-/bare-stream-2.13.1.tgz#acfd787a2983f5feb182ffe4c37ecc2c55b6ec85"
+  integrity sha512-Vp0cnjYyrEC4whYTymQ+YZi6pBpfiICZO3cfRG8sy67ZNWe951urv1x4eW1BKNngw3U+3fPYb5JQvHbCtxH7Ow==
   dependencies:
     streamx "^2.25.0"
     teex "^1.0.1"
@@ -1071,7 +1071,7 @@ flatted@^3.2.9:
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-3.4.2.tgz#f5c23c107f0f37de8dbdf24f13722b3b98d52726"
   integrity sha512-PjDse7RzhcPkIJwy5t7KPWQSZ9cAbzQXcafsetQoD7sOJRQlGikNbx7yZp2OotDnJyrDcbyRq3Ttb18iYOqkxA==
 
-follow-redirects@^1.15.11:
+follow-redirects@^1.16.0:
   version "1.16.0"
   resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.16.0.tgz#28474a159d3b9d11ef62050a14ed60e4df6d61bc"
   integrity sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==
@@ -1494,10 +1494,10 @@ ini@~1.3.0:
   resolved "https://registry.yarnpkg.com/ini/-/ini-1.3.8.tgz#a29da425b48806f34767a4efce397269af28432c"
   integrity sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==
 
-ip-address@^10.0.1:
-  version "10.1.0"
-  resolved "https://registry.yarnpkg.com/ip-address/-/ip-address-10.1.0.tgz#d8dcffb34d0e02eb241427444a6e23f5b0595aa4"
-  integrity sha512-XXADHxXmvT9+CRxhXg56LJovE+bmWnEWB78LB83VZTprKTmaC5QfruXocxzTZ2Kl0DNwKuBdlIhjL8LeY8Sf8Q==
+ip-address@^10.1.1:
+  version "10.2.0"
+  resolved "https://registry.yarnpkg.com/ip-address/-/ip-address-10.2.0.tgz#805fc178b20c518bd4c8548b24fe30892d7f3206"
+  integrity sha512-/+S6j4E9AHvW9SWMSEY9Xfy66O5PWvVEJ08O0y5JGyEKQpojb0K0GKpz/v5HJ/G0vi3D2sjGK78119oXZeE0qA==
 
 is-binary-path@~2.1.0:
   version "2.1.0"
@@ -1966,9 +1966,9 @@ next-tick@^1.1.0:
   integrity sha512-CXdUiJembsNjuToQvxayPZF9Vqht7hewsvy2sOWafLvi2awflj9mOC6bHIg50orX8IJvWKY9wYQ/zB2kogPslQ==
 
 node-abi@^3.3.0, node-abi@^3.54.0:
-  version "3.89.0"
-  resolved "https://registry.yarnpkg.com/node-abi/-/node-abi-3.89.0.tgz#eea98bf89d4534743bbbf2defa9f4f9bd3bdccfd"
-  integrity sha512-6u9UwL0HlAl21+agMN3YAMXcKByMqwGx+pq+P76vii5f7hTPtKDp08/H9py6DY+cfDw7kQNTGEj/rly3IgbNQA==
+  version "3.90.0"
+  resolved "https://registry.yarnpkg.com/node-abi/-/node-abi-3.90.0.tgz#5aca953aa58deb903738adf14a33fb79a32c48f3"
+  integrity sha512-pZNQT7UnYlMwMBy5N1lV5X/YLTbZM5ncytN3xL7CHEzhDN8uVe0u55yaPUJICIJjaCW8NrM5BFdqr7HLweStNA==
   dependencies:
     semver "^7.3.5"
 
@@ -2611,11 +2611,11 @@ socks-proxy-agent@^8.0.3:
     socks "^2.8.3"
 
 socks@^2.8.3:
-  version "2.8.7"
-  resolved "https://registry.yarnpkg.com/socks/-/socks-2.8.7.tgz#e2fb1d9a603add75050a2067db8c381a0b5669ea"
-  integrity sha512-HLpt+uLy/pxB+bum/9DzAgiKS8CX1EvbWxI4zlmgGCExImLdiad2iCwXT5Z4c9c3Eq8rP2318mPW2c+QbtjK8A==
+  version "2.8.8"
+  resolved "https://registry.yarnpkg.com/socks/-/socks-2.8.8.tgz#23bef6d02748eac847ad75610deb6c472554c67a"
+  integrity sha512-NlGELfPrgX2f1TAAcz0WawlLn+0r3FyhhCRpFFK2CemXenPYvzMWWZINv3eDNo9ucdwme7oCHRY0Jnbs4aIkog==
   dependencies:
-    ip-address "^10.0.1"
+    ip-address "^10.1.1"
     smart-buffer "^4.2.0"
 
 sshpk@^1.7.0:
@@ -2778,9 +2778,9 @@ tar-stream@^2.1.4:
     readable-stream "^3.1.1"
 
 tar-stream@^3.1.7:
-  version "3.1.8"
-  resolved "https://registry.yarnpkg.com/tar-stream/-/tar-stream-3.1.8.tgz#a26f5b26c34dfd4936a4f8a9e694a8f5102af13d"
-  integrity sha512-U6QpVRyCGHva435KoNWy9PRoi2IFYCgtEhq9nmrPPpbRacPs9IH4aJ3gbrFC8dPcXvdSZ4XXfXT5Fshbp2MtlQ==
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/tar-stream/-/tar-stream-3.2.0.tgz#0d0064d9b67ea3c9f5abde155e35faab0df37591"
+  integrity sha512-ojzvCvVaNp6aOTFmG7jaRD0meowIAuPc3cMMhSgKiVWws1GyHbGd/xvnyuRKcKlMpt3qvxx6r0hreCNITP9hIg==
   dependencies:
     b4a "^1.6.4"
     bare-fs "^4.5.5"
