@@ -91,6 +91,8 @@ export class Statement extends events.EventEmitter {
     each<T>(callback?: (err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
     each<T>(params: any, callback?: (this: RunResult, err: Error | null, row: T) => void, complete?: (err: Error | null, count: number) => void): this;
     each(...params: any[]): this;
+
+    readonly expandedSql: string | undefined;
 }
 
 export class Database extends events.EventEmitter {
