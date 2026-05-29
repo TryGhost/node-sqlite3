@@ -60,6 +60,18 @@ jobs:
             node: 24
             host: arm64
             target: arm64
+          - os: windows-11-arm
+            node: 20
+            host: arm64
+            target: arm64
+          - os: windows-11-arm
+            node: 22
+            host: arm64
+            target: arm64
+          - os: windows-11-arm
+            node: 24
+            host: arm64
+            target: arm64
     name: ${{ matrix.os }} (node=${{ matrix.node }}, host=${{ matrix.host }}, target=${{ matrix.target }})
     steps:
       - uses: actions/checkout@v6
