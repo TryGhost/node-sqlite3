@@ -46,6 +46,7 @@ The module uses [`prebuild-install`](https://github.com/prebuild/prebuild-instal
 * `linux-x64`
 * `linuxmusl-arm64`
 * `linuxmusl-x64`
+* `win32-arm64`
 * `win32-x64`
 
 Unfortunately, [prebuild](https://github.com/prebuild/prebuild/issues/174) cannot differentiate between `armv6` and `armv7`, and instead uses `arm` as the `{arch}`. Until that is fixed, you will still need to install `sqlite3` from [source](#source-install).
