@@ -63,7 +63,7 @@
     }
   },
   "optionalDependencies": {
-    "node-gyp": "12.x"
+    "node-gyp": "13.x"
   },
   "engines": {
     "node": ">=20.17.0"
