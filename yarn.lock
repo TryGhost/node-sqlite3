@@ -1990,9 +1990,9 @@ node-abi@^3.3.0, node-abi@^3.54.0:
     semver "^7.3.5"
 
 node-addon-api@^8.0.0:
-  version "8.8.0"
-  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-8.8.0.tgz#b742be05007b37ebc1741bbaf370d22bf25d208a"
-  integrity sha512-c5Ko1fZJIJmzhFIkhRN76WTq+fC6tWnGy9CXA0fA+XygsWZmEwG8vmbkNqxMyoaa0Tin4djul49NzdVcJJcjeA==
+  version "8.9.0"
+  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-8.9.0.tgz#d2467090e6195c428ccd510dfd604f01c027f0a0"
+  integrity sha512-ekZMeaaIzSQTSpr7X2X3iJM7lTzgnx8ahAG9pJfT/7+14mlEM8ZYQ9cgCDvSSRbReFK0oHli3WrZdCiRsgAT9Q==
 
 node-api-headers@^1.1.0:
   version "1.9.0"
